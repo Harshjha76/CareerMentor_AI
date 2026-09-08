@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const { t, language, changeLanguage } = useLanguage();
 
   const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [targetRole, setTargetRole] = useState(user?.target_role || '');
   const [dreamCompanies, setDreamCompanies] = useState(user?.dream_companies || '');
   const [currentSkills, setCurrentSkills] = useState(user?.current_skills || '');
@@ -44,6 +45,7 @@ export default function SettingsPage() {
     try {
       await updateProfile({
         name,
+        email,
         target_role: targetRole,
         dream_companies: dreamCompanies,
         current_skills: currentSkills,
@@ -120,6 +122,38 @@ export default function SettingsPage() {
             <Sparkles className="w-5 h-5 text-[#06B6D4]" />
             {t('settings.pref_section')}
           </h2>
+
+          {/* Name & Notification Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-[#3B82F6]" />
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-[#06B6D4]" />
+                Autonomous Agent Notification Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#06B6D4] outline-none"
+              />
+              <p className="text-[11px] text-[#64748B] mt-1">
+                Your AI agent delivers 2-hour check-ins and study reminders to this address.
+              </p>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>

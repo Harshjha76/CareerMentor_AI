@@ -122,7 +122,7 @@ export default function LandingPage() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="max-w-lg mx-auto mb-6">
+          <div className="max-w-xl mx-auto mb-6">
             <GoogleSignInButton fullWidth />
           </div>
 

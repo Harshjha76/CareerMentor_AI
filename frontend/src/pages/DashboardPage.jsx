@@ -20,7 +20,8 @@ import {
   TrendingUp,
   AlertCircle,
   Activity,
-  Bell
+  Bell,
+  Mail
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -154,6 +155,12 @@ export default function DashboardPage() {
               <Activity className="w-3.5 h-3.5 animate-pulse" />
               {t('dashboard.agent_active')}
             </span>
+            {user?.email && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#172033] text-[#06B6D4] text-xs font-semibold border border-[#1E293B]">
+                <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
+                Alerts to: {user.email}
+              </span>
+            )}
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight mb-2 text-[#F8FAFC]">

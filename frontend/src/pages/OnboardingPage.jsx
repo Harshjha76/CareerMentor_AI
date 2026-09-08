@@ -15,7 +15,8 @@ import {
   Loader2,
   GraduationCap,
   Phone,
-  BookOpen
+  BookOpen,
+  Mail
 } from 'lucide-react';
 
 const COMMON_SKILLS = [
@@ -125,6 +126,12 @@ export default function OnboardingPage() {
                   {t('onboarding.step1_title')}
                 </h3>
                 <p className="text-xs text-[#94A3B8]">Define your primary career target, college background, and contact info.</p>
+                {user?.email && (
+                  <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#172033] border border-[#3B82F6]/30 text-xs text-[#06B6D4]">
+                    <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
+                    <span>Agent notifications linked to: <strong className="text-[#F8FAFC] font-semibold">{user.email}</strong></span>
+                  </div>
+                )}
               </div>
 
               <div>

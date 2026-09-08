@@ -29,6 +29,22 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
+  const loginWithEmail = async (email, name) => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.emailLogin(email, name);
+      localStorage.setItem('careerpilot_token', res.token);
+      setToken(res.token);
+      setUser(res.user);
+      if (res.user.preferred_language) {
+        changeLanguage(res.user.preferred_language);
+      }
+      return res.user;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const loginWithGoogle = async (credential) => {
     setIsLoading(true);
     try {
@@ -92,6 +108,7 @@ export function AuthProvider({ children }) {
         token,
         isAuthenticated: !!user,
         isLoading,
+        loginWithEmail,
         loginWithGoogle,
         loginWithDemo,
         completeOnboarding,

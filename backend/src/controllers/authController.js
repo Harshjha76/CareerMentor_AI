@@ -36,6 +36,83 @@ function formatUserResponse(user) {
 }
 
 /**
+ * Direct Email Sign-In / Registration
+ * Activates user account with personal email so AI agent can send study check-ins
+ */
+export async function emailLogin(req, res) {
+  const { email, name } = req.body;
+
+  if (!email || typeof email !== 'string' || !email.trim()) {
+    return res.status(400).json({ error: 'A valid email address is required' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    return res.status(400).json({ error: 'Please provide a valid email format (e.g. name@example.com)' });
+  }
+
+  const userName = (name && typeof name === 'string' && name.trim())
+    ? name.trim()
+    : cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  try {
+    let existingUser = await query('SELECT * FROM users WHERE LOWER(email) = $1', [cleanEmail]);
+    let user;
+    let isNewUser = false;
+
+    if (existingUser.rows.length > 0) {
+      user = existingUser.rows[0];
+      // Update name if a custom name was provided
+      if (name && typeof name === 'string' && name.trim() && user.name !== name.trim()) {
+        await query('UPDATE users SET name = $1 WHERE id = $2', [name.trim(), user.id]);
+        user.name = name.trim();
+      }
+    } else {
+      isNewUser = true;
+      const newId = uuidv4();
+      const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanEmail)}`;
+      
+      await query(
+        `INSERT INTO users (
+          id, google_id, email, name, avatar_url, preferred_language, is_onboarded,
+          target_role, dream_companies, current_skills, daily_study_hours, available_study_minutes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          newId,
+          `email_${Date.now()}`,
+          cleanEmail,
+          userName,
+          defaultAvatar,
+          'en',
+          false,
+          'Software Engineer',
+          'Google, Microsoft, TCS, Infosys',
+          'JavaScript, React, SQL',
+          2,
+          57
+        ]
+      );
+      const created = await query('SELECT * FROM users WHERE id = $1', [newId]);
+      user = created.rows[0];
+    }
+
+    const token = generateToken(user);
+
+    return res.json({
+      token,
+      user: formatUserResponse(user),
+      isNewUser
+    });
+  } catch (err) {
+    console.error('Email Auth Error:', err);
+    return res.status(500).json({ error: 'Authentication failed: ' + err.message });
+  }
+}
+
+/**
  * Handle Google Sign-In (OAuth ID Token)
  */
 export async function googleLogin(req, res) {
@@ -253,6 +330,7 @@ export async function updateProfile(req, res) {
     const userId = req.user.id;
     const {
       name,
+      email,
       target_role,
       dream_companies,
       current_skills,
@@ -273,21 +351,27 @@ export async function updateProfile(req, res) {
       ? parseInt(available_study_minutes, 10)
       : (req.user.available_study_minutes || (daily_study_hours ? parseInt(daily_study_hours, 10) * 60 : 120));
 
+    const updatedEmail = email && typeof email === 'string' && email.includes('@')
+      ? email.trim().toLowerCase()
+      : req.user.email;
+
     await query(
       `UPDATE users SET
         name = COALESCE($1, name),
-        target_role = COALESCE($2, target_role),
-        dream_companies = COALESCE($3, dream_companies),
-        current_skills = COALESCE($4, current_skills),
-        daily_study_hours = COALESCE($5, daily_study_hours),
-        available_study_minutes = COALESCE($6, available_study_minutes),
-        university_name = COALESCE($7, university_name),
-        branch = COALESCE($8, branch),
-        phone_number = COALESCE($9, phone_number),
-        preferred_language = $10
-      WHERE id = $11`,
+        email = COALESCE($2, email),
+        target_role = COALESCE($3, target_role),
+        dream_companies = COALESCE($4, dream_companies),
+        current_skills = COALESCE($5, current_skills),
+        daily_study_hours = COALESCE($6, daily_study_hours),
+        available_study_minutes = COALESCE($7, available_study_minutes),
+        university_name = COALESCE($8, university_name),
+        branch = COALESCE($9, branch),
+        phone_number = COALESCE($10, phone_number),
+        preferred_language = $11
+      WHERE id = $12`,
       [
         name || req.user.name,
+        updatedEmail,
         target_role || req.user.target_role,
         dream_companies || req.user.dream_companies,
         current_skills || req.user.current_skills,

@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 import { uploadResume } from '../middleware/uploadMiddleware.js';
 
 import {
+  emailLogin,
   googleLogin,
   demoLogin,
   saveOnboarding,
@@ -62,6 +63,7 @@ import {
 const router = express.Router();
 
 // 1. Authentication
+router.post('/auth/email', emailLogin);
 router.post('/auth/google', googleLogin);
 router.post('/auth/demo', demoLogin);
 router.post('/auth/onboarding', authenticateToken, saveOnboarding);

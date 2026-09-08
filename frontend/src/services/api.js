@@ -17,6 +17,9 @@ async function handleResponse(res) {
     } catch {
       errorMsg = `Error ${res.status}: ${res.statusText}`;
     }
+    if (res.status === 401) {
+      localStorage.removeItem('careerpilot_token');
+    }
     throw new Error(errorMsg);
   }
   return res.json();
@@ -25,6 +28,13 @@ async function handleResponse(res) {
 export const api = {
   // Authentication & Profile
   auth: {
+    emailLogin: (email, name) =>
+      fetch(`${API_BASE}/auth/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name })
+      }).then(handleResponse),
+
     googleLogin: (tokenOrCredential) =>
       fetch(`${API_BASE}/auth/google`, {
         method: 'POST',

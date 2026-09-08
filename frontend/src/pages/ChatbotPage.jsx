@@ -253,13 +253,18 @@ export default function ChatbotPage() {
       }
     } catch (err) {
       console.error('Send message error:', err);
+      const isAuthIssue = err.message?.toLowerCase().includes('session') || err.message?.toLowerCase().includes('token') || err.message?.toLowerCase().includes('database');
+      const guidance = isAuthIssue
+        ? `⚠️ **Session Notice**: ${err.message}. Please refresh the page or sign in with your email to continue your career session.`
+        : `⚠️ **Connection notice**: ${err.message}. Please verify your network and try again.`;
+      
       setMessages(prev => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           session_id: activeSessionId,
           sender: 'ai',
-          text: `⚠️ **Connection issue**: ${err.message}. Please verify your network connection and try again.`,
+          text: guidance,
           created_at: new Date().toISOString()
         }
       ]);
