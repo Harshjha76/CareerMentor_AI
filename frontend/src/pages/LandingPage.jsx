@@ -1,0 +1,253 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from '../components/LanguageSelector';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import {
+  Sparkles,
+  FileText,
+  Map,
+  Calendar,
+  MessageSquare,
+  CheckCircle2,
+  Users,
+  Award,
+  Globe2,
+  TrendingUp,
+  ArrowRight,
+  ShieldCheck,
+  Zap
+} from 'lucide-react';
+
+export default function LandingPage() {
+  const { isAuthenticated } = useAuth();
+  const { t, language } = useLanguage();
+
+  const features = [
+    {
+      icon: FileText,
+      color: 'from-blue-600 to-cyan-500',
+      title: t('landing.feat_resume_title'),
+      desc: t('landing.feat_resume_desc'),
+      badge: 'ATS 90+'
+    },
+    {
+      icon: Map,
+      color: 'from-purple-600 to-indigo-500',
+      title: t('landing.feat_roadmap_title'),
+      desc: t('landing.feat_roadmap_desc'),
+      badge: 'Curated'
+    },
+    {
+      icon: Calendar,
+      color: 'from-teal-600 to-emerald-500',
+      title: t('landing.feat_planner_title'),
+      desc: t('landing.feat_planner_desc'),
+      badge: 'Automated'
+    },
+    {
+      icon: MessageSquare,
+      color: 'from-amber-500 to-orange-500',
+      title: t('landing.feat_chat_title'),
+      desc: t('landing.feat_chat_desc'),
+      badge: '24/7 AI'
+    }
+  ];
+
+  const stats = [
+    { label: t('landing.stats_students'), icon: Users },
+    { label: t('landing.stats_roadmaps'), icon: Map },
+    { label: t('landing.stats_ats'), icon: Award },
+    { label: t('landing.stats_languages'), icon: Globe2 },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-electric-500 selection:text-white">
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-900 via-electric-600 to-tealBrand-500 flex items-center justify-center text-white shadow-md shadow-electric-600/20">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary-900 via-electric-700 to-primary-800 bg-clip-text text-transparent">
+                CareerPilot<span className="text-tealBrand-600">.AI</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <LanguageSelector variant="transparent" />
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-electric-600 hover:bg-electric-700 text-white text-sm font-semibold shadow-md shadow-electric-600/25 transition-all"
+              >
+                Go to Dashboard <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative pt-12 pb-20 overflow-hidden">
+        {/* Subtle decorative background gradient blobs */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] pointer-events-none -z-10">
+          <div className="absolute -top-24 left-1/4 w-96 h-96 bg-electric-400/15 rounded-full blur-3xl"></div>
+          <div className="absolute top-10 right-1/4 w-96 h-96 bg-tealBrand-400/15 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-electric-50 border border-electric-200/80 text-electric-700 text-xs font-semibold mb-6 shadow-xs animate-in fade-in slide-in-from-top-4 duration-300">
+            <Zap className="w-3.5 h-3.5 text-electric-600" />
+            <span>{t('landing.badge')}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-electric-400"></span>
+            <span className="font-bold text-gray-700">English • हिंदी • मराठी • संस्कृतम्</span>
+          </div>
+
+          {/* Hero Heading */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 tracking-tight leading-[1.15] mb-6">
+            <span className="block bg-gradient-to-r from-primary-900 via-electric-800 to-primary-900 bg-clip-text text-transparent">
+              {t('landing.hero_title')}
+            </span>
+          </h1>
+
+          {/* Hero Subtitle */}
+          <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+            {t('landing.hero_subtitle')}
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="max-w-lg mx-auto mb-6">
+            <GoogleSignInButton fullWidth />
+          </div>
+
+          {/* Demo Note */}
+          <p className="text-xs text-gray-500 font-medium">
+            💡 {t('landing.demo_note')}
+          </p>
+        </div>
+      </section>
+
+      {/* Stats Ribbon */}
+      <section className="border-y border-gray-200/80 bg-white/70 backdrop-blur-sm py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {stats.map((s, idx) => {
+              const Icon = s.icon;
+              return (
+                <div key={idx} className="flex flex-col items-center justify-center p-3">
+                  <div className="w-10 h-10 rounded-xl bg-electric-50 text-electric-600 flex items-center justify-center mb-2 shadow-xs">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="text-sm sm:text-base font-bold text-gray-900">{s.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-4">
+              {t('landing.features_heading')}
+            </h2>
+            <p className="text-gray-600 text-base sm:text-lg">
+              {t('landing.features_sub')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {features.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <div
+                  key={i}
+                  className="relative group bg-white p-8 rounded-2xl border border-gray-200/80 shadow-glass hover:shadow-glass-hover transition-all duration-300 hover:-translate-y-1"
+                >
+                  <div className="flex items-center justify-between mb-5">
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${f.color} flex items-center justify-center text-white shadow-md`}>
+                      <Icon className="w-7 h-7" />
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {f.badge}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2.5 group-hover:text-electric-700 transition-colors">
+                    {f.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {f.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Strict 4-Language Highlight Banner */}
+      <section className="py-16 bg-gradient-to-r from-primary-900 via-electric-900 to-primary-950 text-white relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 text-tealBrand-300 text-xs font-semibold mb-4 border border-white/15">
+            <Globe2 className="w-4 h-4" /> Multilingual Architecture
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold mb-4 tracking-tight">
+            Seamlessly Mentoring in 4 Dedicated Languages
+          </h2>
+          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto mb-8">
+            CareerPilot AI is uniquely calibrated to provide resume ATS analysis, career counseling, study plans, and daily notifications strictly in your chosen tongue.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+              <span className="text-2xl mb-1 block">🇬🇧</span>
+              <div className="font-bold text-white text-sm">English</div>
+              <div className="text-[11px] text-slate-400">Professional Register</div>
+            </div>
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+              <span className="text-2xl mb-1 block">🇮🇳</span>
+              <div className="font-bold text-white text-sm">हिंदी</div>
+              <div className="text-[11px] text-slate-400">देवनागरी लिपि</div>
+            </div>
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+              <span className="text-2xl mb-1 block">🚩</span>
+              <div className="font-bold text-white text-sm">मराठी</div>
+              <div className="text-[11px] text-slate-400">शुद्ध मराठी लिपी</div>
+            </div>
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm text-center">
+              <span className="text-2xl mb-1 block">🕉️</span>
+              <div className="font-bold text-white text-sm">संस्कृतम्</div>
+              <div className="text-[11px] text-slate-400">विद्वत्-परम्परा</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="mt-auto bg-white border-t border-gray-200 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-electric-600" />
+            <span className="font-bold text-gray-900">CareerPilot AI</span>
+            <span className="text-gray-400 text-xs">© 2026. Built for college students & job seekers.</span>
+          </div>
+
+          <div className="flex items-center gap-6 text-sm text-gray-500">
+            <span>Supported: English • हिंदी • मराठी • संस्कृतम्</span>
+            <Link to="/admin" className="text-electric-600 hover:underline font-medium text-xs">
+              View Analytics
+            </Link>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

@@ -1,0 +1,29 @@
+{
+  "name": "careerpilot-ai-backend",
+  "version": "1.0.0",
+  "description": "CareerPilot AI - 24/7 Intelligent Career Guidance Agent Backend",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "google-auth-library": "^9.15.1",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.9.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.10.0",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.13.3",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

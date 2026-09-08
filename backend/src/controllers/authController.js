@@ -1,0 +1,317 @@
+import { OAuth2Client } from 'google-auth-library';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { query } from '../config/db.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'careerpilot-ai-super-secret-key-2026';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+function generateToken(user) {
+  return jwt.sign(
+    { id: user.id, email: user.email, name: user.name },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+}
+
+/**
+ * Handle Google Sign-In (OAuth ID Token)
+ */
+export async function googleLogin(req, res) {
+  const { id_token, credential } = req.body;
+  const tokenToVerify = id_token || credential;
+
+  if (!tokenToVerify) {
+    return res.status(400).json({ error: 'Google credential or id_token is required' });
+  }
+
+  try {
+    let email, name, picture, googleId;
+
+    // Verify token with Google Auth Library if configured
+    if (GOOGLE_CLIENT_ID && !tokenToVerify.startsWith('mock_')) {
+      const ticket = await client.verifyIdToken({
+        idToken: tokenToVerify,
+        audience: GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      googleId = payload.sub;
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } else {
+      // Decode JWT payload or mock credential
+      try {
+        const decoded = jwt.decode(tokenToVerify);
+        if (decoded && decoded.email) {
+          googleId = decoded.sub || `google_${Date.now()}`;
+          email = decoded.email;
+          name = decoded.name || 'Google User';
+          picture = decoded.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+        } else {
+          throw new Error('Could not decode token');
+        }
+      } catch {
+        googleId = `google_user_${Date.now()}`;
+        email = `student_${Date.now()}@gmail.com`;
+        name = 'Google Student';
+        picture = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
+      }
+    }
+
+    // Check if user already exists
+    let existingUser = await query('SELECT * FROM users WHERE email = $1', [email]);
+    let user;
+
+    if (existingUser.rows.length > 0) {
+      user = existingUser.rows[0];
+      // Update avatar or name if changed
+      await query('UPDATE users SET avatar_url = $1, name = $2 WHERE id = $3', [
+        picture || user.avatar_url,
+        name || user.name,
+        user.id
+      ]);
+    } else {
+      // Create new user record
+      const newId = uuidv4();
+      await query(
+        `INSERT INTO users (
+          id, google_id, email, name, avatar_url, preferred_language, is_onboarded
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [newId, googleId, email, name, picture, 'en', false]
+      );
+      const created = await query('SELECT * FROM users WHERE id = $1', [newId]);
+      user = created.rows[0];
+    }
+
+    const token = generateToken(user);
+
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        preferred_language: user.preferred_language,
+        target_role: user.target_role,
+        dream_companies: user.dream_companies,
+        current_skills: user.current_skills,
+        daily_study_hours: user.daily_study_hours,
+        is_onboarded: !!user.is_onboarded
+      }
+    });
+  } catch (err) {
+    console.error('Google Auth Error:', err);
+    return res.status(500).json({ error: 'Google authentication failed: ' + err.message });
+  }
+}
+
+/**
+ * 1-Click Demo User Login for immediate evaluation
+ */
+export async function demoLogin(req, res) {
+  try {
+    const demoEmail = 'demo.student@careerpilot.ai';
+    let userRes = await query('SELECT * FROM users WHERE email = $1', [demoEmail]);
+    let user;
+
+    if (userRes.rows.length > 0) {
+      user = userRes.rows[0];
+    } else {
+      const newId = uuidv4();
+      await query(
+        `INSERT INTO users (
+          id, google_id, email, name, avatar_url, target_role, dream_companies,
+          current_skills, daily_study_hours, preferred_language, is_onboarded
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          newId,
+          'google_demo_1001',
+          demoEmail,
+          'Aarav Sharma',
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          'Full Stack Software Engineer',
+          'Google, Microsoft, TCS, Infosys',
+          'JavaScript, React, Node.js, Python, SQL',
+          3,
+          'en',
+          true
+        ]
+      );
+      const created = await query('SELECT * FROM users WHERE id = $1', [newId]);
+      user = created.rows[0];
+    }
+
+    const token = generateToken(user);
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        preferred_language: user.preferred_language,
+        target_role: user.target_role,
+        dream_companies: user.dream_companies,
+        current_skills: user.current_skills,
+        daily_study_hours: user.daily_study_hours,
+        is_onboarded: !!user.is_onboarded
+      }
+    });
+  } catch (err) {
+    console.error('Demo Login Error:', err);
+    return res.status(500).json({ error: 'Failed to authenticate demo user' });
+  }
+}
+
+/**
+ * Save Onboarding Profile Questionnaire
+ */
+export async function saveOnboarding(req, res) {
+  try {
+    const userId = req.user.id;
+    const {
+      target_role,
+      dream_companies,
+      current_skills,
+      daily_study_hours,
+      preferred_language
+    } = req.body;
+
+    // Validate preferred_language strictly to en, hi, mr, sa
+    const validLanguages = ['en', 'hi', 'mr', 'sa'];
+    const selectedLang = validLanguages.includes(preferred_language) ? preferred_language : 'en';
+
+    await query(
+      `UPDATE users SET
+        target_role = $1,
+        dream_companies = $2,
+        current_skills = $3,
+        daily_study_hours = $4,
+        preferred_language = $5,
+        is_onboarded = TRUE
+      WHERE id = $6`,
+      [
+        target_role || 'Software Engineer',
+        dream_companies || 'Google, Microsoft',
+        Array.isArray(current_skills) ? current_skills.join(', ') : current_skills || 'General Tech',
+        parseInt(daily_study_hours || '2', 10),
+        selectedLang,
+        userId
+      ]
+    );
+
+    const updated = await query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = updated.rows[0];
+
+    return res.json({
+      message: 'Onboarding completed successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        preferred_language: user.preferred_language,
+        target_role: user.target_role,
+        dream_companies: user.dream_companies,
+        current_skills: user.current_skills,
+        daily_study_hours: user.daily_study_hours,
+        is_onboarded: !!user.is_onboarded
+      }
+    });
+  } catch (err) {
+    console.error('Onboarding Error:', err);
+    return res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
+}
+
+/**
+ * Get current authenticated user profile
+ */
+export async function getMe(req, res) {
+  try {
+    const user = req.user;
+    return res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        preferred_language: user.preferred_language,
+        target_role: user.target_role,
+        dream_companies: user.dream_companies,
+        current_skills: user.current_skills,
+        daily_study_hours: user.daily_study_hours,
+        is_onboarded: !!user.is_onboarded
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+}
+
+/**
+ * Update Profile Settings & Language
+ */
+export async function updateProfile(req, res) {
+  try {
+    const userId = req.user.id;
+    const {
+      name,
+      target_role,
+      dream_companies,
+      current_skills,
+      daily_study_hours,
+      preferred_language
+    } = req.body;
+
+    const validLanguages = ['en', 'hi', 'mr', 'sa'];
+    const selectedLang = validLanguages.includes(preferred_language)
+      ? preferred_language
+      : req.user.preferred_language;
+
+    await query(
+      `UPDATE users SET
+        name = COALESCE($1, name),
+        target_role = COALESCE($2, target_role),
+        dream_companies = COALESCE($3, dream_companies),
+        current_skills = COALESCE($4, current_skills),
+        daily_study_hours = COALESCE($5, daily_study_hours),
+        preferred_language = $6
+      WHERE id = $7`,
+      [
+        name || req.user.name,
+        target_role || req.user.target_role,
+        dream_companies || req.user.dream_companies,
+        current_skills || req.user.current_skills,
+        daily_study_hours ? parseInt(daily_study_hours, 10) : req.user.daily_study_hours,
+        selectedLang,
+        userId
+      ]
+    );
+
+    const updated = await query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = updated.rows[0];
+
+    return res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        preferred_language: user.preferred_language,
+        target_role: user.target_role,
+        dream_companies: user.dream_companies,
+        current_skills: user.current_skills,
+        daily_study_hours: user.daily_study_hours,
+        is_onboarded: !!user.is_onboarded
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update profile: ' + err.message });
+  }
+}
