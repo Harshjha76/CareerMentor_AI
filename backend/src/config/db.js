@@ -164,13 +164,34 @@ export async function initDB() {
       is_edited_by_user BOOLEAN DEFAULT FALSE
     );`,
 
-    // 6. Chat History
+    // 6. Chat History (legacy fallback)
     `CREATE TABLE IF NOT EXISTS chat_history (
       id VARCHAR(64) PRIMARY KEY,
       user_id VARCHAR(64) NOT NULL,
       message TEXT NOT NULL,
       ai_response TEXT NOT NULL,
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 6b. Multi-Session Chat Sessions
+    `CREATE TABLE IF NOT EXISTS chat_sessions (
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 6c. Multi-Session Chat Messages
+    `CREATE TABLE IF NOT EXISTS chat_messages (
+      id VARCHAR(64) PRIMARY KEY,
+      session_id VARCHAR(64) NOT NULL,
+      user_id VARCHAR(64) NOT NULL,
+      sender VARCHAR(20) NOT NULL,
+      text TEXT NOT NULL,
+      attachment_name VARCHAR(255),
+      attachment_type VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
     // 7. Reminders

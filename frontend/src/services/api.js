@@ -142,8 +142,46 @@ export const api = {
       }).then(handleResponse)
   },
 
-  // 24/7 Career Chatbot
+  // 24/7 Career Chatbot (Multi-Session & Database Backed)
   chat: {
+    getSessions: () =>
+      fetch(`${API_BASE}/chat/sessions`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    createSession: (title) =>
+      fetch(`${API_BASE}/chat/sessions`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ title })
+      }).then(handleResponse),
+
+    getSessionMessages: (sessionId) =>
+      fetch(`${API_BASE}/chat/sessions/${sessionId}/messages`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    sendSessionMessage: (sessionId, message, language, attachment) =>
+      fetch(`${API_BASE}/chat/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ message, language, attachment })
+      }).then(handleResponse),
+
+    deleteSession: (sessionId) =>
+      fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    renameSession: (sessionId, title) =>
+      fetch(`${API_BASE}/chat/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ title })
+      }).then(handleResponse),
+
+    // Legacy fallbacks
     getHistory: () =>
       fetch(`${API_BASE}/chat/history`, {
         headers: getAuthHeaders()

@@ -20,8 +20,8 @@ function ProtectedRoute({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 border-4 border-electric-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#0B1220]">
+        <div className="w-10 h-10 border-4 border-[#3B82F6] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -43,7 +43,7 @@ export default function App() {
   const isOnboarding = location.pathname === '/onboarding';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-[#0B1220] flex flex-col font-sans text-[#F8FAFC] selection:bg-[#3B82F6] selection:text-white">
       {!isLandingPage && !isOnboarding && <Navbar />}
 
       <main className="flex-1">

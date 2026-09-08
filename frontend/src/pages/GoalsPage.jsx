@@ -111,22 +111,22 @@ export default function GoalsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
-            <Target className="w-8 h-8 text-electric-600" />
+          <h1 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] tracking-tight flex items-center gap-2.5">
+            <Target className="w-8 h-8 text-[#3B82F6]" />
             {t('goals.title')}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-[#94A3B8] text-sm mt-1">
             {t('goals.subtitle')}
           </p>
         </div>
 
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-electric-600/25 transition-all self-start md:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#3B82F6]/25 transition-all self-start md:self-auto"
         >
           <Plus className="w-4 h-4" />
           {t('goals.btn_new_goal')}
@@ -135,15 +135,15 @@ export default function GoalsPage() {
 
       {/* Goals List */}
       {goals.length === 0 && !loading ? (
-        <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
-          <Trophy className="w-12 h-12 text-amber-500 mx-auto" />
-          <h3 className="text-lg font-bold text-gray-900">No Career Goals Set Yet</h3>
-          <p className="text-sm text-gray-500">
+        <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-12 text-center max-w-xl mx-auto space-y-4 shadow-xl">
+          <Trophy className="w-12 h-12 text-amber-400 mx-auto" />
+          <h3 className="text-lg font-bold text-[#F8FAFC]">No Career Goals Set Yet</h3>
+          <p className="text-sm text-[#94A3B8]">
             Setting clear, target-dated career milestones dramatically increases your chances of cracking your dream roles.
           </p>
           <button
             onClick={() => setModalOpen(true)}
-            className="px-6 py-2.5 rounded-xl bg-electric-600 text-white font-bold text-xs shadow-sm hover:bg-electric-700"
+            className="px-6 py-2.5 rounded-xl bg-[#3B82F6] text-white font-bold text-xs shadow-sm hover:bg-[#2563EB]"
           >
             + Set Your First Goal
           </button>
@@ -155,45 +155,45 @@ export default function GoalsPage() {
             return (
               <div
                 key={goal.id}
-                className={`bg-white rounded-3xl border p-6 shadow-sm transition-all flex flex-col justify-between ${
+                className={`bg-[#111827] rounded-3xl border p-6 shadow-xl transition-all flex flex-col justify-between ${
                   isCompleted
-                    ? 'border-emerald-300 ring-2 ring-emerald-400/20 bg-emerald-50/20'
-                    : 'border-gray-200 hover:border-electric-300 hover:shadow-md'
+                    ? 'border-[#10B981]/50 ring-2 ring-[#10B981]/20 bg-[#111827]'
+                    : 'border-[#1E293B] hover:border-[#3B82F6]/50'
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                      isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-electric-50 text-electric-700'
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                      isCompleted ? 'bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30' : 'bg-[#3B82F6]/20 text-[#3B82F6] border-[#3B82F6]/30'
                     }`}>
                       {isCompleted ? t('goals.status_completed') : t('goals.status_active')}
                     </span>
                     <button
                       onClick={() => handleDeleteGoal(goal.id)}
-                      className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                      className="text-[#94A3B8] hover:text-red-400 transition-colors p-1"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <h3 className="font-extrabold text-base text-gray-900 mb-2 leading-snug">
+                  <h3 className="font-extrabold text-base text-[#F8FAFC] mb-2 leading-snug">
                     {goal.goal_description}
                   </h3>
 
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-5">
-                    <Calendar className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] mb-5">
+                    <Calendar className="w-3.5 h-3.5 text-[#3B82F6]" />
                     Due by: {goal.target_date || 'Target Date'}
                   </div>
 
                   {/* Subtasks if present */}
                   {goal.subtasks && goal.subtasks.length > 0 && (
                     <div className="space-y-2 mb-6">
-                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                      <span className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider block">
                         {t('goals.subtasks')}
                       </span>
                       {goal.subtasks.map((st, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-gray-700 p-2 rounded-lg bg-slate-50 border border-gray-100">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-electric-600 flex-shrink-0" />
+                        <div key={idx} className="flex items-center gap-2 text-xs text-[#F8FAFC] p-2 rounded-lg bg-[#0B1220] border border-[#1E293B]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#06B6D4] flex-shrink-0" />
                           <span className="truncate">{st.title || st}</span>
                         </div>
                       ))}
@@ -202,18 +202,18 @@ export default function GoalsPage() {
                 </div>
 
                 {/* Progress Controls */}
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-[#1E293B]">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-gray-600">{t('goals.progress')}</span>
-                    <span className="text-electric-700 font-extrabold">{goal.progress_percentage || 0}%</span>
+                    <span className="text-[#94A3B8]">{t('goals.progress')}</span>
+                    <span className="text-[#06B6D4] font-extrabold">{goal.progress_percentage || 0}%</span>
                   </div>
 
-                  <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[#0B1220] h-2.5 rounded-full overflow-hidden border border-[#1E293B]">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
                         isCompleted
-                          ? 'bg-emerald-500'
-                          : 'bg-gradient-to-r from-tealBrand-500 to-electric-600'
+                          ? 'bg-[#10B981]'
+                          : 'bg-gradient-to-r from-[#3B82F6] to-[#06B6D4]'
                       }`}
                       style={{ width: `${goal.progress_percentage || 0}%` }}
                     />
@@ -228,8 +228,8 @@ export default function GoalsPage() {
                         onClick={() => updateProgress(goal.id, pct)}
                         className={`flex-1 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
                           goal.progress_percentage === pct
-                            ? 'bg-electric-600 text-white border-electric-600'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-slate-50'
+                            ? 'bg-[#3B82F6] text-white border-[#3B82F6]'
+                            : 'bg-[#172033] text-[#94A3B8] border-[#1E293B] hover:text-[#F8FAFC]'
                         }`}
                       >
                         {pct}%
@@ -238,8 +238,8 @@ export default function GoalsPage() {
                   </div>
 
                   {isCompleted && (
-                    <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-900 text-center text-xs font-bold flex items-center justify-center gap-1.5 animate-in zoom-in-95">
-                      <Trophy className="w-4 h-4 text-emerald-600" />
+                    <div className="p-2.5 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] text-center text-xs font-bold flex items-center justify-center gap-1.5 animate-in zoom-in-95">
+                      <Trophy className="w-4 h-4 text-[#10B981]" />
                       {t('goals.completed_celebration')}
                     </div>
                   )}
@@ -252,20 +252,20 @@ export default function GoalsPage() {
 
       {/* Add Goal Modal with AI Subtask Breakdown */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 text-[#F8FAFC]">
             <div>
-              <h3 className="text-xl font-black text-gray-900 mb-1">
+              <h3 className="text-xl font-black text-[#F8FAFC] mb-1">
                 {t('goals.add_goal_modal_title')}
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[#94A3B8]">
                 AI will automatically break this goal into actionable milestone subtasks.
               </p>
             </div>
 
             <form onSubmit={handleCreateGoal} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                   {t('goals.goal_desc_label')}
                 </label>
                 <textarea
@@ -274,12 +274,12 @@ export default function GoalsPage() {
                   value={goalDesc}
                   onChange={(e) => setGoalDesc(e.target.value)}
                   placeholder={t('goals.goal_desc_placeholder')}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 outline-none resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 outline-none resize-none placeholder-[#94A3B8]/50"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                   {t('goals.target_date_label')}
                 </label>
                 <input
@@ -287,7 +287,7 @@ export default function GoalsPage() {
                   required
                   value={targetDate}
                   onChange={(e) => setTargetDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
                 />
               </div>
 
@@ -295,14 +295,14 @@ export default function GoalsPage() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="px-4 py-2.5 rounded-xl border border-[#1E293B] text-xs font-semibold text-[#94A3B8] hover:bg-[#172033]"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-700 text-white font-bold text-xs shadow-md shadow-electric-600/25 transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs shadow-md shadow-[#3B82F6]/25 transition-all"
                 >
                   {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   Create with AI Breakdown

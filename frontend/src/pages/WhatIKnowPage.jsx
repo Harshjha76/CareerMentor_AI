@@ -90,31 +90,31 @@ export default function WhatIKnowPage() {
 
   const getLevelBadge = (level) => {
     if (level === 'expert') {
-      return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">Expert</span>;
+      return <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30">Expert</span>;
     }
     if (level === 'intermediate') {
-      return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">Intermediate</span>;
+      return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30">Intermediate</span>;
     }
-    return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">Beginner</span>;
+    return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#172033] text-[#94A3B8] border border-[#1E293B]">Beginner</span>;
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
-            <BrainCircuit className="w-8 h-8 text-electric-600" />
+          <h1 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] tracking-tight flex items-center gap-2.5">
+            <BrainCircuit className="w-8 h-8 text-[#3B82F6]" />
             {t('what_i_know.title')}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-[#94A3B8] text-sm mt-1">
             {t('what_i_know.subtitle')}
           </p>
         </div>
 
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-electric-600/25 transition-all self-start md:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#3B82F6]/25 transition-all self-start md:self-auto"
         >
           <Plus className="w-4 h-4" />
           {t('what_i_know.btn_add_skill')}
@@ -122,30 +122,30 @@ export default function WhatIKnowPage() {
       </div>
 
       {/* Target Company Skill Match Banner */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-50 text-electric-700 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#172033] text-[#06B6D4] text-xs font-semibold border border-[#06B6D4]/30">
             <Building2 className="w-3.5 h-3.5" />
             Target: {user?.dream_companies || 'Google, Microsoft, Amazon'}
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-gray-900">
+          <h2 className="text-xl sm:text-2xl font-black text-[#F8FAFC]">
             {t('what_i_know.company_match_title')}
           </h2>
-          <p className="text-xs sm:text-sm text-gray-500 max-w-xl leading-relaxed">
-            Based on your target role (<strong className="text-gray-800">{user?.target_role || 'Software Engineer'}</strong>), our AI analyzed your knowledge inventory against real industry hiring criteria.
+          <p className="text-xs sm:text-sm text-[#94A3B8] max-w-xl leading-relaxed">
+            Based on your target role (<strong className="text-[#F8FAFC]">{user?.target_role || 'Software Engineer'}</strong>), our AI analyzed your knowledge inventory against real industry hiring criteria.
           </p>
         </div>
 
         <div className="flex items-center gap-5">
-          <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-gradient-to-tr from-tealBrand-500 to-electric-600 text-white font-black text-2xl shadow-lg shadow-electric-500/20">
+          <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-gradient-to-tr from-[#3B82F6] to-[#06B6D4] text-white font-black text-2xl shadow-lg shadow-[#06B6D4]/20">
             <span>{compatibilityScore}%</span>
           </div>
           <div>
-            <div className="text-xs uppercase font-bold text-gray-400">{t('what_i_know.match_score')}</div>
-            <div className="text-sm font-extrabold text-emerald-600">
+            <div className="text-xs uppercase font-bold text-[#94A3B8]">{t('what_i_know.match_score')}</div>
+            <div className="text-sm font-extrabold text-[#10B981]">
               {compatibilityScore >= 80 ? 'High Competitiveness' : 'Solid Foundation'}
             </div>
-            <div className="text-xs text-gray-400 mt-0.5">{skills.length} verified competencies</div>
+            <div className="text-xs text-[#94A3B8] mt-0.5">{skills.length} verified competencies</div>
           </div>
         </div>
       </div>
@@ -159,43 +159,43 @@ export default function WhatIKnowPage() {
           return (
             <div
               key={cat.id}
-              className="bg-white rounded-3xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+              className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 shadow-xl hover:border-[#3B82F6]/50 transition-all flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#1E293B]">
                   <div className="flex items-center gap-2.5">
                     <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${cat.color} text-white flex items-center justify-center shadow-xs`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <h3 className="font-extrabold text-sm text-gray-900">
+                    <h3 className="font-extrabold text-sm text-[#F8FAFC]">
                       {cat.label}
                     </h3>
                   </div>
-                  <span className="text-xs font-bold text-gray-400">
+                  <span className="text-xs font-bold text-[#94A3B8] px-2 py-0.5 rounded-full bg-[#172033] border border-[#1E293B]">
                     {catSkills.length}
                   </span>
                 </div>
 
                 <div className="space-y-2 min-h-[120px]">
                   {catSkills.length === 0 ? (
-                    <div className="text-center py-6 text-gray-300 text-xs italic">
+                    <div className="text-center py-6 text-[#94A3B8]/60 text-xs italic">
                       No skills added in this category
                     </div>
                   ) : (
                     catSkills.map((skill) => (
                       <div
                         key={skill.id}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-gray-100 hover:border-gray-200 transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B1220]/70 border border-[#1E293B] hover:border-[#3B82F6]/40 transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-tealBrand-600" />
-                          <span className="text-xs font-semibold text-gray-800">{skill.name}</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+                          <span className="text-xs font-semibold text-[#F8FAFC]">{skill.name}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           {getLevelBadge(skill.level)}
                           <button
                             onClick={() => removeSkill(skill.id)}
-                            className="text-gray-300 hover:text-red-500 p-1 transition-colors"
+                            className="text-[#94A3B8] hover:text-red-400 p-1 transition-colors"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -211,17 +211,17 @@ export default function WhatIKnowPage() {
       </div>
 
       {/* Skill Gaps & Bridging Recommendations */}
-      <div className="bg-gradient-to-br from-slate-900 via-primary-950 to-primary-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-6">
+      <div className="bg-gradient-to-br from-[#111827] via-[#172033] to-[#0B1220] border border-[#1E293B] rounded-3xl p-6 sm:p-8 text-[#F8FAFC] shadow-xl space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-tealBrand-500/20 text-tealBrand-300 flex items-center justify-center border border-tealBrand-500/30">
+            <div className="w-10 h-10 rounded-xl bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center border border-[#06B6D4]/30">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold text-[#F8FAFC]">
                 {t('what_i_know.skill_gaps_title')}
               </h3>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-[#94A3B8]">
                 Recommended by CareerPilot AI to push your candidate profile to the top 5%
               </p>
             </div>
@@ -232,18 +232,18 @@ export default function WhatIKnowPage() {
           {RECOMMENDED_GAPS.map((gap, i) => (
             <div
               key={i}
-              className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm flex flex-col justify-between space-y-4 hover:bg-white/10 transition-colors"
+              className="p-5 rounded-2xl bg-[#0B1220]/60 border border-[#1E293B] flex flex-col justify-between space-y-4 hover:border-[#3B82F6]/50 transition-colors"
             >
               <div>
-                <div className="text-[11px] text-tealBrand-300 font-bold mb-1">Estimated: {gap.duration}</div>
-                <h4 className="font-extrabold text-sm text-white mb-1.5">{gap.name}</h4>
-                <p className="text-xs text-slate-300 leading-relaxed">{gap.why}</p>
+                <div className="text-[11px] text-[#06B6D4] font-bold mb-1">Estimated: {gap.duration}</div>
+                <h4 className="font-extrabold text-sm text-[#F8FAFC] mb-1.5">{gap.name}</h4>
+                <p className="text-xs text-[#94A3B8] leading-relaxed">{gap.why}</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => navigate('/roadmap')}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-tealBrand-500 hover:bg-tealBrand-600 text-white font-bold text-xs shadow-sm transition-all"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs shadow-sm transition-all"
               >
                 <span>{t('what_i_know.btn_add_to_roadmap')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -255,15 +255,15 @@ export default function WhatIKnowPage() {
 
       {/* Add Skill Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6">
-            <h3 className="text-xl font-black text-gray-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 text-[#F8FAFC]">
+            <h3 className="text-xl font-black text-[#F8FAFC]">
               {t('what_i_know.modal_title')}
             </h3>
 
             <form onSubmit={handleAddSkill} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                   {t('what_i_know.skill_name_label')}
                 </label>
                 <input
@@ -272,18 +272,18 @@ export default function WhatIKnowPage() {
                   value={newSkillName}
                   onChange={(e) => setNewSkillName(e.target.value)}
                   placeholder="e.g. TypeScript, Redis, Kubernetes, Next.js"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                   {t('what_i_know.category_label')}
                 </label>
                 <select
                   value={newSkillCat}
                   onChange={(e) => setNewSkillCat(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#1E293B] text-sm bg-[#172033] text-[#F8FAFC] outline-none"
                 >
                   <option value="languages">{t('what_i_know.cat_languages')}</option>
                   <option value="frameworks">{t('what_i_know.cat_frameworks')}</option>
@@ -294,7 +294,7 @@ export default function WhatIKnowPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                   {t('what_i_know.proficiency_label')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -305,8 +305,8 @@ export default function WhatIKnowPage() {
                       onClick={() => setNewSkillLevel(lvl)}
                       className={`py-2 rounded-xl text-xs font-bold capitalize border transition-all ${
                         newSkillLevel === lvl
-                          ? 'bg-electric-600 text-white border-electric-600 shadow-xs'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-slate-50'
+                          ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-sm'
+                          : 'bg-[#172033] text-[#94A3B8] border-[#1E293B] hover:text-[#F8FAFC]'
                       }`}
                     >
                       {lvl}
@@ -319,13 +319,13 @@ export default function WhatIKnowPage() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                  className="px-4 py-2.5 rounded-xl border border-[#1E293B] text-xs font-semibold text-[#94A3B8] hover:bg-[#172033]"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-700 text-white font-bold text-xs shadow-md"
+                  className="px-6 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs shadow-md"
                 >
                   Save Skill
                 </button>

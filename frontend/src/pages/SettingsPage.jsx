@@ -78,36 +78,36 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
       {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
-          <Settings className="w-8 h-8 text-electric-600" />
+        <h1 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] tracking-tight flex items-center gap-2.5">
+          <Settings className="w-8 h-8 text-[#3B82F6]" />
           {t('settings.title')}
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-[#94A3B8] text-sm mt-1">
           {t('settings.subtitle')}
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-8">
+      <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-8">
         {/* Profile Info */}
         <div>
-          <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-electric-600" />
+          <h2 className="text-base font-bold text-[#F8FAFC] mb-4 flex items-center gap-2">
+            <User className="w-5 h-5 text-[#3B82F6]" />
             {t('settings.profile_section')}
           </h2>
 
-          <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50 border border-gray-100">
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-[#0B1220] border border-[#1E293B]">
             <img
               src={user?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
               alt={user?.name}
-              className="w-16 h-16 rounded-full border-2 border-electric-300 object-cover"
+              className="w-16 h-16 rounded-full border-2 border-[#3B82F6]/50 object-cover"
             />
             <div className="space-y-1 text-center sm:text-left">
-              <div className="font-extrabold text-lg text-gray-900">{user?.name}</div>
-              <div className="text-xs text-gray-500">{user?.email}</div>
-              <div className="text-[11px] font-semibold text-tealBrand-700 bg-tealBrand-50 px-2 py-0.5 rounded-md inline-block">
+              <div className="font-extrabold text-lg text-[#F8FAFC]">{user?.name}</div>
+              <div className="text-xs text-[#94A3B8]">{user?.email}</div>
+              <div className="text-[11px] font-semibold text-[#10B981] bg-[#10B981]/15 px-2.5 py-0.5 rounded-md inline-block border border-[#10B981]/30">
                 Google Authenticated Session
               </div>
             </div>
@@ -115,40 +115,40 @@ export default function SettingsPage() {
         </div>
 
         {/* Preferences Form */}
-        <form onSubmit={handleSave} className="space-y-6 pt-4 border-t border-gray-100">
-          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-electric-600" />
+        <form onSubmit={handleSave} className="space-y-6 pt-4 border-t border-[#1E293B]">
+          <h2 className="text-base font-bold text-[#F8FAFC] flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[#06B6D4]" />
             {t('settings.pref_section')}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                 {t('onboarding.target_role')}
               </label>
               <input
                 type="text"
                 value={targetRole}
                 onChange={(e) => setTargetRole(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
                 {t('onboarding.dream_companies')}
               </label>
               <input
                 type="text"
                 value={dreamCompanies}
                 onChange={(e) => setDreamCompanies(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+            <label className="block text-xs font-bold text-[#94A3B8] mb-1.5">
               Current Skills
             </label>
             <input
@@ -156,15 +156,15 @@ export default function SettingsPage() {
               value={currentSkills}
               onChange={(e) => setCurrentSkills(e.target.value)}
               placeholder="e.g. Python, SQL, React, Node.js"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
             />
           </div>
 
           {/* Academic & Contact Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-3 border-t border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-3 border-t border-[#1E293B]">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <GraduationCap className="w-3.5 h-3.5 text-electric-600" />
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-[#3B82F6]" />
                 {t('onboarding.university_name')}
               </label>
               <input
@@ -172,13 +172,13 @@ export default function SettingsPage() {
                 value={universityName}
                 onChange={(e) => setUniversityName(e.target.value)}
                 placeholder={t('onboarding.university_placeholder')}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-electric-600" />
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-[#3B82F6]" />
                 {t('onboarding.branch')}
               </label>
               <input
@@ -186,13 +186,13 @@ export default function SettingsPage() {
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
                 placeholder={t('onboarding.branch_placeholder')}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-tealBrand-600" />
+              <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-[#06B6D4]" />
                 {t('onboarding.phone_number')}
               </label>
               <input
@@ -200,18 +200,18 @@ export default function SettingsPage() {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder={t('onboarding.phone_placeholder')}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
               />
             </div>
           </div>
 
           {/* Daily Study Hours & Flexible Availability */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-gray-200 space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold text-gray-800">
+          <div className="bg-[#0B1220] p-4 rounded-2xl border border-[#1E293B] space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-[#F8FAFC]">
               <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-electric-600" /> {t('onboarding.study_minutes_label')}
+                <Clock className="w-4 h-4 text-[#3B82F6]" /> {t('onboarding.study_minutes_label')}
               </span>
-              <span className="text-electric-600 font-black">{availableMinutes} min/session ({dailyHours} hrs/day)</span>
+              <span className="text-[#06B6D4] font-black">{availableMinutes} min/session ({dailyHours} hrs/day)</span>
             </div>
 
             {/* Quick Presets */}
@@ -226,8 +226,8 @@ export default function SettingsPage() {
                   }}
                   className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                     availableMinutes === mins
-                      ? 'bg-electric-600 text-white shadow-xs'
-                      : 'bg-white text-gray-700 border border-gray-200 hover:border-electric-300'
+                      ? 'bg-[#3B82F6] text-white shadow-sm'
+                      : 'bg-[#172033] text-[#94A3B8] border border-[#1E293B] hover:text-[#F8FAFC]'
                   }`}
                 >
                   {mins} min {mins === 57 && '⚡ (Optimal)'}
@@ -246,9 +246,9 @@ export default function SettingsPage() {
                 setAvailableMinutes(m);
                 setDailyHours(Math.max(1, Math.round(m / 60)));
               }}
-              className="w-full accent-electric-600 cursor-pointer"
+              className="w-full accent-[#3B82F6] cursor-pointer"
             />
-            <div className="flex justify-between text-[11px] text-gray-400 font-semibold">
+            <div className="flex justify-between text-[11px] text-[#94A3B8] font-semibold">
               <span>15 min</span>
               <span>57 min (Recommended)</span>
               <span>240 min</span>
@@ -257,8 +257,8 @@ export default function SettingsPage() {
 
           {/* Language Selector in Settings */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-              <Globe2 className="w-4 h-4 text-electric-600" />
+            <label className="block text-xs font-bold text-[#94A3B8] mb-2 flex items-center gap-1.5">
+              <Globe2 className="w-4 h-4 text-[#3B82F6]" />
               {t('settings.current_language')} (Strictly 4 Supported)
             </label>
 
@@ -272,13 +272,13 @@ export default function SettingsPage() {
                     onClick={() => setSelectedLang(l.code)}
                     className={`p-3 rounded-xl border text-center transition-all ${
                       isSelected
-                        ? 'bg-electric-50 border-electric-600 ring-2 ring-electric-600/30'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                        ? 'bg-[#172033] border-[#3B82F6] ring-2 ring-[#3B82F6]/30'
+                        : 'bg-[#0B1220] border-[#1E293B] hover:bg-[#172033]'
                     }`}
                   >
                     <span className="text-xl block mb-1">{l.flag}</span>
-                    <span className="font-bold text-sm text-gray-900 block">{l.native}</span>
-                    <span className="text-[11px] text-gray-400">{l.label}</span>
+                    <span className="font-bold text-sm text-[#F8FAFC] block">{l.native}</span>
+                    <span className="text-[11px] text-[#94A3B8]">{l.label}</span>
                   </button>
                 );
               })}
@@ -288,7 +288,7 @@ export default function SettingsPage() {
           {/* Save Button */}
           <div className="flex items-center justify-between pt-4">
             {savedSuccess ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981]">
                 <CheckCircle2 className="w-4 h-4" /> Preferences saved successfully!
               </span>
             ) : <div />}
@@ -296,7 +296,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-700 text-white font-bold text-xs shadow-md shadow-electric-600/25 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs shadow-md shadow-[#3B82F6]/25 transition-all"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {t('settings.save_btn')}
@@ -305,20 +305,20 @@ export default function SettingsPage() {
         </form>
 
         {/* Daily Reminder System Section */}
-        <div className="pt-6 border-t border-gray-100 space-y-4">
-          <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-            <Mail className="w-5 h-5 text-tealBrand-600" />
+        <div className="pt-6 border-t border-[#1E293B] space-y-4">
+          <h2 className="text-base font-bold text-[#F8FAFC] flex items-center gap-2">
+            <Mail className="w-5 h-5 text-[#06B6D4]" />
             {t('settings.reminder_section')}
           </h2>
 
-          <div className="p-4 rounded-2xl bg-slate-50 border border-gray-200 space-y-3">
+          <div className="p-4 rounded-2xl bg-[#0B1220] border border-[#1E293B] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-gray-800">
+                <p className="text-xs font-bold text-[#F8FAFC]">
                   {t('settings.reminder_email_label')}
                 </p>
-                <p className="text-[11px] text-gray-400">
-                  Target destination: <strong className="text-gray-700">{user?.email}</strong>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Target destination: <strong className="text-[#F8FAFC]">{user?.email}</strong>
                 </p>
               </div>
 
@@ -326,7 +326,7 @@ export default function SettingsPage() {
                 type="button"
                 disabled={testingReminder}
                 onClick={handleTestReminder}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-tealBrand-600 hover:bg-tealBrand-700 text-white text-xs font-bold shadow-sm transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold shadow-sm transition-all"
               >
                 {testingReminder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
                 {t('settings.test_reminder_btn')}
@@ -334,23 +334,23 @@ export default function SettingsPage() {
             </div>
 
             {reminderResult && (
-              <div className="mt-3 p-3 rounded-xl bg-white border border-tealBrand-200 text-xs text-gray-800 animate-in fade-in">
-                <div className="font-bold text-tealBrand-800 mb-1">
+              <div className="mt-3 p-3 rounded-xl bg-[#172033] border border-[#06B6D4]/30 text-xs text-[#F8FAFC] animate-in fade-in">
+                <div className="font-bold text-[#06B6D4] mb-1">
                   ✓ Localized notification generated for [{reminderResult.language}]:
                 </div>
-                <div className="font-semibold text-gray-700">Subject: {reminderResult.subject}</div>
-                <div className="text-gray-500 mt-1 italic">"{reminderResult.body}"</div>
+                <div className="font-semibold text-[#F8FAFC]">Subject: {reminderResult.subject}</div>
+                <div className="text-[#94A3B8] mt-1 italic">"{reminderResult.body}"</div>
               </div>
             )}
           </div>
         </div>
 
         {/* Sign Out Button */}
-        <div className="pt-6 border-t border-gray-100 flex justify-end">
+        <div className="pt-6 border-t border-[#1E293B] flex justify-end">
           <button
             type="button"
             onClick={logout}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-bold transition-colors"
           >
             <LogOut className="w-4 h-4" />
             {t('nav.logout')}

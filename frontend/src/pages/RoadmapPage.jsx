@@ -156,15 +156,15 @@ export default function RoadmapPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
-            <Map className="w-8 h-8 text-electric-600" />
+          <h1 className="text-2xl sm:text-3xl font-black text-[#F8FAFC] tracking-tight flex items-center gap-2.5">
+            <Map className="w-8 h-8 text-[#3B82F6]" />
             {t('roadmap.title')}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-[#94A3B8] text-sm mt-1">
             {t('roadmap.subtitle')}
           </p>
         </div>
@@ -172,19 +172,19 @@ export default function RoadmapPage() {
         {activeRoadmap && (
           <button
             onClick={handleExportPDF}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-900 hover:bg-primary-800 text-white text-xs sm:text-sm font-bold shadow-md transition-all self-start md:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#172033] hover:bg-[#1E293B] border border-[#1E293B] text-[#F8FAFC] text-xs sm:text-sm font-bold shadow-md transition-all self-start md:self-auto"
           >
-            <Download className="w-4 h-4 text-tealBrand-300" />
+            <Download className="w-4 h-4 text-[#06B6D4]" />
             {t('roadmap.export_pdf')}
           </button>
         )}
       </div>
 
       {/* Generator Form Card */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+      <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl">
         <form onSubmit={handleGenerate} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">
+            <label className="block text-sm font-bold text-[#F8FAFC] mb-2">
               {t('roadmap.form_skill')}
             </label>
             <input
@@ -192,7 +192,7 @@ export default function RoadmapPage() {
               value={skillName}
               onChange={(e) => setSkillName(e.target.value)}
               placeholder={t('roadmap.form_skill_placeholder')}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 text-gray-900 outline-none text-sm transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-[#1E293B] bg-[#172033] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 text-[#F8FAFC] outline-none text-sm transition-all"
             />
             {/* Quick chips */}
             <div className="flex flex-wrap gap-2 mt-2.5">
@@ -201,7 +201,7 @@ export default function RoadmapPage() {
                   key={s}
                   type="button"
                   onClick={() => setSkillName(s)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-electric-50 hover:text-electric-700 text-xs font-semibold text-gray-600 transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-[#172033] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-semibold text-[#94A3B8] hover:text-[#F8FAFC] transition-colors"
                 >
                   + {s}
                 </button>
@@ -211,13 +211,13 @@ export default function RoadmapPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
+              <label className="block text-sm font-bold text-[#F8FAFC] mb-2">
                 {t('roadmap.form_duration')}
               </label>
               <select
                 value={durationWeeks}
                 onChange={(e) => setDurationWeeks(parseInt(e.target.value, 10))}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 text-gray-900 outline-none text-sm bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 text-[#F8FAFC] outline-none text-sm bg-[#172033]"
               >
                 <option value={2}>2 Weeks (Fast-track)</option>
                 <option value={4}>4 Weeks (1 Month Standard)</option>
@@ -227,8 +227,8 @@ export default function RoadmapPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-2">
-                {t('roadmap.form_hours')}: <span className="text-electric-600 font-extrabold">{dailyHours} hrs</span>
+              <label className="block text-sm font-bold text-[#F8FAFC] mb-2">
+                {t('roadmap.form_hours')}: <span className="text-[#06B6D4] font-extrabold">{dailyHours} hrs</span>
               </label>
               <input
                 type="range"
@@ -236,7 +236,7 @@ export default function RoadmapPage() {
                 max="8"
                 value={dailyHours}
                 onChange={(e) => setDailyHours(parseInt(e.target.value, 10))}
-                className="w-full accent-electric-600 cursor-pointer mt-3"
+                className="w-full accent-[#3B82F6] cursor-pointer mt-3"
               />
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function RoadmapPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-tealBrand-600 to-electric-600 hover:from-tealBrand-500 hover:to-electric-500 text-white font-bold text-sm shadow-md shadow-electric-600/25 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white font-bold text-sm shadow-md shadow-[#3B82F6]/25 transition-all"
             >
               {loading ? (
                 <>
@@ -254,7 +254,7 @@ export default function RoadmapPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-tealBrand-200" />
+                  <Sparkles className="w-4 h-4 text-white" />
                   {t('roadmap.btn_generate')}
                 </>
               )}
@@ -267,28 +267,28 @@ export default function RoadmapPage() {
       {activeRoadmap && (
         <div className="space-y-6">
           {/* Progress Header */}
-          <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-50 text-electric-700 text-xs font-semibold mb-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#172033] text-[#06B6D4] text-xs font-semibold mb-2 border border-[#06B6D4]/30">
                 <Target className="w-3.5 h-3.5" />
                 Target Role: {activeRoadmap.target_role}
               </div>
-              <h2 className="text-2xl font-black text-gray-900">
+              <h2 className="text-2xl font-black text-[#F8FAFC]">
                 {activeRoadmap.skill_name}
               </h2>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#94A3B8] mt-1">
                 {activeRoadmap.duration_weeks} Weeks • {activeRoadmap.daily_hours} Hours/day • {activeRoadmap.completedTasks || 0} of {activeRoadmap.totalTasks || 0} tasks completed
               </p>
             </div>
 
             <div className="w-full sm:w-64 space-y-2 text-right">
-              <div className="flex justify-between text-xs font-bold text-gray-700">
+              <div className="flex justify-between text-xs font-bold text-[#F8FAFC]">
                 <span>Progress</span>
-                <span className="text-electric-600 font-black">{activeRoadmap.progress || 0}%</span>
+                <span className="text-[#06B6D4] font-black">{activeRoadmap.progress || 0}%</span>
               </div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+              <div className="w-full bg-[#0B1220] h-3 rounded-full overflow-hidden border border-[#1E293B]">
                 <div
-                  className="bg-gradient-to-r from-tealBrand-500 to-electric-600 h-full rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] h-full rounded-full transition-all duration-300"
                   style={{ width: `${activeRoadmap.progress || 0}%` }}
                 />
               </div>
@@ -302,29 +302,29 @@ export default function RoadmapPage() {
               return (
                 <div
                   key={week.week_number}
-                  className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all"
+                  className="bg-[#111827] rounded-2xl border border-[#1E293B] shadow-xl overflow-hidden transition-all"
                 >
                   {/* Week Title Accordion Button */}
                   <button
                     type="button"
                     onClick={() => toggleWeekExpand(week.week_number)}
-                    className="w-full flex items-center justify-between p-5 bg-slate-50/70 hover:bg-slate-100/70 text-left transition-colors"
+                    className="w-full flex items-center justify-between p-5 bg-[#172033]/60 hover:bg-[#172033] text-left transition-colors border-b border-[#1E293B]"
                   >
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-electric-600">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#3B82F6]">
                         {t('roadmap.week')} {week.week_number}
                       </span>
-                      <h3 className="text-base font-bold text-gray-900 mt-0.5">
+                      <h3 className="text-base font-bold text-[#F8FAFC] mt-0.5">
                         {week.title || `Mastery Module ${week.week_number}`}
                       </h3>
                       {week.milestone && (
-                        <p className="text-xs text-tealBrand-700 font-medium mt-1">
+                        <p className="text-xs text-[#10B981] font-medium mt-1">
                           🎯 {t('roadmap.milestone')}: {week.milestone}
                         </p>
                       )}
                     </div>
                     <ChevronDown
-                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                      className={`w-5 h-5 text-[#94A3B8] transition-transform duration-200 ${
                         isExpanded ? 'rotate-180' : ''
                       }`}
                     />
@@ -332,7 +332,7 @@ export default function RoadmapPage() {
 
                   {/* Tasks List */}
                   {isExpanded && (
-                    <div className="p-5 space-y-4 divide-y divide-gray-100">
+                    <div className="p-5 space-y-4 divide-y divide-[#1E293B]">
                       {(week.tasks || []).map((task) => {
                         let resources = [];
                         if (typeof task.resource_links === 'string') {
@@ -345,7 +345,7 @@ export default function RoadmapPage() {
                           <div
                             key={task.id}
                             className={`pt-4 first:pt-0 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
-                              task.is_completed ? 'opacity-70' : ''
+                              task.is_completed ? 'opacity-60' : ''
                             }`}
                           >
                             <div className="flex items-start gap-3">
@@ -354,18 +354,18 @@ export default function RoadmapPage() {
                                 onClick={() => toggleTask(task.id, task.is_completed)}
                                 className={`w-5 h-5 rounded-md mt-0.5 flex items-center justify-center border transition-all ${
                                   task.is_completed
-                                    ? 'bg-emerald-500 border-emerald-500 text-white'
-                                    : 'border-gray-300 hover:border-electric-500'
+                                    ? 'bg-[#10B981] border-[#10B981] text-white'
+                                    : 'border-[#1E293B] hover:border-[#3B82F6]'
                                 }`}
                               >
                                 {task.is_completed && <CheckCircle2 className="w-4 h-4" />}
                               </button>
 
                               <div>
-                                <span className="text-xs font-bold text-gray-400 block">
+                                <span className="text-xs font-bold text-[#94A3B8] block">
                                   {t('roadmap.day')} {task.day_number}
                                 </span>
-                                <p className={`text-sm font-semibold ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                                <p className={`text-sm font-semibold ${task.is_completed ? 'line-through text-[#94A3B8]' : 'text-[#F8FAFC]'}`}>
                                   {task.task_description}
                                 </p>
                               </div>
@@ -382,10 +382,10 @@ export default function RoadmapPage() {
                                     rel="noreferrer"
                                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
                                       res.type === 'video'
-                                        ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
                                         : res.type === 'practice'
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                        : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                        ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30 hover:bg-[#10B981]/20'
+                                        : 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]/30 hover:bg-[#3B82F6]/20'
                                     }`}
                                   >
                                     {res.type === 'video' && <Video className="w-3 h-3" />}

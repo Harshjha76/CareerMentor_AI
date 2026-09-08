@@ -82,33 +82,33 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 selection:bg-electric-500 selection:text-white">
-      <div className="max-w-2xl w-full bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-[#0B1220] text-[#F8FAFC] flex items-center justify-center p-4 sm:p-6 selection:bg-[#3B82F6] selection:text-white">
+      <div className="max-w-2xl w-full bg-[#111827] rounded-3xl border border-[#1E293B] shadow-2xl overflow-hidden">
         {/* Header with Progress Bar */}
-        <div className="bg-gradient-to-r from-primary-900 via-electric-800 to-primary-900 p-6 sm:p-8 text-white relative">
+        <div className="bg-gradient-to-r from-[#111827] via-[#172033] to-[#0B1220] border-b border-[#1E293B] p-6 sm:p-8 text-[#F8FAFC] relative">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-tealBrand-300" />
-              <span className="text-xs uppercase tracking-widest font-bold text-tealBrand-200">
+              <Sparkles className="w-5 h-5 text-[#06B6D4]" />
+              <span className="text-xs uppercase tracking-widest font-bold text-[#06B6D4]">
                 Onboarding Questionnaire
               </span>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/10 text-white border border-white/15">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#172033] text-[#F8FAFC] border border-[#1E293B]">
               Step {step} of 3
             </span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-black mb-1">
+          <h2 className="text-2xl sm:text-3xl font-black mb-1 text-[#F8FAFC]">
             {t('onboarding.title')}
           </h2>
-          <p className="text-slate-300 text-xs sm:text-sm">
+          <p className="text-[#94A3B8] text-xs sm:text-sm">
             {t('onboarding.subtitle')}
           </p>
 
           {/* Stepper bar */}
-          <div className="w-full bg-white/20 h-1.5 rounded-full mt-6 overflow-hidden">
+          <div className="w-full bg-[#0B1220] h-1.5 rounded-full mt-6 overflow-hidden border border-[#1E293B]">
             <div
-              className="h-full bg-tealBrand-400 transition-all duration-300 ease-out"
+              className="h-full bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] transition-all duration-300 ease-out"
               style={{ width: `${(step / 3) * 100}%` }}
             />
           </div>
@@ -120,15 +120,15 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-electric-600" />
+                <h3 className="text-lg font-bold text-[#F8FAFC] mb-1 flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-[#3B82F6]" />
                   {t('onboarding.step1_title')}
                 </h3>
-                <p className="text-xs text-gray-500">Define your primary career target, college background, and contact info.</p>
+                <p className="text-xs text-[#94A3B8]">Define your primary career target, college background, and contact info.</p>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#94A3B8] mb-2">
                   {t('onboarding.target_role')}
                 </label>
                 <input
@@ -136,12 +136,12 @@ export default function OnboardingPage() {
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
                   placeholder={t('onboarding.target_role_placeholder')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 text-gray-900 outline-none text-sm transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-[#1E293B] bg-[#172033] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 text-[#F8FAFC] outline-none text-sm transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#94A3B8] mb-2">
                   {t('onboarding.dream_companies')}
                 </label>
                 <input
@@ -149,16 +149,16 @@ export default function OnboardingPage() {
                   value={dreamCompanies}
                   onChange={(e) => setDreamCompanies(e.target.value)}
                   placeholder={t('onboarding.dream_companies_placeholder')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 text-gray-900 outline-none text-sm transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-[#1E293B] bg-[#172033] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 text-[#F8FAFC] outline-none text-sm transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1.5">Separate multiple companies with commas.</p>
+                <p className="text-xs text-[#94A3B8] mt-1.5">Separate multiple companies with commas.</p>
               </div>
 
               {/* College, Branch, Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#1E293B]">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <GraduationCap className="w-3.5 h-3.5 text-electric-600" />
+                  <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-[#3B82F6]" />
                     {t('onboarding.university_name')}
                   </label>
                   <input
@@ -166,13 +166,13 @@ export default function OnboardingPage() {
                     value={universityName}
                     onChange={(e) => setUniversityName(e.target.value)}
                     placeholder={t('onboarding.university_placeholder')}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-electric-600" />
+                  <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-[#3B82F6]" />
                     {t('onboarding.branch')}
                   </label>
                   <input
@@ -180,13 +180,13 @@ export default function OnboardingPage() {
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
                     placeholder={t('onboarding.branch_placeholder')}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-tealBrand-600" />
+                  <label className="block text-xs font-bold text-[#94A3B8] mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-[#06B6D4]" />
                     {t('onboarding.phone_number')}
                   </label>
                   <input
@@ -194,7 +194,7 @@ export default function OnboardingPage() {
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     placeholder={t('onboarding.phone_placeholder')}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#1E293B] bg-[#172033] text-sm text-[#F8FAFC] focus:border-[#3B82F6] outline-none"
                   />
                 </div>
               </div>
@@ -205,11 +205,11 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Code2 className="w-5 h-5 text-electric-600" />
+                <h3 className="text-lg font-bold text-[#F8FAFC] mb-1 flex items-center gap-2">
+                  <Code2 className="w-5 h-5 text-[#3B82F6]" />
                   {t('onboarding.step2_title')}
                 </h3>
-                <p className="text-xs text-gray-500">{t('onboarding.skills_label')}</p>
+                <p className="text-xs text-[#94A3B8]">{t('onboarding.skills_label')}</p>
               </div>
 
               <div className="flex flex-wrap gap-2.5 max-h-72 overflow-y-auto pr-1">
@@ -222,8 +222,8 @@ export default function OnboardingPage() {
                       onClick={() => toggleSkill(skill)}
                       className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
                         isSelected
-                          ? 'bg-electric-600 text-white border-electric-600 shadow-sm'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-electric-400 hover:bg-electric-50/50'
+                          ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-sm'
+                          : 'bg-[#172033] text-[#94A3B8] border-[#1E293B] hover:text-[#F8FAFC] hover:border-[#3B82F6]/40'
                       }`}
                     >
                       {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
@@ -233,8 +233,8 @@ export default function OnboardingPage() {
                 })}
               </div>
 
-              <p className="text-xs text-gray-500">
-                Selected: <span className="font-bold text-electric-700">{selectedSkills.length} skills</span>
+              <p className="text-xs text-[#94A3B8]">
+                Selected: <span className="font-bold text-[#06B6D4]">{selectedSkills.length} skills</span>
               </p>
             </div>
           )}
@@ -243,20 +243,20 @@ export default function OnboardingPage() {
           {step === 3 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-electric-600" />
+                <h3 className="text-lg font-bold text-[#F8FAFC] mb-1 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-[#3B82F6]" />
                   {t('onboarding.step3_title')}
                 </h3>
-                <p className="text-xs text-gray-500">Personalize your study rhythm and mentorship language.</p>
+                <p className="text-xs text-[#94A3B8]">Personalize your study rhythm and mentorship language.</p>
               </div>
 
               {/* Study Hours & Flexible Availability */}
-              <div className="bg-slate-50 p-5 rounded-2xl border border-gray-200 space-y-3">
+              <div className="bg-[#0B1220] p-5 rounded-2xl border border-[#1E293B] space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-800">
+                  <span className="text-sm font-bold text-[#F8FAFC]">
                     {t('onboarding.study_minutes_label')}
                   </span>
-                  <span className="px-3 py-1 bg-electric-100 text-electric-800 font-extrabold text-sm rounded-lg">
+                  <span className="px-3 py-1 bg-[#3B82F6]/20 border border-[#3B82F6]/30 text-[#3B82F6] font-extrabold text-sm rounded-lg">
                     {availableMinutes} Minutes ({Math.round((availableMinutes / 60) * 10) / 10} hrs)
                   </span>
                 </div>
@@ -273,8 +273,8 @@ export default function OnboardingPage() {
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                         availableMinutes === mins
-                          ? 'bg-electric-600 text-white shadow-sm ring-2 ring-electric-400/30'
-                          : 'bg-white text-gray-700 border border-gray-200 hover:border-electric-300'
+                          ? 'bg-[#3B82F6] text-white shadow-sm ring-2 ring-[#3B82F6]/30'
+                          : 'bg-[#172033] text-[#94A3B8] border border-[#1E293B] hover:text-[#F8FAFC]'
                       }`}
                     >
                       {mins} min {mins === 57 && '⚡ (Optimal)'}
@@ -294,9 +294,9 @@ export default function OnboardingPage() {
                       setAvailableMinutes(m);
                       setDailyHours(Math.max(1, Math.round(m / 60)));
                     }}
-                    className="w-full accent-electric-600 cursor-pointer"
+                    className="w-full accent-[#3B82F6] cursor-pointer"
                   />
-                  <div className="flex justify-between text-[11px] text-gray-400 font-semibold mt-1">
+                  <div className="flex justify-between text-[11px] text-[#94A3B8] font-semibold mt-1">
                     <span>15 min</span>
                     <span>57 min (Recommended)</span>
                     <span>4 hours (240 min)</span>
@@ -304,13 +304,13 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              {/* Language Selection Grid (English, Hindi, Marathi, Sanskrit) */}
+              {/* Language Selection Grid */}
               <div>
-                <label className="block text-sm font-bold text-gray-800 mb-1.5 flex items-center gap-2">
-                  <Globe2 className="w-4 h-4 text-electric-600" />
+                <label className="block text-sm font-bold text-[#F8FAFC] mb-1.5 flex items-center gap-2">
+                  <Globe2 className="w-4 h-4 text-[#3B82F6]" />
                   {t('onboarding.language_label')}
                 </label>
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-[#94A3B8] mb-3">
                   {t('onboarding.language_hint')}
                 </p>
 
@@ -324,13 +324,13 @@ export default function OnboardingPage() {
                         onClick={() => handleLanguageChange(lang.code)}
                         className={`p-3.5 rounded-2xl border text-left transition-all ${
                           isSelected
-                            ? 'bg-electric-50/80 border-electric-600 ring-2 ring-electric-600/30 shadow-sm'
-                            : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            ? 'bg-[#172033] border-[#3B82F6] ring-2 ring-[#3B82F6]/30 shadow-sm'
+                            : 'bg-[#0B1220] border-[#1E293B] hover:bg-[#172033]'
                         }`}
                       >
                         <div className="text-xl mb-1">{lang.flag}</div>
-                        <div className="font-bold text-sm text-gray-900">{lang.native}</div>
-                        <div className="text-xs text-gray-500">{lang.label}</div>
+                        <div className="font-bold text-sm text-[#F8FAFC]">{lang.native}</div>
+                        <div className="text-xs text-[#94A3B8]">{lang.label}</div>
                       </button>
                     );
                   })}
@@ -340,12 +340,12 @@ export default function OnboardingPage() {
           )}
 
           {/* Navigation Controls */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#1E293B]">
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#1E293B] text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172033] text-sm font-semibold transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" /> {t('onboarding.btn_back')}
               </button>
@@ -355,7 +355,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-700 text-white text-sm font-semibold shadow-md shadow-electric-600/20 transition-all ml-auto"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold shadow-md shadow-[#3B82F6]/20 transition-all ml-auto"
               >
                 {t('onboarding.btn_next')} <ArrowRight className="w-4 h-4" />
               </button>
@@ -364,7 +364,7 @@ export default function OnboardingPage() {
                 type="button"
                 disabled={loading}
                 onClick={handleComplete}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-tealBrand-600 to-electric-600 hover:from-tealBrand-500 hover:to-electric-500 text-white text-sm font-bold shadow-lg shadow-electric-600/25 transition-all ml-auto"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white text-sm font-bold shadow-lg shadow-[#3B82F6]/25 transition-all ml-auto"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

@@ -491,7 +491,119 @@ For high-scale systems evaluated at companies like **${companies}**:
 💡 **Next Steps**: Would you like to deep-dive into database schema optimization, or explore cache invalidation strategies?`;
   }
 
-  // 5. Behavioral & STAR Method Query
+  // 5. Java Backend Development Roadmap & Skills
+  if (lowerMsg.includes('java') && (lowerMsg.includes('backend') || lowerMsg.includes('skill') || lowerMsg.includes('learn') || lowerMsg.includes('spring'))) {
+    return `### ☕ Java Backend Engineering Mastery Roadmap for ${name}
+
+Targeting **${role}** roles at tier-1 companies like **${companies}**:
+
+#### 1. Core Language & JVM Fundamentals (Weeks 1-2)
+- **Java 17 / 21 LTS Features**: Records, Pattern Matching, Virtual Threads (Project Loom), Sealed Classes.
+- **Advanced Concurrency**: \`CompletableFuture\`, \`ExecutorService\`, Thread pools, and memory barriers (\`volatile\`, CAS).
+- **Collections & Generics**: Internal implementation of \`HashMap\` (buckets, red-black tree threshold), \`ConcurrentHashMap\`.
+
+#### 2. Enterprise Frameworks & Data Persistence (Weeks 3-4)
+- **Spring Boot 3.x**: IoC, Dependency Injection, Spring Security with Stateless JWT & OAuth2.
+- **Data Layer**: Spring Data JPA / Hibernate, N+1 query problem resolution with \`JOIN FETCH\`, Level-2 caching.
+- **Databases**: PostgreSQL schema normalization, B-Tree and GIN indexes, transaction isolation levels (ACID).
+
+#### 3. Distributed Architecture & Cloud Deployment (Weeks 5-6)
+- **Microservices Communication**: RESTful APIs with OpenAPI/Swagger, gRPC for inter-service RPC.
+- **Event-Driven Streaming**: Apache Kafka (Producers, Consumer Groups, Partitions, Idempotence).
+- **Caching & DevOps**: Redis Cache-Aside, Docker multi-stage builds, and Kubernetes basics.
+
+#### 4. Testing & Code Quality
+- **Unit & Integration Testing**: JUnit 5, Mockito, and Testcontainers for ephemeral database testing.
+
+---
+💡 **Next Step**: Would you like me to generate a 4-week structured learning roadmap for this in your **Smart Roadmap** module?`;
+  }
+
+  // 6. Career Progress & Readiness Analysis
+  if (lowerMsg.includes('career progress') || lowerMsg.includes('analyze my career') || lowerMsg.includes('my progress') || lowerMsg.includes('evaluate my progress')) {
+    return `### 📈 Comprehensive Career Velocity Analysis for ${name}
+
+Based on your active profile:
+- **Academic Foundation**: ${branch} at ${university}
+- **Target Destination**: ${role} at ${companies}
+- **Daily Focus Budget**: ${studyMins} minutes/session (${Math.round((studyMins / 60) * 10) / 10} hours/day)
+- **Current Core Competencies**: ${profile.current_skills || 'Full-Stack Foundations'}
+
+#### 🎯 Strategic Velocity Assessment
+1. **Curriculum Pacing (Top 15% Consistency)**:
+   - Your daily availability of **${studyMins} minutes** is optimal for high-retention focused deep work blocks.
+   - Dedicating 5 days a week equals **~${Math.round(studyMins * 5 / 60)} hours/week** of focused deliberate practice.
+
+2. **Skill Readiness vs Target Companies**:
+   - **DSA & Problem Solving**: Solid progress. Recommend pushing through High-Frequency Blind 75 / NeetCode 150 patterns.
+   - **Full Stack / Backend Depth**: Ready for production microservices and scalable cloud deployments.
+   - **System Design & Concurrency**: Recommended next tier for senior placement rounds at **${companies}**.
+
+3. **High-Impact Next Milestones**:
+   - Complete 1 End-to-End full-stack capstone project with Docker & CI/CD deployment.
+   - Run ATS Resume Scan to verify keyword coverage >85% for ${role}.
+   - Schedule 2 weekly mock interview practice rounds.
+
+---
+💡 **Next Action**: Would you like to review your current tasks in the **AI Planner** or run an instant resume ATS audit?`;
+  }
+
+  // 7. Study Plan Generation Query
+  if (lowerMsg.includes('study plan') || lowerMsg.includes('create a study plan') || lowerMsg.includes('study schedule') || lowerMsg.includes('schedule for me')) {
+    const dsaMins = Math.round(studyMins * 0.5);
+    const devMins = Math.round(studyMins * 0.35);
+    const revMins = studyMins - dsaMins - devMins;
+
+    return `### 📅 Custom ${studyMins}-Minute Daily Study Architecture for ${name}
+
+Engineered specifically for your target role (**${role}**) and schedule:
+
+#### 🕒 Daily Time Allocation (${studyMins} min session):
+| Block | Duration | Focus Area | High-Yield Activity |
+|---|---|---|---|
+| **Block 1: Deep Problem Solving** | **${dsaMins} mins** | Algorithms & DSA | Solve 1-2 pattern problems (Two Pointers, DP, Trees). Analyze $O(N)$ Big-O. |
+| **Block 2: Applied Engineering** | **${devMins} mins** | Core Dev & Projects | Build production features, API endpoints, or database schemas. |
+| **Block 3: Consolidation & Review** | **${revMins} mins** | CS Fundamentals | Review OS concurrency, SQL indexing, or mock interview questions. |
+
+#### 🗓️ Weekly Cadence:
+- **Mon - Thu**: Core Curriculum & Problem Solving sprints.
+- **Friday**: Integration testing, GitHub pushes, and code refactoring.
+- **Saturday**: 1 Timed Mock Coding Contest (45-60 min).
+- **Sunday**: Strategic rest & planning for the upcoming week.
+
+---
+💡 **Instant Sync**: I can push this schedule directly into your **Human + AI Planner** module! Would you like me to sync it?`;
+  }
+
+  // 8. Resume Review & Improvement Query
+  if (lowerMsg.includes('resume') || lowerMsg.includes('improve my resume') || lowerMsg.includes('cv') || lowerMsg.includes('ats score')) {
+    return `### 📄 Resume Optimization & ATS Strategy for ${name}
+
+Tailored for **${role}** applications at **${companies}**:
+
+#### 1. The Google X-Y-Z Impact Formula
+Transform passive duty bullets into quantified impact bullets:
+- ❌ *Weak*: "Developed REST APIs for a web application using Node.js."
+- ✅ *Strong*: "Engineered 14 RESTful endpoints using **Node.js, TypeScript, & PostgreSQL**, improving average query latency by **38%** and supporting **10,000+** monthly active requests."
+
+#### 2. Essential Technical Keywords to Include
+- **Languages**: Java, Python, TypeScript, SQL, Go.
+- **Frameworks & Libs**: Spring Boot, React, Node.js, Express, Docker.
+- **Data & Architecture**: Redis, PostgreSQL, MongoDB, Kafka, Microservices, RESTful APIs.
+- **Cloud & DevOps**: AWS (S3, EC2), GitHub Actions, Docker, Linux, CI/CD.
+
+#### 3. Section Architecture (ATS Friendly):
+1. **Header**: Name, LinkedIn, GitHub, Email, Phone (clean single-column).
+2. **Technical Skills**: Categorized (Languages, Frameworks, Databases, Tools).
+3. **Projects (Top Priority for College / Recent Grads)**: 2-3 standout applications with live URLs and GitHub source links.
+4. **Education**: ${university} — ${branch} (include GPA if >8.0).
+5. **Certifications & Achievements**: LeetCode rating, hackathons, cloud certifications.
+
+---
+💡 **Next Step**: You can upload your PDF/DOCX resume in the **Resume Analyzer** page for an instant 0-100 ATS compatibility breakdown!`;
+  }
+
+  // 9. Behavioral & STAR Method Query
   if (lowerMsg.includes('star') || lowerMsg.includes('interview') || lowerMsg.includes('behavioral') || lowerMsg.includes('tell me about') || lowerMsg.includes('salary')) {
     return `### 🎙️ The STAR Framework for Behavioral Interviews
 
@@ -506,7 +618,7 @@ Top tech interviewers evaluate structure and quantifiable business impact:
 💡 **Next Steps**: Would you like to practice your response to: *"Tell me about a time you resolved a difficult technical disagreement"*?`;
   }
 
-  // 6. Generic intelligent response
+  // 10. Generic intelligent response
   return `### 💡 Career Guidance & Strategy for ${name}
 
 Regarding your inquiry: *"**${message.slice(0, 100)}**"*

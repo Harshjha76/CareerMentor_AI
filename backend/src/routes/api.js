@@ -33,7 +33,13 @@ import {
 import {
   getChatHistory,
   sendMessage,
-  clearChatHistory
+  clearChatHistory,
+  getSessions,
+  createSession,
+  getSessionMessages,
+  sendSessionMessage,
+  deleteSession,
+  renameSession
 } from '../controllers/chatController.js';
 
 import {
@@ -79,7 +85,14 @@ router.post('/planner/tasks', authenticateToken, savePlanTasks);
 router.post('/planner/analyze', authenticateToken, analyzePlanProsAndCons);
 router.post('/planner/optimize', authenticateToken, applyAIOptimization);
 
-// 5. 24/7 Career Chatbot
+// 5. 24/7 Career Chatbot (Multi-Session & Database-Backed)
+router.get('/chat/sessions', authenticateToken, getSessions);
+router.post('/chat/sessions', authenticateToken, createSession);
+router.get('/chat/sessions/:sessionId/messages', authenticateToken, getSessionMessages);
+router.post('/chat/sessions/:sessionId/messages', authenticateToken, sendSessionMessage);
+router.delete('/chat/sessions/:sessionId', authenticateToken, deleteSession);
+router.put('/chat/sessions/:sessionId', authenticateToken, renameSession);
+// Legacy compatibility routes
 router.get('/chat/history', authenticateToken, getChatHistory);
 router.post('/chat/message', authenticateToken, sendMessage);
 router.delete('/chat/history', authenticateToken, clearChatHistory);
