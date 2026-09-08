@@ -11,7 +11,11 @@ import {
   CheckCircle2,
   Loader2,
   LogOut,
-  Sparkles
+  Sparkles,
+  GraduationCap,
+  BookOpen,
+  Phone,
+  Clock
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -22,6 +26,10 @@ export default function SettingsPage() {
   const [targetRole, setTargetRole] = useState(user?.target_role || '');
   const [dreamCompanies, setDreamCompanies] = useState(user?.dream_companies || '');
   const [currentSkills, setCurrentSkills] = useState(user?.current_skills || '');
+  const [universityName, setUniversityName] = useState(user?.university_name || '');
+  const [branch, setBranch] = useState(user?.branch || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
+  const [availableMinutes, setAvailableMinutes] = useState(user?.available_study_minutes || 57);
   const [dailyHours, setDailyHours] = useState(user?.daily_study_hours || 2);
   const [selectedLang, setSelectedLang] = useState(user?.preferred_language || language || 'en');
 
@@ -39,6 +47,10 @@ export default function SettingsPage() {
         target_role: targetRole,
         dream_companies: dreamCompanies,
         current_skills: currentSkills,
+        university_name: universityName,
+        branch: branch,
+        phone_number: phoneNumber,
+        available_study_minutes: availableMinutes,
         daily_study_hours: dailyHours,
         preferred_language: selectedLang
       });
@@ -148,20 +160,99 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Daily Study Hours */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-gray-200">
-            <div className="flex items-center justify-between mb-2 text-xs font-bold text-gray-800">
-              <span>{t('onboarding.hours_label')}</span>
-              <span className="text-electric-600 font-black">{dailyHours} hours/day</span>
+          {/* Academic & Contact Details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-3 border-t border-gray-100">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-electric-600" />
+                {t('onboarding.university_name')}
+              </label>
+              <input
+                type="text"
+                value={universityName}
+                onChange={(e) => setUniversityName(e.target.value)}
+                placeholder={t('onboarding.university_placeholder')}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+              />
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-electric-600" />
+                {t('onboarding.branch')}
+              </label>
+              <input
+                type="text"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder={t('onboarding.branch_placeholder')}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-tealBrand-600" />
+                {t('onboarding.phone_number')}
+              </label>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder={t('onboarding.phone_placeholder')}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Daily Study Hours & Flexible Availability */}
+          <div className="bg-slate-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-800">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-electric-600" /> {t('onboarding.study_minutes_label')}
+              </span>
+              <span className="text-electric-600 font-black">{availableMinutes} min/session ({dailyHours} hrs/day)</span>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[30, 45, 57, 90, 120].map((mins) => (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() => {
+                    setAvailableMinutes(mins);
+                    setDailyHours(Math.max(1, Math.round(mins / 60)));
+                  }}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                    availableMinutes === mins
+                      ? 'bg-electric-600 text-white shadow-xs'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:border-electric-300'
+                  }`}
+                >
+                  {mins} min {mins === 57 && '⚡ (Optimal)'}
+                </button>
+              ))}
+            </div>
+
             <input
               type="range"
-              min="1"
-              max="8"
-              value={dailyHours}
-              onChange={(e) => setDailyHours(parseInt(e.target.value, 10))}
+              min="15"
+              max="240"
+              step="5"
+              value={availableMinutes}
+              onChange={(e) => {
+                const m = parseInt(e.target.value, 10);
+                setAvailableMinutes(m);
+                setDailyHours(Math.max(1, Math.round(m / 60)));
+              }}
               className="w-full accent-electric-600 cursor-pointer"
             />
+            <div className="flex justify-between text-[11px] text-gray-400 font-semibold">
+              <span>15 min</span>
+              <span>57 min (Recommended)</span>
+              <span>240 min</span>
+            </div>
           </div>
 
           {/* Language Selector in Settings */}

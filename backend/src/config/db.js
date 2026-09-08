@@ -110,6 +110,10 @@ export async function initDB() {
       dream_companies TEXT,
       current_skills TEXT,
       daily_study_hours INTEGER DEFAULT 2,
+      available_study_minutes INTEGER DEFAULT 120,
+      university_name VARCHAR(255),
+      branch VARCHAR(255),
+      phone_number VARCHAR(50),
       preferred_language VARCHAR(10) DEFAULT 'en',
       is_onboarded BOOLEAN DEFAULT FALSE
     );`,
@@ -198,6 +202,21 @@ export async function initDB() {
     }
   }
 
+  // Idempotent column migrations for existing databases
+  const alterColumns = [
+    'ALTER TABLE users ADD COLUMN university_name VARCHAR(255);',
+    'ALTER TABLE users ADD COLUMN branch VARCHAR(255);',
+    'ALTER TABLE users ADD COLUMN phone_number VARCHAR(50);',
+    'ALTER TABLE users ADD COLUMN available_study_minutes INTEGER DEFAULT 120;'
+  ];
+  for (const alterSql of alterColumns) {
+    try {
+      await query(alterSql);
+    } catch {
+      // Column already exists or already migrated, safe to ignore
+    }
+  }
+
   // Seed default demo user if not exists
   try {
     const demoCheck = await query('SELECT id FROM users WHERE email = $1', ['demo.student@careerpilot.ai']);
@@ -206,8 +225,8 @@ export async function initDB() {
       await query(
         `INSERT INTO users (
           id, google_id, email, name, avatar_url, target_role, dream_companies,
-          current_skills, daily_study_hours, preferred_language, is_onboarded
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          current_skills, daily_study_hours, available_study_minutes, university_name, branch, phone_number, preferred_language, is_onboarded
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           demoId,
           'google_demo_1001',
@@ -217,7 +236,11 @@ export async function initDB() {
           'Full Stack Software Engineer',
           'Google, Microsoft, Atlassian, Infosys',
           'JavaScript, React, Node.js, Python, SQL',
-          3,
+          2,
+          57,
+          'Indian Institute of Technology (IIT)',
+          'Computer Science & Engineering',
+          '+91 98765 43210',
           'en',
           true
         ]
@@ -238,6 +261,17 @@ export async function initDB() {
       );
 
       console.log('🌱 Seeded demo student profile');
+    } else {
+      // Ensure existing demo user has enriched fields
+      await query(
+        `UPDATE users SET
+          university_name = COALESCE(university_name, 'Indian Institute of Technology (IIT)'),
+          branch = COALESCE(branch, 'Computer Science & Engineering'),
+          phone_number = COALESCE(phone_number, '+91 98765 43210'),
+          available_study_minutes = COALESCE(available_study_minutes, 57)
+         WHERE email = $1`,
+        ['demo.student@careerpilot.ai']
+      );
     }
   } catch (seedErr) {
     console.warn('Notice on seeding demo user:', seedErr.message);

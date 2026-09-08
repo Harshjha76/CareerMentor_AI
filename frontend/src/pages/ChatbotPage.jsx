@@ -17,7 +17,12 @@ import {
   Briefcase,
   HelpCircle,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Mic,
+  MicOff,
+  Paperclip,
+  X,
+  FileText
 } from 'lucide-react';
 
 export default function ChatbotPage() {
@@ -29,7 +34,14 @@ export default function ChatbotPage() {
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [copiedId, setCopiedId] = useState(null);
+
+  // Speech & Attachment States
+  const [isListening, setIsListening] = useState(false);
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [fileReading, setFileReading] = useState(false);
   const chatBottomRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     loadChatHistory();
@@ -74,23 +86,92 @@ export default function ChatbotPage() {
     return `Hello **${name || 'there'}**! 🌟\n\nI am your 24/7 personal **CareerPilot AI Mentor** (operating with ChatGPT-4o & Claude-level career intelligence).\n\nI am calibrated for your target role (**${role || 'Full Stack Software Engineer'}**) and dream companies:\n- **Technical Mastery**: Live mock interviews, system design blueprints, and DSA optimization.\n- **Behavioral Frameworks**: STAR method interview coaching.\n- **Portfolio Engineering**: Architecting standout projects that impress hiring managers.\n\nWhat specific challenge can we tackle together right now?`;
   }
 
+  const toggleSpeechRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech Recognition is not supported by your browser. Please use Google Chrome or Microsoft Edge.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : language === 'sa' ? 'sa-IN' : 'en-US';
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        setIsListening(false);
+      };
+      recognition.onerror = (err) => {
+        console.warn('Speech recognition notice:', err);
+        setIsListening(false);
+      };
+      recognition.onend = () => setIsListening(false);
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+      setIsListening(false);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileReading(true);
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const text = event.target?.result || '';
+      setAttachedFile({
+        name: file.name,
+        type: file.name.endsWith('.json') ? 'roadmap' : 'document',
+        size: (file.size / 1024).toFixed(1) + ' KB',
+        content: typeof text === 'string' ? text : 'Binary file'
+      });
+      setFileReading(false);
+    };
+
+    reader.onerror = () => {
+      alert('Failed to read file');
+      setFileReading(false);
+    };
+
+    reader.readAsText(file);
+  };
+
   const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
-    if (!query.trim() || sending) return;
+    if ((!query.trim() && !attachedFile) || sending) return;
+
+    const attachmentPayload = attachedFile ? { ...attachedFile } : null;
 
     const userMsg = {
       id: `u-${Date.now()}`,
       sender: 'user',
-      text: query,
+      text: query || (attachmentPayload ? `Uploaded: ${attachmentPayload.name}` : ''),
+      attachment: attachmentPayload,
       timestamp: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
+    setAttachedFile(null);
     setSending(true);
 
     try {
-      const res = await api.chat.sendMessage(query, language);
+      const res = await api.chat.sendMessage(query, language, attachmentPayload);
       setMessages(prev => [...prev, res.message]);
     } catch (err) {
       alert('Error communicating with mentor: ' + err.message);
@@ -277,24 +358,74 @@ export default function ChatbotPage() {
         ))}
       </div>
 
-      {/* Input Box */}
-      <div className="bg-white rounded-b-3xl border border-gray-200 border-t-0 p-4 shadow-sm">
+      {/* Input Box with Attachment Chip and Voice Mic */}
+      <div className="bg-white rounded-b-3xl border border-gray-200 border-t-0 p-4 shadow-sm space-y-2">
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,.txt,.json,.md"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+
+        {/* Attachment preview chip */}
+        {attachedFile && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900 w-fit animate-in fade-in">
+            <FileText className="w-4 h-4 text-purple-600" />
+            <span className="font-semibold max-w-[220px] truncate">{attachedFile.name}</span>
+            <span className="text-[10px] text-purple-500 font-mono">({attachedFile.size})</span>
+            <button
+              type="button"
+              onClick={() => setAttachedFile(null)}
+              className="p-0.5 text-purple-400 hover:text-purple-700 rounded-full"
+              title="Remove attachment"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         <form
           onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-          className="flex items-center gap-3"
+          className="flex items-center gap-2 sm:gap-3"
         >
+          {/* File Attachment Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-3 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-2xl border border-gray-200 transition-colors"
+            title="Upload personal roadmap or document (PDF, TXT, JSON)"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
+          {/* Voice Microphone Button */}
+          <button
+            type="button"
+            onClick={toggleSpeechRecognition}
+            className={`p-3 rounded-2xl border transition-all ${
+              isListening
+                ? 'bg-red-500 text-white border-red-500 shadow-md shadow-red-500/30 animate-pulse'
+                : 'text-gray-500 hover:text-electric-700 hover:bg-electric-50 border-gray-200'
+            }`}
+            title={isListening ? "Listening... (Click to stop)" : "Speak via Microphone"}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={t('chat.placeholder')}
+            placeholder={isListening ? "Listening... speak now..." : t('chat.placeholder')}
             className="flex-1 px-4 py-3 rounded-2xl border border-gray-300 text-sm focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 text-gray-900 outline-none transition-all"
           />
 
           <button
             type="submit"
-            disabled={!inputText.trim() || sending}
-            className="px-6 py-3 rounded-2xl bg-electric-600 hover:bg-electric-700 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-electric-600/25 transition-all flex items-center gap-2"
+            disabled={(!inputText.trim() && !attachedFile) || sending}
+            className="px-5 sm:px-6 py-3 rounded-2xl bg-electric-600 hover:bg-electric-700 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-electric-600/25 transition-all flex items-center gap-2"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             <span className="hidden sm:inline">{t('chat.btn_send')}</span>

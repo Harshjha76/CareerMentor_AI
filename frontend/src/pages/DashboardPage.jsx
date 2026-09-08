@@ -36,6 +36,25 @@ export default function DashboardPage() {
   const [agentNotification, setAgentNotification] = useState(null);
   const [triggeringCheckin, setTriggeringCheckin] = useState(false);
 
+  // Flexible Availability & Interactive Charts State
+  const [availableMinutes, setAvailableMinutes] = useState(user?.available_study_minutes || 57);
+  const [hoveredStudyIndex, setHoveredStudyIndex] = useState(null);
+  const [hoveredGapIndex, setHoveredGapIndex] = useState(null);
+  const [customMinsInput, setCustomMinsInput] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  const handleSelectMinutes = async (mins) => {
+    const val = parseInt(mins, 10);
+    if (!val || val <= 0) return;
+    setAvailableMinutes(val);
+    setShowCustomInput(false);
+    try {
+      await api.auth.updateProfile({ available_study_minutes: val });
+    } catch (e) {
+      console.warn('Failed to save study minutes:', e);
+    }
+  };
+
   useEffect(() => {
     async function loadDashboardData() {
       try {
@@ -276,189 +295,435 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* REALISTIC PIE CHARTS & VISUAL ANALYTICS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Pie Chart 1: Study Time Allocation */}
-        <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-electric-600" />
-              {t('dashboard.chart_study_time')}
-            </h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-              Active Sprint
-            </span>
+      {/* DEDICATED COMPARTMENT: WHAT I KNOW & SKILLS VAULT (Prominently below title & launchpad) */}
+      <div className="bg-gradient-to-br from-white via-slate-50 to-purple-50/40 rounded-3xl border border-purple-100 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-purple-100 pb-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-tealBrand-500 animate-ping"></span>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-purple-700">
+                Knowledge Vault & Skill Gap Compartment
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-gray-900">
+              What I Know vs What I Need To Know
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+              Live skill alignment for <span className="font-bold text-gray-800">{user?.target_role || 'Software Engineer'}</span> at <span className="font-bold text-gray-800">{user?.dream_companies || 'Google, Microsoft'}</span>.
+            </p>
           </div>
 
+          <Link
+            to="/what-i-know"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-500/20 transition-all hover:scale-[1.02]"
+          >
+            <BrainCircuit className="w-4 h-4" />
+            Manage Full Vault →
+          </Link>
+        </div>
+
+        {/* Skill Matrix Breakdown Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Mastered Skills Preview */}
+          <div className="p-5 rounded-2xl bg-white border border-emerald-100 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-emerald-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                What I Know (Mastered • 68%)
+              </h4>
+              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                Verified
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Proficiencies proven in previous projects and verified ATS assessments:
+            </p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {['Python', 'JavaScript', 'React.js', 'Node.js', 'PostgreSQL', 'Git & GitHub', 'REST APIs'].map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200/60"
+                >
+                  ✓ {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Target Gap Skills Preview */}
+          <div className="p-5 rounded-2xl bg-white border border-amber-100 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-amber-900 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500" />
+                What I Need To Know (Target Gap • 32%)
+              </h4>
+              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                Tier-1 Required
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Priority gaps to bridge for technical interviews at {user?.dream_companies || 'Google, Microsoft'}:
+            </p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {['System Design & Architecture', 'Redis Caching & Pub/Sub', 'Docker & CI/CD Pipelines', 'Dynamic Programming on Trees'].map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200/60"
+                >
+                  ⚡ {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* REALISTIC INTERACTIVE PIE CHARTS & VISUAL ANALYTICS WITH CURSOR HOVER TOOLTIP */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Pie Chart 1: Study Time Allocation with Flexible Availability Selector */}
+        <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-electric-600" />
+                Study Time Allocation
+              </h3>
+              <p className="text-xs text-gray-500">
+                Current availability: <span className="font-bold text-electric-700">{availableMinutes} mins/day</span>
+              </p>
+            </div>
+
+            {/* Quick Availability Pills (30m, 45m, 57m, 90m, Custom) */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+              {[30, 45, 57, 90].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => handleSelectMinutes(m)}
+                  className={`px-2.5 py-1 rounded-xl transition-all ${
+                    availableMinutes === m
+                      ? 'bg-white text-electric-700 shadow-xs'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {m}m
+                </button>
+              ))}
+              <button
+                onClick={() => setShowCustomInput(!showCustomInput)}
+                className={`px-2 py-1 rounded-xl transition-all ${
+                  ![30, 45, 57, 90].includes(availableMinutes)
+                    ? 'bg-white text-electric-700 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                Custom
+              </button>
+            </div>
+          </div>
+
+          {showCustomInput && (
+            <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-2xl border border-gray-200">
+              <span className="text-xs text-gray-600 font-medium">Set daily study time:</span>
+              <input
+                type="number"
+                min="10"
+                max="600"
+                value={customMinsInput}
+                onChange={(e) => setCustomMinsInput(e.target.value)}
+                placeholder="e.g. 57"
+                className="w-20 px-2 py-1 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-900 outline-none"
+              />
+              <button
+                onClick={() => {
+                  if (customMinsInput) handleSelectMinutes(customMinsInput);
+                }}
+                className="px-3 py-1 bg-electric-600 text-white rounded-lg text-xs font-bold hover:bg-electric-700"
+              >
+                Apply
+              </button>
+            </div>
+          )}
+
+          {/* SVG Pie Chart with Cursor Hover */}
           <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-            {/* SVG Pie Chart */}
-            <div className="relative w-44 h-44 flex-shrink-0">
+            <div className="relative w-48 h-48 flex-shrink-0">
               <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                 {/* DSA 45% */}
                 <circle
                   cx="18" cy="18" r="15.915"
                   fill="transparent"
                   stroke="#7C3AED"
-                  strokeWidth="4"
+                  strokeWidth={hoveredStudyIndex === 0 ? "6" : "4.5"}
                   strokeDasharray="45 55"
                   strokeDashoffset="0"
+                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
+                  onMouseEnter={() => setHoveredStudyIndex(0)}
+                  onMouseLeave={() => setHoveredStudyIndex(null)}
                 />
                 {/* Web Dev & APIs 25% */}
                 <circle
                   cx="18" cy="18" r="15.915"
                   fill="transparent"
                   stroke="#14B8A6"
-                  strokeWidth="4"
+                  strokeWidth={hoveredStudyIndex === 1 ? "6" : "4.5"}
                   strokeDasharray="25 75"
                   strokeDashoffset="-45"
+                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
+                  onMouseEnter={() => setHoveredStudyIndex(1)}
+                  onMouseLeave={() => setHoveredStudyIndex(null)}
                 />
                 {/* System Design 15% */}
                 <circle
                   cx="18" cy="18" r="15.915"
                   fill="transparent"
                   stroke="#F59E0B"
-                  strokeWidth="4"
+                  strokeWidth={hoveredStudyIndex === 2 ? "6" : "4.5"}
                   strokeDasharray="15 85"
                   strokeDashoffset="-70"
+                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
+                  onMouseEnter={() => setHoveredStudyIndex(2)}
+                  onMouseLeave={() => setHoveredStudyIndex(null)}
                 />
                 {/* Core CS Theory 15% */}
                 <circle
                   cx="18" cy="18" r="15.915"
                   fill="transparent"
                   stroke="#3B82F6"
-                  strokeWidth="4"
+                  strokeWidth={hoveredStudyIndex === 3 ? "6" : "4.5"}
                   strokeDasharray="15 85"
                   strokeDashoffset="-85"
+                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
+                  onMouseEnter={() => setHoveredStudyIndex(3)}
+                  onMouseLeave={() => setHoveredStudyIndex(null)}
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-gray-900">100%</span>
-                <span className="text-[10px] uppercase font-bold text-gray-400">Pacing</span>
+
+              {/* Dynamic Center Tooltip on Hover */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                {hoveredStudyIndex === 0 && (
+                  <>
+                    <span className="text-xs font-extrabold text-[#7C3AED]">DSA Mastery</span>
+                    <span className="text-xl font-black text-gray-900">{Math.round(availableMinutes * 0.45)} mins</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">45% of time</span>
+                  </>
+                )}
+                {hoveredStudyIndex === 1 && (
+                  <>
+                    <span className="text-xs font-extrabold text-[#14B8A6]">Projects & APIs</span>
+                    <span className="text-xl font-black text-gray-900">{Math.round(availableMinutes * 0.25)} mins</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">25% of time</span>
+                  </>
+                )}
+                {hoveredStudyIndex === 2 && (
+                  <>
+                    <span className="text-xs font-extrabold text-[#F59E0B]">System Design</span>
+                    <span className="text-xl font-black text-gray-900">{Math.round(availableMinutes * 0.15)} mins</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">15% of time</span>
+                  </>
+                )}
+                {hoveredStudyIndex === 3 && (
+                  <>
+                    <span className="text-xs font-extrabold text-[#3B82F6]">CS Core & OS</span>
+                    <span className="text-xl font-black text-gray-900">{Math.round(availableMinutes * 0.15)} mins</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">15% of time</span>
+                  </>
+                )}
+                {hoveredStudyIndex === null && (
+                  <>
+                    <span className="text-2xl font-black text-gray-900">{availableMinutes}m</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Hover slice</span>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Legend */}
+            {/* Interactive Legend with Cursor Hover */}
             <div className="space-y-2.5 w-full sm:w-auto text-xs">
-              <div className="flex items-center justify-between sm:justify-start gap-4">
+              <div
+                onMouseEnter={() => setHoveredStudyIndex(0)}
+                onMouseLeave={() => setHoveredStudyIndex(null)}
+                className={`flex items-center justify-between sm:justify-start gap-4 p-2 rounded-xl cursor-pointer transition-all ${
+                  hoveredStudyIndex === 0 ? 'bg-purple-50 shadow-xs' : 'hover:bg-slate-50'
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#7C3AED]"></span>
                   <span className="font-semibold text-gray-800">Algorithms & DSA</span>
                 </div>
-                <span className="font-bold text-gray-900">45%</span>
+                <div className="text-right">
+                  <span className="font-bold text-gray-900">{Math.round(availableMinutes * 0.45)}m</span>
+                  <span className="text-[10px] text-gray-400 ml-1.5">(45%)</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4">
+
+              <div
+                onMouseEnter={() => setHoveredStudyIndex(1)}
+                onMouseLeave={() => setHoveredStudyIndex(null)}
+                className={`flex items-center justify-between sm:justify-start gap-4 p-2 rounded-xl cursor-pointer transition-all ${
+                  hoveredStudyIndex === 1 ? 'bg-teal-50 shadow-xs' : 'hover:bg-slate-50'
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#14B8A6]"></span>
                   <span className="font-semibold text-gray-800">Projects & APIs</span>
                 </div>
-                <span className="font-bold text-gray-900">25%</span>
+                <div className="text-right">
+                  <span className="font-bold text-gray-900">{Math.round(availableMinutes * 0.25)}m</span>
+                  <span className="text-[10px] text-gray-400 ml-1.5">(25%)</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4">
+
+              <div
+                onMouseEnter={() => setHoveredStudyIndex(2)}
+                onMouseLeave={() => setHoveredStudyIndex(null)}
+                className={`flex items-center justify-between sm:justify-start gap-4 p-2 rounded-xl cursor-pointer transition-all ${
+                  hoveredStudyIndex === 2 ? 'bg-amber-50 shadow-xs' : 'hover:bg-slate-50'
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
                   <span className="font-semibold text-gray-800">System Design</span>
                 </div>
-                <span className="font-bold text-gray-900">15%</span>
+                <div className="text-right">
+                  <span className="font-bold text-gray-900">{Math.round(availableMinutes * 0.15)}m</span>
+                  <span className="text-[10px] text-gray-400 ml-1.5">(15%)</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4">
+
+              <div
+                onMouseEnter={() => setHoveredStudyIndex(3)}
+                onMouseLeave={() => setHoveredStudyIndex(null)}
+                className={`flex items-center justify-between sm:justify-start gap-4 p-2 rounded-xl cursor-pointer transition-all ${
+                  hoveredStudyIndex === 3 ? 'bg-blue-50 shadow-xs' : 'hover:bg-slate-50'
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-[#3B82F6]"></span>
                   <span className="font-semibold text-gray-800">Core CS (OS/DBMS)</span>
                 </div>
-                <span className="font-bold text-gray-900">15%</span>
+                <div className="text-right">
+                  <span className="font-bold text-gray-900">{Math.round(availableMinutes * 0.15)}m</span>
+                  <span className="text-[10px] text-gray-400 ml-1.5">(15%)</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Pie Chart 2: Target Role Skill Readiness */}
+        {/* Pie Chart 2: "What I Know vs What I Need to Know" Interactive Donut Chart */}
         <div className="bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
-              <Award className="w-5 h-5 text-tealBrand-600" />
-              {t('dashboard.chart_skill_readiness')}
-            </h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-teal-800">
-              Tier-1 Ready
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-purple-600" />
+                Knowledge Gap Analysis
+              </h3>
+              <p className="text-xs text-gray-500">
+                What I Know vs What I Need for {user?.dream_companies?.split(',')[0] || 'Google'}
+              </p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800">
+              68% Compatible
             </span>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-            {/* SVG Pie Chart */}
-            <div className="relative w-44 h-44 flex-shrink-0">
+            {/* SVG Donut with Hover */}
+            <div className="relative w-48 h-48 flex-shrink-0">
               <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                {/* Languages 35% */}
+                {/* What I Know 68% */}
                 <circle
                   cx="18" cy="18" r="15.915"
                   fill="transparent"
                   stroke="#10B981"
-                  strokeWidth="4"
-                  strokeDasharray="35 65"
+                  strokeWidth={hoveredGapIndex === 0 ? "6.5" : "4.5"}
+                  strokeDasharray="68 32"
                   strokeDashoffset="0"
+                  className="cursor-pointer transition-all duration-200 hover:opacity-95"
+                  onMouseEnter={() => setHoveredGapIndex(0)}
+                  onMouseLeave={() => setHoveredGapIndex(null)}
                 />
-                {/* Frameworks 30% */}
+                {/* What I Need to Know 32% */}
                 <circle
                   cx="18" cy="18" r="15.915"
                   fill="transparent"
-                  stroke="#3B82F6"
-                  strokeWidth="4"
-                  strokeDasharray="30 70"
-                  strokeDashoffset="-35"
-                />
-                {/* Databases 20% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#6366F1"
-                  strokeWidth="4"
-                  strokeDasharray="20 80"
-                  strokeDashoffset="-65"
-                />
-                {/* Architecture 15% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#EC4899"
-                  strokeWidth="4"
-                  strokeDasharray="15 85"
-                  strokeDashoffset="-85"
+                  stroke="#F59E0B"
+                  strokeWidth={hoveredGapIndex === 1 ? "6.5" : "4.5"}
+                  strokeDasharray="32 68"
+                  strokeDashoffset="-68"
+                  className="cursor-pointer transition-all duration-200 hover:opacity-95"
+                  onMouseEnter={() => setHoveredGapIndex(1)}
+                  onMouseLeave={() => setHoveredGapIndex(null)}
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-gray-900">82%</span>
-                <span className="text-[10px] uppercase font-bold text-gray-400">Match</span>
+
+              {/* Dynamic Center Display */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                {hoveredGapIndex === 0 && (
+                  <>
+                    <span className="text-xs font-extrabold text-[#10B981]">Mastered Skills</span>
+                    <span className="text-2xl font-black text-gray-900">68%</span>
+                    <span className="text-[10px] text-gray-400">7 Verified</span>
+                  </>
+                )}
+                {hoveredGapIndex === 1 && (
+                  <>
+                    <span className="text-xs font-extrabold text-[#F59E0B]">Missing Gaps</span>
+                    <span className="text-2xl font-black text-gray-900">32%</span>
+                    <span className="text-[10px] text-gray-400">4 Gaps to Bridge</span>
+                  </>
+                )}
+                {hoveredGapIndex === null && (
+                  <>
+                    <span className="text-2xl font-black text-gray-900">68%</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Role Match</span>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Legend */}
-            <div className="space-y-2.5 w-full sm:w-auto text-xs">
-              <div className="flex items-center justify-between sm:justify-start gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#10B981]"></span>
-                  <span className="font-semibold text-gray-800">Programming (Python/JS)</span>
+            {/* Interactive Legend */}
+            <div className="space-y-3 w-full sm:w-auto text-xs">
+              <div
+                onMouseEnter={() => setHoveredGapIndex(0)}
+                onMouseLeave={() => setHoveredGapIndex(null)}
+                className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                  hoveredGapIndex === 0
+                    ? 'bg-emerald-50 border-emerald-300 shadow-xs'
+                    : 'bg-white border-gray-100 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#10B981]"></span>
+                    <span className="font-bold text-gray-900">What I Know</span>
+                  </div>
+                  <span className="font-black text-emerald-700">68%</span>
                 </div>
-                <span className="font-bold text-gray-900">35%</span>
+                <div className="text-[11px] text-gray-500">
+                  Python, React, Node.js, SQL, Git & APIs
+                </div>
               </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#3B82F6]"></span>
-                  <span className="font-semibold text-gray-800">Frameworks (React/Node)</span>
+
+              <div
+                onMouseEnter={() => setHoveredGapIndex(1)}
+                onMouseLeave={() => setHoveredGapIndex(null)}
+                className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                  hoveredGapIndex === 1
+                    ? 'bg-amber-50 border-amber-300 shadow-xs'
+                    : 'bg-white border-gray-100 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-4 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
+                    <span className="font-bold text-gray-900">What I Need To Know</span>
+                  </div>
+                  <span className="font-black text-amber-700">32%</span>
                 </div>
-                <span className="font-bold text-gray-900">30%</span>
-              </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#6366F1]"></span>
-                  <span className="font-semibold text-gray-800">Databases (SQL/Mongo)</span>
+                <div className="text-[11px] text-gray-500">
+                  System Design, Redis, Docker, DP Algorithms
                 </div>
-                <span className="font-bold text-gray-900">20%</span>
-              </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#EC4899]"></span>
-                  <span className="font-semibold text-gray-800">Architecture & Cloud</span>
-                </div>
-                <span className="font-bold text-gray-900">15%</span>
               </div>
             </div>
           </div>

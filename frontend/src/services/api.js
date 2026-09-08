@@ -149,11 +149,11 @@ export const api = {
         headers: getAuthHeaders()
       }).then(handleResponse),
 
-    sendMessage: (message, language) =>
+    sendMessage: (message, language, attachment) =>
       fetch(`${API_BASE}/chat/message`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ message, language })
+        body: JSON.stringify({ message, language, attachment })
       }).then(handleResponse),
 
     clearHistory: () =>

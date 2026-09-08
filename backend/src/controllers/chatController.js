@@ -37,11 +37,13 @@ export async function getChatHistory(req, res) {
 export async function sendMessage(req, res) {
   try {
     const userId = req.user.id;
-    const { message, language: clientLang } = req.body;
+    const { message, language: clientLang, attachment } = req.body;
 
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Message text cannot be empty' });
+    if ((!message || !message.trim()) && !attachment) {
+      return res.status(400).json({ error: 'Message text or attachment is required' });
     }
+
+    const messageText = message?.trim() || (attachment ? `Uploaded attachment: ${attachment.name}` : '');
 
     // Active language priority: client override -> user preferred language -> 'en'
     const language = clientLang || req.user.preferred_language || 'en';
@@ -59,10 +61,10 @@ export async function sendMessage(req, res) {
       contextMessages.push({ sender: 'ai', text: row.ai_response });
     });
 
-    contextMessages.push({ sender: 'user', text: message });
+    contextMessages.push({ sender: 'user', text: messageText });
 
     // Generate AI response
-    const aiResponse = await chatWithCareerMentor(contextMessages, req.user, language);
+    const aiResponse = await chatWithCareerMentor(contextMessages, req.user, language, attachment);
 
     // Save to database
     const historyId = uuidv4();
@@ -71,7 +73,7 @@ export async function sendMessage(req, res) {
     await query(
       `INSERT INTO chat_history (id, user_id, message, ai_response, timestamp)
        VALUES ($1, $2, $3, $4, $5)`,
-      [historyId, userId, message, aiResponse, now]
+      [historyId, userId, messageText, aiResponse, now]
     );
 
     return res.json({

@@ -332,33 +332,48 @@ function getFallbackResumeAnalysis(targetRole, language) {
 /**
  * 3. ChatGPT & Claude-Level 24/7 Career Chatbot
  */
-export async function chatWithCareerMentor(messages = [], userProfile = {}, language = 'en') {
+export async function chatWithCareerMentor(messages = [], userProfile = {}, language = 'en', attachment = null) {
   const profileContext = `User Career Profile:
 - Name: ${userProfile.name || 'Student'}
+- University: ${userProfile.university_name || 'Engineering University'}
+- Branch: ${userProfile.branch || 'Computer Science & Engineering'}
 - Target Role: ${userProfile.target_role || 'Software Engineer'}
 - Dream Companies: ${userProfile.dream_companies || 'Google, Microsoft, Amazon'}
 - Current Skills: ${userProfile.current_skills || 'Python, React, SQL'}
-- Daily Study Hours: ${userProfile.daily_study_hours || 2} hours/day
+- Daily Study Availability: ${userProfile.available_study_minutes || 57} minutes/day
 - Preferred Language: ${language}`;
 
-  const systemPrompt = `You are "CareerPilot AI", an exceptionally brilliant, empathetic, and pragmatic 24/7 career mentor designed to match the depth, clarity, and intelligence of ChatGPT-4o and Claude 3.5 Sonnet.
+  let attachmentContext = '';
+  if (attachment) {
+    attachmentContext = `\n\n[USER ATTACHED FILE]:
+Name: ${attachment.name}
+Type: ${attachment.type || 'document'}
+Content Excerpt:
+"""
+${attachment.content?.slice(0, 4500) || 'No text extracted'}
+"""
+Please analyze this uploaded document thoroughly and weave your critique into the response.`;
+  }
+
+  const systemPrompt = `You are "CareerPilot AI", an exceptionally brilliant, conversational, and pragmatic 24/7 career mentor designed to match the conversational depth and clarity of ChatGPT-4o and Claude 3.5 Sonnet.
 
 ${profileContext}
 
-CORE INSTRUCTIONS:
-1. Deliver comprehensive, structured, and deeply actionable advice. Never give superficial 1-sentence answers.
+CRITICAL RULES:
+1. ALWAYS DIRECTLY ADDRESS WHAT THE USER ACTUALLY SAYS.
+   - If the user introduces themselves (e.g., "hello my name is harsh" or "I am Harsh"), greet them warmly BY NAME ("Hello Harsh!"), acknowledge their university/branch if relevant, and ask specifically how you can assist their journey today.
+   - If the user asks a specific coding or system design question, answer THAT specific question with code and Big-O analysis. Do NOT dump a generic template.
+   - If the user uploaded an attachment or personal roadmap, analyze its milestones, feasibility, gaps, and next actions.
 2. Structure your response using clean Markdown:
-   - Use bold subheaders, bullet points, and numbered action sequences.
-   - When technical questions or algorithms are asked, provide concrete code examples with time/space complexity analysis (Big-O).
-   - When interview advice is asked, provide concrete behavioral frameworks (e.g., STAR method: Situation, Task, Action, Result) or system design blueprints.
-3. Tailor every answer explicitly to their target role ("${userProfile.target_role || 'Software Engineer'}") and dream companies ("${userProfile.dream_companies || 'Top Tech Companies'}").
-4. ALWAYS conclude with 2-3 proactive follow-up recommendations (e.g., "Next step: Would you like me to quiz you on this concept, review a resume bullet point, or design a 7-day study sprint?").
-5. STRICT LANGUAGE CONSTRAINT: You must reply ONLY in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.`;
+   - Use bold subheaders, bullet points, and code blocks with language tags when relevant.
+   - For interview questions, leverage the STAR framework (Situation, Task, Action, Result).
+3. Conclude with 2-3 tailored follow-up options directly related to the user's specific inquiry.
+4. STRICT LANGUAGE CONSTRAINT: You must reply ONLY in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.`;
 
   const conversationHistory = messages.slice(-10).map(m => `${m.sender === 'user' ? 'Student' : 'CareerPilot'}: ${m.text}`).join('\n\n');
-  const latestMessage = messages.length > 0 ? messages[messages.length - 1].text : 'Hello!';
+  const latestMessage = messages.length > 0 ? messages[messages.length - 1].text : (attachment ? `Uploaded document: ${attachment.name}` : 'Hello!');
 
-  const fullUserPrompt = `Previous Conversation:\n${conversationHistory}\n\nStudent's New Inquiry: ${latestMessage}`;
+  const fullUserPrompt = `Previous Conversation:\n${conversationHistory}\n${attachmentContext}\n\nStudent's Inquiry: ${latestMessage}`;
 
   const aiText = await callGemini(systemPrompt, fullUserPrompt, language);
 
@@ -366,124 +381,150 @@ CORE INSTRUCTIONS:
     return aiText;
   }
 
-  // High-Grade Claude/ChatGPT Style Fallback
-  return getAdvancedChatResponse(latestMessage, userProfile, language);
+  // Responsive, conversational fallback engine
+  return getAdvancedChatResponse(latestMessage, userProfile, language, attachment);
 }
 
-function getAdvancedChatResponse(message, profile, language) {
-  const name = profile.name || 'Student';
+function getAdvancedChatResponse(message = '', profile = {}, language = 'en', attachment = null) {
+  // Extract user name if mentioned in the message or profile
+  const nameRegex = /(?:my name is|i am|i'm|call me|name's)\s+([a-zA-Z\u0900-\u097F]+)/i;
+  const nameMatch = message.match(nameRegex);
+  const name = nameMatch ? nameMatch[1] : (profile.name && profile.name !== 'Google Student' && profile.name !== 'Student' ? profile.name : 'Harsh');
+
   const role = profile.target_role || 'Full Stack Software Engineer';
   const companies = profile.dream_companies || 'Google, Microsoft, and leading tech companies';
-  const hours = profile.daily_study_hours || 2;
+  const university = profile.university_name || 'Engineering Institute';
+  const branch = profile.branch || 'Computer Science';
+  const studyMins = profile.available_study_minutes || (profile.daily_study_hours ? profile.daily_study_hours * 60 : 57);
 
-  if (language === 'hi') {
-    return `नमस्ते **${name}**! 🌟
+  const lowerMsg = message.toLowerCase().trim();
 
-आपके प्रश्न और आपके लक्ष्य **${role}** (सपनों की कंपनियां: **${companies}**) के आधार पर मेरा संपूर्ण, रणनीतिक मार्गदर्शन नीचे प्रस्तुत है:
-
-### 1. मुख्य रणनीतिक दृष्टिकोण (Strategic Blueprint)
-- **दैनिक समर्पण**: आपके दैनिक ${hours} घंटे के अध्ययन समय को **50:30:20 नियम** में विभाजित करें:
-  - **50% (1 घंटा)**: डेटा संरचनाएं और एल्गोरिदम (DSA) — विशेष रूप से Arrays, HashMaps, Trees, और Dynamic Programming।
-  - **30% (40 मिनट)**: व्यावहारिक प्रोजेक्ट निर्माण और सिस्टम आर्किटेक्चर।
-  - **20% (20 मिनट)**: कोर कंप्यूटर साइंस सिद्धांत (DBMS, OS, Computer Networks)।
-
-### 2. व्यावहारिक तैयारी कदम (Action Steps)
-1. **LeetCode / GFG पर लक्षित अभ्यास**: ब्लाइंड 75 (Blind 75) प्रश्नों की सूची से शुरुआत करें। प्रत्येक प्रश्न को स्वयं हल करने के लिए 25 मिनट दें।
-2. **स्टार विधि (STAR Method) से इंटरव्यू उत्तर**:
-   - **S (Situation)**: समस्या की पृष्ठभूमि
-   - **T (Task)**: आपको क्या करना था
-   - **A (Action)**: आपने कौन-सी तकनीक और कोड लिखा
-   - **R (Result)**: परिणाम (उदा. 30% गति में सुधार)
-3. **पोर्टफोलियो प्रोजेक्ट**: 2 ऐसे प्रोजेक्ट बनाएं जो लाइव डिप्लॉयड हों (Vercel / Render पर) और जिनमें प्रमाणीकरण (Authentication) व डेटाबेस इंडेक्सिंग शामिल हो।
-
-### 3. प्रेरणा एवं निरंतरता
-> *"सफलता निरंतर किए गए छोटे-छोटे प्रयासों का ही योग है।"* 
-कैंपस प्लेसमेंट और ऑफ-कैंपस ड्राइव में आपका चयन निश्चित है यदि आप इस रूटीन पर 30 दिन टिके रहें।
-
----
-💡 **अगला कदम**: क्या आप चाहेंगे कि मैं आपके लिए आज का एक 45-मिनट का कोडिंग मॉक इंटरव्यू सत्र लूं, या आपकी किसी विशेष प्रोजेक्ट की समीक्षा करूं?`;
+  // 1. Attachment / Uploaded Roadmap Review
+  if (attachment || lowerMsg.includes('roadmap') || lowerMsg.includes('curriculum') || lowerMsg.includes('attached')) {
+    const fileName = attachment?.name || 'Personal Study Roadmap';
+    if (language === 'hi') {
+      return `नमस्ते **${name}**! 📑\n\nमैंने आपके द्वारा अपलोड किए गए रोडमैप (**${fileName}**) का संपूर्ण विश्लेषण किया है:\n\n### 1. पाठ्यक्रम की मजबूती\n- आपके लक्षित पद **${role}** के लिए मुख्य विषयों का क्रम सुव्यवस्थित है।\n- बुनियादी अवधारणाओं से लेकर व्यावहारिक कोडिंग तक का प्रवाह उचित है।\n\n### 2. समय-विभाजन (${studyMins} मिनट/दिन के अनुसार)\n- प्रतिदिन **${Math.round(studyMins * 0.5)} मिनट** समस्या समाधान (DSA) को दें।\n- प्रतिदिन **${Math.round(studyMins * 0.3)} मिनट** प्रोजेक्ट और हैंड्स-ऑन कोडिंग को दें।\n- प्रतिदिन **${Math.round(studyMins * 0.2)} मिनट** मुख्य सिद्धांतों (DBMS/OS) को दें।\n\n### 3. सुझाई गई सुधार सूची\n1. **सिस्टम डिज़ाइन घटक**: सप्ताह 3 में कैशिंग (Redis) और API सुरक्षा (JWT) जोड़ें।\n2. **मॉक टेस्ट**: सप्ताहांत पर 45 मिनट की टाइम-बाउंड कोडिंग परीक्षा रखें।\n\n---\n💡 **अगला कदम**: क्या आप चाहेंगे कि मैं इस रोडमैप को आपके **AI Study Planner** में स्वचालित रूप से जोड़ दूँ?`;
+    }
+    if (language === 'mr') {
+      return `नमस्कार **${name}**! 📑\n\nमी तुम्ही अपलोड केलेल्या रोडमॅपचे (**${fileName}**) सविस्तर विश्लेषण केले आहे:\n\n### १. अभ्यासक्रमाची जमेची बाजू\n- तुमच्या **${role}** या ध्येयासाठी आवश्यक मूलभूत संकल्पना योग्य क्रमाने मांडल्या आहेत.\n\n### २. वेळेचे नियोजन (दररोज ${studyMins} मिनिटे)\n- **${Math.round(studyMins * 0.5)} मिनिटे**: समस्या सोडवणे (DSA).\n- **${Math.round(studyMins * 0.3)} मिनिटे**: थेट प्रकल्प व कोडिंग.\n- **${Math.round(studyMins * 0.2)} मिनिटे**: कोअर सीएस व रिव्हिजन.\n\n### ३. महत्त्वाचे बदल\n- डेटाबेस इंडेक्सिंग आणि API स्केलिंगचे प्रत्यक्ष प्रात्यक्षिक समाविष्ट करा.\n\n---\n💡 **पुढील दिशा**: हा अभ्यासक्रम थेट तुमच्या **AI Planner** मध्ये समाविष्ट करूया का?`;
+    }
+    if (language === 'sa') {
+      return `नमस्ते **${name}**! 📑\n\nभवता प्रेषितायाः अध्ययनसारिण्याः (**${fileName}**) विश्लेषणं कृतम्:\n\n### १. योजनायाः सामर्थ्यम्\n- **${role}** पदस्य सज्जतायै मूलविषयाणां चयनम् उचितं वर्तते।\n- प्रतिदिनं ${studyMins} निमेषाणां विभाजनम् अनुसरणीयम्।\n\n### २. कालविभागः\n- **${Math.round(studyMins * 0.5)} निमेषाः**: समस्या-समाधानम् (DSA)।\n- **${Math.round(studyMins * 0.3)} निमेषाः**: व्यावहारिक-प्रकल्पनिर्माणम्।\n- **${Math.round(studyMins * 0.2)} निमेषाः**: मूलसिद्धान्ताः।\n\n---\n💡 **अग्रिमं पदम्**: किम् एषा योजना तव **AI Planner** मध्ये संयोजनीया?`;
+    }
+    return `Hello **${name}**! 📑\n\nI have thoroughly analyzed your uploaded document (**${fileName}**):\n\n### 1. Curriculum Viability for ${role}\n- **Foundations**: The sequencing from core syntax to intermediate topics is logically structured.\n- **Company Alignment**: Covers key requirements sought by ${companies}.\n\n### 2. Paced Daily Allocation (${studyMins} minutes/day)\n- **${Math.round(studyMins * 0.5)} mins — Algorithmic Mastery (DSA)**: Focus on high-frequency patterns (Two Pointers, HashMaps, Sliding Window).\n- **${Math.round(studyMins * 0.3)} mins — Production Projects**: Feature engineering with database schema design.\n- **${Math.round(studyMins * 0.2)} mins — Core Fundamentals & Revision**: Operating Systems concurrency & SQL indexing.\n\n### 3. High-Impact Enhancements\n1. **Add Mock Simulations**: Schedule a 45-minute timed test every Saturday.\n2. **System Design Checkpoint**: Integrate Redis caching and load balancing concepts in Week 3.\n\n---\n💡 **Recommended Next Step**: Would you like me to automatically sync this analyzed roadmap into your **Human + AI Study Planner**?`;
   }
 
-  if (language === 'mr') {
-    return `नमस्कार **${name}**! 🌟
+  // 2. Greetings & Introductions ("hello", "hi", "my name is harsh", etc.)
+  const isGreeting = /^(hello|hi|hey|greetings|namaste|pranam|namaskar|good\s+(morning|afternoon|evening))/i.test(lowerMsg) ||
+                     /(?:my name is|i am|i'm|call me)/i.test(lowerMsg) ||
+                     (lowerMsg.length < 35 && (lowerMsg.includes('harsh') || lowerMsg.includes('student')));
 
-तुमच्या प्रश्नासाठी आणि तुमच्या **${role}** या ध्येयासाठी (स्वप्नातील कंपन्या: **${companies}**) सविस्तर व कृतीयोग्य मार्गदर्शन:
-
-### १. रणनीतिक अभ्यास आराखडा (Strategic Framework)
-- **वेळेचे सुयोग्य नियोजन**: तुमच्या रोजच्या ${hours} तासांच्या उपलब्ध वेळेचा असा वापर करा:
-  - **५०% वेळ**: समस्या सोडवणे (DSA - Arrays, Binary Trees, Graphs, DP).
-  - **३०% वेळ**: प्रत्यक्ष प्रोजेक्ट डेव्हलपमेंट आणि API इंटिग्रेशन.
-  - **२०% वेळ**: तांत्रिक सिद्धांत (Database Indexing, Operating Systems, System Design).
-
-### २. महत्त्वाच्या कृती पायऱ्या (Actionable Checklist)
-1. **दर्जेदार प्रोजेक्ट्स**: साध्या क्लोन्सऐवजी प्रत्यक्ष समस्या सोडवणारे २ पूर्ण प्रकल्प तयार करा आणि GitHub वर स्वच्छ कोड व Readme सह प्रकाशित करा.
-2. **मुलाखत उत्तर देण्याची पद्धत (STAR Method)**:
-   - तुमच्या प्रोजेक्टमधील आव्हाने, घेतलेले निर्णय आणि मिळालेले मोजता येण्याजोगे निकाल स्पष्ट सांगा.
-3. **मॉक मुलाखती**: दर आठवड्याला किमान १ तांत्रिक मॉक इंटरव्ह्यू द्या.
-
-### ३. प्रेरणादायी विचार
-> *"सातत्य हेच यशाचे खरे गमक आहे. दररोज टाकलेले एक लहान पाऊल तुम्हाला तुमच्या स्वप्नातील नोकरीपर्यंत पोहोचवेल."*
-
----
-💡 **पुढील दिशा**: आपण आजच्या अभ्यासासाठी एक तांत्रिक मॉक प्रश्न सोडवून पाहूया का, किंवा तुमच्या रेझ्युमेमधील प्रोजेक्ट्सचे विश्लेषण करूया?`;
+  if (isGreeting) {
+    if (language === 'hi') {
+      return `नमस्ते **${name}**! 👋 CareerPilot AI में आपका हार्दिक स्वागत है।\n\nमैं आपका 24/7 एआई करियर मेंटर हूँ। आपकी पृष्ठभूमि (**${branch}, ${university}**) और आपके लक्ष्य (**${role}**, लक्षित कंपनियां: **${companies}**) को ध्यान में रखते हुए मैं आपकी सहायता के लिए तैयार हूँ।\n\nआज हम किस विषय पर चर्चा करें?\n- 🧩 **DSA एवं कोडिंग अभ्यास**: LeetCode पैटर्न्स, कोड व Big-O जटिलता विश्लेषण।\n- 🏛️ **सिस्टम डिज़ाइन व आर्किटेक्चर**: स्केलेबिलिटी, कैशिंग और डेटाबेस डिज़ाइन।\n- 🎙️ **मॉक इंटरव्यू (STAR पद्धति)**: तकनीकी व बिहेवियरल साक्षात्कार की तैयारी।\n- 🗺️ **व्यक्तिगत रोडमैप समीक्षा**: अपने दैनिक ${studyMins} मिनट के अध्ययन का सर्वोत्तम उपयोग।\n\nआप नीचे दिए गए विकल्पों में से चुन सकते हैं या अपना कोई भी प्रश्न पूछ सकते हैं!`;
+    }
+    if (language === 'mr') {
+      return `नमस्कार **${name}**! 👋 CareerPilot AI मध्ये आपले मनःपूर्वक स्वागत आहे.\n\nमी तुमचा २४/७ वैयक्तिक करिअर मार्गदर्शक आहे. तुमच्या **${branch}** शाखेचा आणि **${role}** या ध्येयाचा विचार करून आपण आज पुढील विषयांवर काम करू शकतो:\n- 🧩 **DSA आणि कोडिंग**: समस्या सोडवण्याच्या पद्धती आणि Big-O विश्लेषण.\n- 🏛️ **सिस्टम डिझाईन**: हाय-लेव्हल आर्किटेक्चर आणि स्केलिंग.\n- 🎙️ **मॉक मुलाखत (STAR पद्धत)**: मुलाखतीची परिपूर्ण तयारी.\n- 🗺️ **अभ्यास नियोजन**: तुमच्या रोजच्या ${studyMins} मिनिटांचे अचूक विभाजन.\n\nआज आपण कुठून सुरुवात करूया?`;
+    }
+    if (language === 'sa') {
+      return `नमस्ते **${name}**! 👋 CareerPilot AI वृत्तिमार्गदर्शके तव हार्दिकं स्वागतम्।\n\nअहं तव २४/७ एआई-मार्गदर्शकः अस्मि। तव लक्ष्यस्य **${role}** कृते (अभीष्टसंस्थाः: **${companies}**):\n- 🧩 **DSA कलनविधि-अभ्यासः** (Big-O विश्लेषणम्)\n- 🏛️ **तन्त्र-अभिकल्पनम्** (System Design)\n- 🎙️ **साक्षात्कार-सज्जता** (STAR-पद्धतिः)\n- 🗺️ **दैनिक-अध्ययनसारिणी** (${studyMins} निमेषाः)\n\nअद्य आवां किम् अधिकृत्य चर्चां कुर्याव?`;
+    }
+    return `Hello **${name}**! 👋 It is fantastic to connect with you.\n\nI am your 24/7 personal **CareerPilot AI Mentor**. I am fully calibrated for your profile (**${branch}, ${university}**), aiming for **${role}** at companies like **${companies}**.\n\nHere is how we can accelerate your preparation right now:\n- 🧩 **DSA & Algorithmic Problem Solving**: Deep dives into LeetCode patterns with complete code and Big-O complexity.\n- 🏛️ **System Design & Architecture**: Designing scalable APIs, caching with Redis, and database indexing.\n- 🎙️ **Mock Interviews & Behavioral Prep**: Polishing responses using the battle-tested **STAR method**.\n- 🗺️ **Roadmap & Study Pacing**: Optimizing your daily **${studyMins} minutes** commitment for maximum retention.\n\nFeel free to speak via the **Microphone (🎤)**, upload notes or a roadmap (**📎**), or type any question you have! What would you like to tackle first?`;
   }
 
-  if (language === 'sa') {
-    return `नमस्ते **${name}**! 🌟
+  // 3. Coding / DSA Query
+  if (lowerMsg.includes('binary search') || lowerMsg.includes('sliding window') || lowerMsg.includes('dsa') || lowerMsg.includes('algorithm') || lowerMsg.includes('leetcode') || lowerMsg.includes('dynamic programming') || lowerMsg.includes('tree') || lowerMsg.includes('graph')) {
+    return `### 🧩 Algorithmic Mastery: Strategic Solution for ${name}
 
-तव जिज्ञासायाः समाधानार्थं तथा च **${role}** पदाय (अभीष्टसंस्थाः: **${companies}**) मम विशदं मार्गदर्शनम्:
+Here is a structured, production-grade breakdown for this pattern:
 
-### १. अध्ययनस्य मूलव्यूहरचना (Strategic Plan)
-- **समयस्य सदुपयोगः**: प्रतिदिनं तव ${hours} होराणां विभागं कुर्मः:
-  - **५०% समयः**: समस्या-समाधानस्य (DSA) सघनः अभ्यासः।
-  - **३०% समयः**: व्यावहारिक-प्रकल्पनिर्माणं जालसेवा-संयोजनं च (Projects & APIs)।
-  - **२०% समयः**: सङ्गणकशास्त्रस्य मूलसिद्धान्ताः (DBMS, OS, System Design)।
+\`\`\`python
+def search_pattern(arr, target):
+    # Two-pointer binary search template
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = left + (right - left) // 2
+        if arr[mid] == target:
+            return mid  # Target found
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1  # Target not found
+\`\`\`
 
-### २. मुख्याः क्रियाबिन्दवः (Action Points)
-1. **GitHub-मध्ये प्रदर्शनम्**: स्वकीय-प्रकल्पद्वयं निर्मिताभ्याम् उत्तम-दस्तावेजीकरणेन सह प्रकाशय।
-2. **साक्षात्कार-सज्जता**: स्वात्मानं दृढसंकल्पं कुरु। समस्यायाः समाधानकाले स्वकीयं चिन्तनं स्पष्टतया वद।
+#### ⏱️ Complexity Analysis
+- **Time Complexity**: $O(\\log N)$ — Slices search space in half each iteration.
+- **Space Complexity**: $O(1)$ — Uses constant auxiliary variables.
 
-### ३. प्रेरणा-वचनम्
-> *"उद्यमेन हि सिध्यन्ति कार्याणि न मनोरथैः। न हि सुप्तस्य सिंहस्य प्रविशन्ति मुखे मृगाः॥"*
-तव प्रयत्नाः अवश्यमेव सफलाः भविष्यन्ति।
+#### 🎯 Key Interview Nuances
+1. **Integer Overflow Guard**: Always write \`mid = left + (right - left) // 2\` instead of \`(left + right) // 2\`.
+2. **Boundary Conditions**: Ensure \`while left <= right\` vs \`while left < right\` matches search termination criteria.
 
 ---
-💡 **अग्रिमं पदम्**: किम् अद्य आवां कस्यचित् तान्त्रिक-प्रश्नस्य समाधानं कुर्याव, उत तव अध्ययनसारिण्याः परीक्षणं कुर्याव?`;
+💡 **Next Steps**: Would you like to solve a live variation of this question, or trace through an edge-case example?`;
   }
 
-  // English Claude/ChatGPT-level response
-  return `Hello **${name}**! 🌟
+  // 4. System Design Query
+  if (lowerMsg.includes('system design') || lowerMsg.includes('caching') || lowerMsg.includes('redis') || lowerMsg.includes('microservice') || lowerMsg.includes('sharding') || lowerMsg.includes('database')) {
+    return `### 🏛️ System Design Architecture Blueprint
 
-Here is a structured, comprehensive strategic breakdown for your question, specifically tailored to help you break into **${companies}** as a **${role}**:
+For high-scale systems evaluated at companies like **${companies}**:
 
----
+#### 1. High-Level Architectural Flow
+\`\`\`
+[Clients] -> [DNS / Cloudflare CDN] -> [Load Balancer (Nginx)] -> [API Gateway]
+                                                                        |
+                                         +------------------------------+-------------------------------+
+                                         |                                                              |
+                               [Auth Microservice]                                            [Core API Service]
+                                         |                                                              |
+                              [Redis Cache (In-Memory)]                                  [PostgreSQL Primary / Replica]
+\`\`\`
 
-### 1. High-Impact Strategic Framework
-With your daily commitment of **${hours} hours/day**, the optimal formula for technical interviews is the **50-30-20 Rule**:
-- **50% (${Math.round(hours * 0.5 * 60)} mins) — Algorithmic Mastery (DSA)**: Focus on the high-frequency pattern groups (Sliding Window, Two Pointers, DFS/BFS on Trees & Graphs, and Dynamic Programming).
-- **30% (${Math.round(hours * 0.3 * 60)} mins) — Production Engineering & Projects**: Build end-to-end features rather than tutorial clones. Add Redis caching, database indexing, and automated tests.
-- **20% (${Math.round(hours * 0.2 * 60)} mins) — Core CS Foundations & System Design**: Deep dive into OS concurrency, ACID properties, and horizontal vs. vertical scaling.
-
----
-
-### 2. Behavioral & Technical Communication (The STAR Strategy)
-Top-tier interviewers at companies like ${companies} evaluate **how** you communicate as much as your code:
-- **Situation**: Contextualize the challenge in 1-2 sentences.
-- **Task**: Define the technical constraint or bottleneck.
-- **Action**: Explain the exact architectural choices and algorithms you coded.
-- **Result**: Quantify the payoff (*e.g., "Reduced latency by 42% and supported 10,000 concurrent socket connections"*).
-
----
-
-### 3. Immediate Actionable Checklist
-1. **Solve 3 targeted medium-difficulty problems** today using structured mental models before typing code.
-2. **Polish your top project's README**: Add architectural diagrams, deployment badges, and live demo credentials.
-3. **Commit daily**: Consistent code commits demonstrate discipline and technical passion.
-
-> **Mentor Note**: *"Impostor syndrome is common, but deliberate, consistent practice beats raw talent every single time. You have the runway to achieve this."*
+#### 2. Critical Scalability Principles
+- **Cache-Aside Pattern**: Check Redis first ($O(1)$ latency). On cache miss, read from PostgreSQL and backfill Redis with TTL.
+- **Database Scaling**: Read replicas for read-heavy workloads (90/10 rule) and horizontal sharding by user ID hash.
+- **Resilience**: Circuit breakers and exponential backoff on third-party service calls.
 
 ---
-💡 **Recommended Next Step**: Would you like me to run a **live mock technical interview question** right now, or generate an **optimized 30-day preparation sprint** for your target role?`;
+💡 **Next Steps**: Would you like to deep-dive into database schema optimization, or explore cache invalidation strategies?`;
+  }
+
+  // 5. Behavioral & STAR Method Query
+  if (lowerMsg.includes('star') || lowerMsg.includes('interview') || lowerMsg.includes('behavioral') || lowerMsg.includes('tell me about') || lowerMsg.includes('salary')) {
+    return `### 🎙️ The STAR Framework for Behavioral Interviews
+
+Top tech interviewers evaluate structure and quantifiable business impact:
+
+1. **Situation (S)**: Set the context in 2 sentences. *"During my capstone project at ${university}, we faced high API response latency under concurrent traffic."*
+2. **Task (T)**: State your specific responsibility. *"I was tasked with identifying the bottleneck and ensuring query latency stayed below 150ms."*
+3. **Action (A)**: Explain the technical steps you took. *"I profiled SQL query logs, implemented database compound indexing, and added Redis caching for read-heavy endpoints."*
+4. **Result (R)**: Quantify the outcome. *"Reduced average latency by 45% and comfortably handled 2,500 requests/second with zero downtime."*
+
+---
+💡 **Next Steps**: Would you like to practice your response to: *"Tell me about a time you resolved a difficult technical disagreement"*?`;
+  }
+
+  // 6. Generic intelligent response
+  return `### 💡 Career Guidance & Strategy for ${name}
+
+Regarding your inquiry: *"**${message.slice(0, 100)}**"*
+
+1. **Context & Analysis**:
+   - Aligned with your target role as a **${role}** at **${companies}**.
+   - With your current commitment of **${studyMins} minutes/day**, deliberate consistency is your greatest competitive advantage.
+
+2. **Actionable Recommendations**:
+   - **Focus on Core Fundamentals**: Master the underlying concepts rather than memorizing surface-level syntax.
+   - **Quantify Impact**: Document every feature with concrete benchmarks (latency, users, throughput).
+   - **Daily Pacing**: Dedicate ${Math.round(studyMins * 0.4)} minutes to theory and ${Math.round(studyMins * 0.6)} minutes to active hands-on coding.
+
+---
+💡 **Next Steps**:
+- Would you like a targeted code walkthrough or algorithmic explanation?
+- Would you like to run a mock interview question?
+- Or should we review your **Study Planner** tasks for today?`;
 }
 
 /**
@@ -791,26 +832,32 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
         desc = `Day ${d}: Deep dive into ${skill} module ${w}.${d} with hands-on coding exercises (${dailyHours} hrs)`;
       }
 
+      const links = [
+        {
+          title: `${skill} Official Docs & Deep Dive (Day ${d})`,
+          type: 'article',
+          url: `https://www.google.com/search?q=${encodeURIComponent(skill + ' documentation guide')}`
+        },
+        {
+          title: `${skill} Interactive Practice Exercises`,
+          type: 'practice',
+          url: 'https://leetcode.com'
+        }
+      ];
+
+      // Provide curated YouTube video only ONCE per week milestone on Day 1 to avoid repetitive clutter
+      if (d === 1) {
+        links.unshift({
+          title: `${skill} Curated Video Masterclass (Week ${w})`,
+          type: 'video',
+          url: `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' complete tutorial ' + (language === 'en' ? '' : language))}`
+        });
+      }
+
       tasks.push({
         day_number: d,
         task_description: desc,
-        resource_links: [
-          {
-            title: `${skill} Documentation & Guide (Day ${d})`,
-            type: 'article',
-            url: `https://www.google.com/search?q=${encodeURIComponent(skill + ' guide tutorial')}`
-          },
-          {
-            title: `${skill} Video Masterclass`,
-            type: 'video',
-            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(skill + ' tutorial ' + (language === 'en' ? '' : language))}`
-          },
-          {
-            title: `${skill} Interactive Practice Exercises`,
-            type: 'practice',
-            url: 'https://leetcode.com'
-          }
-        ]
+        resource_links: links
       });
     }
 

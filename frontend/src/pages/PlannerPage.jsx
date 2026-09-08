@@ -17,7 +17,11 @@ import {
   Lightbulb,
   ArrowRight,
   Zap,
-  Bell
+  Bell,
+  Edit2,
+  Bot,
+  User as UserIcon,
+  RotateCcw
 } from 'lucide-react';
 
 export default function PlannerPage() {
@@ -33,12 +37,14 @@ export default function PlannerPage() {
   const [applyingOpt, setApplyingOpt] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderToast, setReminderToast] = useState(null);
+  const [selectedMinutes, setSelectedMinutes] = useState(user?.available_study_minutes || 57);
 
-  // New task modal
+  // New / Edit task modal
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState(null);
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskDay, setNewTaskDay] = useState('Monday');
-  const [newTaskTime, setNewTaskTime] = useState('18:00 - 20:00');
+  const [newTaskTime, setNewTaskTime] = useState('18:00 - 19:00');
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -135,29 +141,81 @@ export default function PlannerPage() {
     }
   };
 
-  const handleAddTask = async (e) => {
+  const handleOpenCreateModal = () => {
+    setEditingTaskId(null);
+    setNewTaskDesc('');
+    setNewTaskDay('Monday');
+    setNewTaskTime(`${selectedMinutes} min Block`);
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (task) => {
+    setEditingTaskId(task.id);
+    setNewTaskDesc(task.description);
+    setNewTaskDay(task.day || 'Monday');
+    setNewTaskTime(task.time || `${selectedMinutes} min Block`);
+    setModalOpen(true);
+  };
+
+  const handleSaveTaskModal = async (e) => {
     e.preventDefault();
     if (!newTaskDesc.trim()) return;
 
-    const newTask = {
-      id: `task-${Date.now()}`,
-      day: newTaskDay,
-      time: newTaskTime,
-      description: newTaskDesc,
-      is_completed: false,
-      status: 'pending',
-      is_ai_suggested: false
-    };
+    let updated;
+    if (editingTaskId) {
+      updated = tasks.map(t => {
+        if (t.id === editingTaskId) {
+          return {
+            ...t,
+            day: newTaskDay,
+            time: newTaskTime,
+            description: newTaskDesc
+          };
+        }
+        return t;
+      });
+    } else {
+      const newTask = {
+        id: `task-${Date.now()}`,
+        day: newTaskDay,
+        time: newTaskTime,
+        description: newTaskDesc,
+        is_completed: false,
+        status: 'pending',
+        is_ai_suggested: false
+      };
+      updated = [...tasks, newTask];
+    }
 
-    const updated = [...tasks, newTask];
     setTasks(updated);
     setModalOpen(false);
+    setEditingTaskId(null);
     setNewTaskDesc('');
 
     try {
       await api.planner.saveTasks(updated);
     } catch (err) {
       console.error('Failed to save task:', err);
+    }
+  };
+
+  const handleAdaptTimeAvailability = async (mins) => {
+    setSelectedMinutes(mins);
+    const updated = tasks.map(t => ({
+      ...t,
+      time: `${mins} min block`
+    }));
+    setTasks(updated);
+    try {
+      await api.planner.saveTasks(updated);
+      setReminderToast({
+        title: `Plan Adapted to ${mins} Minutes!`,
+        body: `All study sessions have been calibrated to ${mins} minute deep-work blocks.`,
+        to: user?.email
+      });
+      setTimeout(() => setReminderToast(null), 5000);
+    } catch (err) {
+      console.error('Failed to save adapted tasks:', err);
     }
   };
 
@@ -236,7 +294,7 @@ export default function PlannerPage() {
           </button>
 
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold shadow-xs transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -259,6 +317,58 @@ export default function PlannerPage() {
           >
             {sendingReminder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
             {t('planner.btn_send_reminder')}
+          </button>
+        </div>
+      </div>
+
+      {/* Human + AI Collaborative Velocity & Availability Control Bar */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-white border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-electric-600 to-tealBrand-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-sm text-gray-900">Human + AI Co-Planning Velocity</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                Active Co-Pilot
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              👤 <strong className="text-gray-700">{tasks.filter(t => !t.is_ai_suggested).length}</strong> Human Tasks • 🤖 <strong className="text-gray-700">{tasks.filter(t => !!t.is_ai_suggested).length}</strong> AI Tasks • Total: <strong className="text-gray-700">{tasks.length}</strong>
+            </p>
+          </div>
+        </div>
+
+        {/* Flexible Availability Presets */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-gray-600 flex items-center gap-1 mr-1">
+            <Clock className="w-3.5 h-3.5 text-electric-600" />
+            Session Budget:
+          </span>
+          {[30, 45, 57, 90].map((mins) => (
+            <button
+              key={mins}
+              type="button"
+              onClick={() => handleAdaptTimeAvailability(mins)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                selectedMinutes === mins
+                  ? 'bg-electric-600 text-white shadow-sm ring-2 ring-electric-400/30'
+                  : 'bg-slate-100 text-gray-700 hover:bg-slate-200'
+              }`}
+            >
+              {mins}m {mins === 57 && '⚡'}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={handleGenerateAIPlan}
+            disabled={generating}
+            className="ml-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all"
+            title="Regenerate whole plan with AI"
+          >
+            {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 text-tealBrand-400" />}
+            Regenerate AI
           </button>
         </div>
       </div>
@@ -362,22 +472,33 @@ export default function PlannerPage() {
                   ) : (
                     dayTasks.map((task) => {
                       const isCompleted = !!task.is_completed;
+                      const isAI = !!task.is_ai_suggested;
                       return (
                         <div
                           key={task.id}
-                          className={`p-3 rounded-xl border text-xs transition-all ${
+                          className={`p-3.5 rounded-2xl border text-xs transition-all ${
                             isCompleted
                               ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
-                              : 'bg-white border-gray-200 hover:border-electric-300'
+                              : 'bg-white border-gray-200 hover:border-electric-300 shadow-xs'
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <span className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {task.time || '18:00'}
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span className="text-[10px] font-semibold text-gray-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-electric-600" /> {task.time || `${selectedMinutes} min`}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
+                                type="button"
+                                onClick={() => handleOpenEditModal(task)}
+                                title="Edit Session"
+                                className="text-gray-400 hover:text-electric-600 transition-colors p-1"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => toggleTaskStatus(task.id)}
+                                title="Mark Completed"
                                 className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${
                                   isCompleted
                                     ? 'bg-emerald-500 border-emerald-500 text-white'
@@ -387,8 +508,10 @@ export default function PlannerPage() {
                                 {isCompleted && <CheckCircle2 className="w-3 h-3" />}
                               </button>
                               <button
+                                type="button"
                                 onClick={() => deleteTask(task.id)}
-                                className="text-gray-300 hover:text-red-500 transition-colors p-0.5"
+                                title="Delete Session"
+                                className="text-gray-300 hover:text-red-500 transition-colors p-1"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -399,11 +522,17 @@ export default function PlannerPage() {
                             {task.description}
                           </p>
 
-                          {task.is_ai_suggested && (
-                            <span className="inline-block mt-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-electric-100 text-electric-700">
-                              AI Optimized
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 mt-2.5">
+                            {isAI ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-electric-100 text-electric-700">
+                                <Bot className="w-2.5 h-2.5" /> AI Co-Pilot
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold bg-slate-100 text-slate-700">
+                                <UserIcon className="w-2.5 h-2.5" /> Human Added
+                              </span>
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -415,15 +544,15 @@ export default function PlannerPage() {
         })}
       </div>
 
-      {/* Manual Task Add Modal */}
+      {/* Manual & Edit Task Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-md w-full p-6 space-y-5">
             <h3 className="text-lg font-bold text-gray-900">
-              {t('planner.new_task_modal_title')}
+              {editingTaskId ? 'Edit Study Session' : t('planner.new_task_modal_title')}
             </h3>
 
-            <form onSubmit={handleAddTask} className="space-y-4">
+            <form onSubmit={handleSaveTaskModal} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   {t('planner.task_desc')}
@@ -455,7 +584,7 @@ export default function PlannerPage() {
                     type="text"
                     value={newTaskTime}
                     onChange={(e) => setNewTaskTime(e.target.value)}
-                    placeholder="18:00 - 20:00"
+                    placeholder="e.g. 57 min Block"
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs"
                   />
                 </div>
@@ -473,7 +602,7 @@ export default function PlannerPage() {
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-electric-600 hover:bg-electric-700 text-white text-xs font-bold shadow-sm"
                 >
-                  {t('planner.save_task')}
+                  {editingTaskId ? 'Save Changes' : t('planner.save_task')}
                 </button>
               </div>
             </form>

@@ -12,7 +12,10 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Loader2
+  Loader2,
+  GraduationCap,
+  Phone,
+  BookOpen
 } from 'lucide-react';
 
 const COMMON_SKILLS = [
@@ -33,6 +36,10 @@ export default function OnboardingPage() {
   // Form State
   const [targetRole, setTargetRole] = useState(user?.target_role || 'Software Engineer');
   const [dreamCompanies, setDreamCompanies] = useState(user?.dream_companies || 'Google, Microsoft, TCS, Infosys');
+  const [universityName, setUniversityName] = useState(user?.university_name || '');
+  const [branch, setBranch] = useState(user?.branch || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
+  const [availableMinutes, setAvailableMinutes] = useState(user?.available_study_minutes || 57);
   const [selectedSkills, setSelectedSkills] = useState(
     user?.current_skills ? user.current_skills.split(',').map(s => s.trim()) : ['Python', 'SQL', 'Data Structures & Algorithms']
   );
@@ -58,6 +65,10 @@ export default function OnboardingPage() {
       await completeOnboarding({
         target_role: targetRole,
         dream_companies: dreamCompanies,
+        university_name: universityName,
+        branch: branch,
+        phone_number: phoneNumber,
+        available_study_minutes: availableMinutes,
         current_skills: selectedSkills,
         daily_study_hours: dailyHours,
         preferred_language: preferredLang
@@ -113,7 +124,7 @@ export default function OnboardingPage() {
                   <Briefcase className="w-5 h-5 text-electric-600" />
                   {t('onboarding.step1_title')}
                 </h3>
-                <p className="text-xs text-gray-500">Define your primary career target and aspiration goals.</p>
+                <p className="text-xs text-gray-500">Define your primary career target, college background, and contact info.</p>
               </div>
 
               <div>
@@ -141,6 +152,51 @@ export default function OnboardingPage() {
                   className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 text-gray-900 outline-none text-sm transition-all"
                 />
                 <p className="text-xs text-gray-400 mt-1.5">Separate multiple companies with commas.</p>
+              </div>
+
+              {/* College, Branch, Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-electric-600" />
+                    {t('onboarding.university_name')}
+                  </label>
+                  <input
+                    type="text"
+                    value={universityName}
+                    onChange={(e) => setUniversityName(e.target.value)}
+                    placeholder={t('onboarding.university_placeholder')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-electric-600" />
+                    {t('onboarding.branch')}
+                  </label>
+                  <input
+                    type="text"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    placeholder={t('onboarding.branch_placeholder')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-tealBrand-600" />
+                    {t('onboarding.phone_number')}
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder={t('onboarding.phone_placeholder')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:border-electric-500 outline-none"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -194,28 +250,57 @@ export default function OnboardingPage() {
                 <p className="text-xs text-gray-500">Personalize your study rhythm and mentorship language.</p>
               </div>
 
-              {/* Study Hours Slider */}
-              <div className="bg-slate-50 p-5 rounded-2xl border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
+              {/* Study Hours & Flexible Availability */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-800">
-                    {t('onboarding.hours_label')}
+                    {t('onboarding.study_minutes_label')}
                   </span>
                   <span className="px-3 py-1 bg-electric-100 text-electric-800 font-extrabold text-sm rounded-lg">
-                    {dailyHours} {t('onboarding.hours_suffix')}
+                    {availableMinutes} Minutes ({Math.round((availableMinutes / 60) * 10) / 10} hrs)
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="8"
-                  value={dailyHours}
-                  onChange={(e) => setDailyHours(parseInt(e.target.value, 10))}
-                  className="w-full accent-electric-600 cursor-pointer"
-                />
-                <div className="flex justify-between text-[11px] text-gray-400 mt-1 font-semibold">
-                  <span>1 Hour</span>
-                  <span>4 Hours</span>
-                  <span>8 Hours</span>
+
+                {/* Flexible availability buttons */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {[30, 45, 57, 90, 120].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => {
+                        setAvailableMinutes(mins);
+                        setDailyHours(Math.max(1, Math.round(mins / 60)));
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        availableMinutes === mins
+                          ? 'bg-electric-600 text-white shadow-sm ring-2 ring-electric-400/30'
+                          : 'bg-white text-gray-700 border border-gray-200 hover:border-electric-300'
+                      }`}
+                    >
+                      {mins} min {mins === 57 && '⚡ (Optimal)'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-2">
+                  <input
+                    type="range"
+                    min="15"
+                    max="240"
+                    step="5"
+                    value={availableMinutes}
+                    onChange={(e) => {
+                      const m = parseInt(e.target.value, 10);
+                      setAvailableMinutes(m);
+                      setDailyHours(Math.max(1, Math.round(m / 60)));
+                    }}
+                    className="w-full accent-electric-600 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[11px] text-gray-400 font-semibold mt-1">
+                    <span>15 min</span>
+                    <span>57 min (Recommended)</span>
+                    <span>4 hours (240 min)</span>
+                  </div>
                 </div>
               </div>
 

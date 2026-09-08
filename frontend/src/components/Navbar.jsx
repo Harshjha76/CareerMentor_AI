@@ -10,13 +10,14 @@ import {
   Calendar,
   MessageSquare,
   Target,
-  BrainCircuit,
   BarChart2,
   Settings,
   LogOut,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Bell,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -25,10 +26,10 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const navLinks = [
     { to: '/dashboard', label: t('nav.dashboard'), icon: Compass },
-    { to: '/what-i-know', label: t('nav.what_i_know'), icon: BrainCircuit },
     { to: '/resume', label: t('nav.resume'), icon: FileText },
     { to: '/roadmap', label: t('nav.roadmap'), icon: Map },
     { to: '/planner', label: t('nav.planner'), icon: Calendar },
@@ -90,7 +91,47 @@ export default function Navbar() {
             <LanguageSelector />
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative">
+                {/* Notification Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setNotifOpen(!notifOpen)}
+                    className="p-2 text-gray-500 hover:text-electric-700 hover:bg-gray-100 rounded-lg transition-colors relative"
+                    title="Agent Notifications"
+                  >
+                    <Bell className="w-4 h-4" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-tealBrand-500 animate-pulse"></span>
+                  </button>
+
+                  {notifOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
+                      <div className="flex items-center justify-between border-b pb-2 mb-2.5">
+                        <span className="font-extrabold text-gray-900 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-electric-600" /> CareerPilot Agent
+                        </span>
+                        <span className="text-[10px] bg-electric-50 text-electric-700 px-2 py-0.5 rounded-full font-bold">
+                          Active
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-gray-100">
+                          <div className="font-bold text-gray-900 text-[11px] mb-0.5">2-Hour Study Check-in ⏱️</div>
+                          <div className="text-gray-600 text-[11px] leading-relaxed">
+                            Your 2-hour study cadence is actively tracked. Keep up your daily tasks!
+                          </div>
+                          <div className="text-[10px] text-tealBrand-600 font-semibold mt-1">Autonomous monitoring on</div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-gray-100">
+                          <div className="font-bold text-gray-900 text-[11px] mb-0.5">Daily Goal Progress 🎯</div>
+                          <div className="text-gray-600 text-[11px] leading-relaxed">
+                            Check off your daily tasks to maintain your study streak.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <Link
                   to="/settings"
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"

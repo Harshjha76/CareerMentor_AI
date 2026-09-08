@@ -16,6 +16,25 @@ function generateToken(user) {
   );
 }
 
+function formatUserResponse(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatar_url: user.avatar_url,
+    preferred_language: user.preferred_language || 'en',
+    target_role: user.target_role || 'Software Engineer',
+    dream_companies: user.dream_companies || 'Google, Microsoft',
+    current_skills: user.current_skills || '',
+    daily_study_hours: user.daily_study_hours || 2,
+    available_study_minutes: user.available_study_minutes || (user.daily_study_hours ? user.daily_study_hours * 60 : 120),
+    university_name: user.university_name || '',
+    branch: user.branch || '',
+    phone_number: user.phone_number || '',
+    is_onboarded: !!user.is_onboarded
+  };
+}
+
 /**
  * Handle Google Sign-In (OAuth ID Token)
  */
@@ -90,18 +109,7 @@ export async function googleLogin(req, res) {
 
     return res.json({
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar_url: user.avatar_url,
-        preferred_language: user.preferred_language,
-        target_role: user.target_role,
-        dream_companies: user.dream_companies,
-        current_skills: user.current_skills,
-        daily_study_hours: user.daily_study_hours,
-        is_onboarded: !!user.is_onboarded
-      }
+      user: formatUserResponse(user)
     });
   } catch (err) {
     console.error('Google Auth Error:', err);
@@ -125,8 +133,8 @@ export async function demoLogin(req, res) {
       await query(
         `INSERT INTO users (
           id, google_id, email, name, avatar_url, target_role, dream_companies,
-          current_skills, daily_study_hours, preferred_language, is_onboarded
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          current_skills, daily_study_hours, available_study_minutes, university_name, branch, phone_number, preferred_language, is_onboarded
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           newId,
           'google_demo_1001',
@@ -136,7 +144,11 @@ export async function demoLogin(req, res) {
           'Full Stack Software Engineer',
           'Google, Microsoft, TCS, Infosys',
           'JavaScript, React, Node.js, Python, SQL',
-          3,
+          2,
+          57,
+          'Indian Institute of Technology (IIT)',
+          'Computer Science & Engineering',
+          '+91 98765 43210',
           'en',
           true
         ]
@@ -148,18 +160,7 @@ export async function demoLogin(req, res) {
     const token = generateToken(user);
     return res.json({
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar_url: user.avatar_url,
-        preferred_language: user.preferred_language,
-        target_role: user.target_role,
-        dream_companies: user.dream_companies,
-        current_skills: user.current_skills,
-        daily_study_hours: user.daily_study_hours,
-        is_onboarded: !!user.is_onboarded
-      }
+      user: formatUserResponse(user)
     });
   } catch (err) {
     console.error('Demo Login Error:', err);
@@ -178,12 +179,17 @@ export async function saveOnboarding(req, res) {
       dream_companies,
       current_skills,
       daily_study_hours,
+      available_study_minutes,
+      university_name,
+      branch,
+      phone_number,
       preferred_language
     } = req.body;
 
     // Validate preferred_language strictly to en, hi, mr, sa
     const validLanguages = ['en', 'hi', 'mr', 'sa'];
     const selectedLang = validLanguages.includes(preferred_language) ? preferred_language : 'en';
+    const studyMins = available_study_minutes ? parseInt(available_study_minutes, 10) : (daily_study_hours ? parseInt(daily_study_hours, 10) * 60 : 120);
 
     await query(
       `UPDATE users SET
@@ -191,14 +197,22 @@ export async function saveOnboarding(req, res) {
         dream_companies = $2,
         current_skills = $3,
         daily_study_hours = $4,
-        preferred_language = $5,
+        available_study_minutes = $5,
+        university_name = $6,
+        branch = $7,
+        phone_number = $8,
+        preferred_language = $9,
         is_onboarded = TRUE
-      WHERE id = $6`,
+      WHERE id = $10`,
       [
         target_role || 'Software Engineer',
         dream_companies || 'Google, Microsoft',
         Array.isArray(current_skills) ? current_skills.join(', ') : current_skills || 'General Tech',
-        parseInt(daily_study_hours || '2', 10),
+        daily_study_hours ? parseInt(daily_study_hours, 10) : Math.round(studyMins / 60),
+        studyMins,
+        university_name || '',
+        branch || '',
+        phone_number || '',
         selectedLang,
         userId
       ]
@@ -209,18 +223,7 @@ export async function saveOnboarding(req, res) {
 
     return res.json({
       message: 'Onboarding completed successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar_url: user.avatar_url,
-        preferred_language: user.preferred_language,
-        target_role: user.target_role,
-        dream_companies: user.dream_companies,
-        current_skills: user.current_skills,
-        daily_study_hours: user.daily_study_hours,
-        is_onboarded: !!user.is_onboarded
-      }
+      user: formatUserResponse(user)
     });
   } catch (err) {
     console.error('Onboarding Error:', err);
@@ -235,18 +238,7 @@ export async function getMe(req, res) {
   try {
     const user = req.user;
     return res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar_url: user.avatar_url,
-        preferred_language: user.preferred_language,
-        target_role: user.target_role,
-        dream_companies: user.dream_companies,
-        current_skills: user.current_skills,
-        daily_study_hours: user.daily_study_hours,
-        is_onboarded: !!user.is_onboarded
-      }
+      user: formatUserResponse(user)
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to fetch user profile' });
@@ -265,6 +257,10 @@ export async function updateProfile(req, res) {
       dream_companies,
       current_skills,
       daily_study_hours,
+      available_study_minutes,
+      university_name,
+      branch,
+      phone_number,
       preferred_language
     } = req.body;
 
@@ -273,6 +269,10 @@ export async function updateProfile(req, res) {
       ? preferred_language
       : req.user.preferred_language;
 
+    const studyMins = available_study_minutes
+      ? parseInt(available_study_minutes, 10)
+      : (req.user.available_study_minutes || (daily_study_hours ? parseInt(daily_study_hours, 10) * 60 : 120));
+
     await query(
       `UPDATE users SET
         name = COALESCE($1, name),
@@ -280,14 +280,22 @@ export async function updateProfile(req, res) {
         dream_companies = COALESCE($3, dream_companies),
         current_skills = COALESCE($4, current_skills),
         daily_study_hours = COALESCE($5, daily_study_hours),
-        preferred_language = $6
-      WHERE id = $7`,
+        available_study_minutes = COALESCE($6, available_study_minutes),
+        university_name = COALESCE($7, university_name),
+        branch = COALESCE($8, branch),
+        phone_number = COALESCE($9, phone_number),
+        preferred_language = $10
+      WHERE id = $11`,
       [
         name || req.user.name,
         target_role || req.user.target_role,
         dream_companies || req.user.dream_companies,
         current_skills || req.user.current_skills,
         daily_study_hours ? parseInt(daily_study_hours, 10) : req.user.daily_study_hours,
+        studyMins,
+        university_name !== undefined ? university_name : req.user.university_name,
+        branch !== undefined ? branch : req.user.branch,
+        phone_number !== undefined ? phone_number : req.user.phone_number,
         selectedLang,
         userId
       ]
@@ -298,18 +306,7 @@ export async function updateProfile(req, res) {
 
     return res.json({
       message: 'Profile updated successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar_url: user.avatar_url,
-        preferred_language: user.preferred_language,
-        target_role: user.target_role,
-        dream_companies: user.dream_companies,
-        current_skills: user.current_skills,
-        daily_study_hours: user.daily_study_hours,
-        is_onboarded: !!user.is_onboarded
-      }
+      user: formatUserResponse(user)
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update profile: ' + err.message });
