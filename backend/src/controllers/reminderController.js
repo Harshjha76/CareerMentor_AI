@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
 import { sendEmailReminder } from '../services/emailService.js';
-import { generateLocalizedReminder } from '../services/aiService.js';
+import { generateLocalizedReminder, generate2HourCheckinReminder } from '../services/aiService.js';
 
 export async function sendTestReminder(req, res) {
   try {
@@ -60,6 +60,55 @@ export async function sendTestReminder(req, res) {
   } catch (err) {
     console.error('Reminder error:', err);
     return res.status(500).json({ error: 'Failed to send reminder: ' + err.message });
+  }
+}
+
+/**
+ * 2-Hour Autonomous AI Agent Study Check-in Simulator
+ */
+export async function simulate2HourCheckin(req, res) {
+  try {
+    const user = req.user;
+    const language = user.preferred_language || 'en';
+
+    // Fetch count of pending tasks
+    const pendingTasks = await query(
+      `SELECT COUNT(*) as count FROM roadmap_tasks rt
+       JOIN roadmaps r ON rt.roadmap_id = r.id
+       WHERE r.user_id = $1 AND rt.is_completed = FALSE`,
+      [user.id]
+    );
+
+    const count = parseInt(pendingTasks.rows[0]?.count || '3', 10);
+    const checkin = generate2HourCheckinReminder(user.name, count, language);
+
+    // Send email or log notification
+    await sendEmailReminder({
+      toEmail: user.email,
+      subject: checkin.subject,
+      textContent: checkin.body
+    });
+
+    // Save in reminders log
+    const reminderId = uuidv4();
+    await query(
+      `INSERT INTO reminders (id, user_id, reminder_text, scheduled_time, is_sent, sent_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [reminderId, user.id, checkin.body, new Date().toISOString(), true, new Date().toISOString()]
+    );
+
+    return res.json({
+      message: '2-Hour Agent check-in triggered',
+      title: checkin.title,
+      subject: checkin.subject,
+      body: checkin.body,
+      language,
+      pendingCount: count,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('2-Hour Check-in Error:', err);
+    return res.status(500).json({ error: 'Failed to trigger 2-hour checkin: ' + err.message });
   }
 }
 

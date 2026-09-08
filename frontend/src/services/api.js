@@ -58,7 +58,7 @@ export const api = {
       }).then(handleResponse)
   },
 
-  // Resume Analyzer
+  // Resume Analyzer & Information Extraction
   resume: {
     upload: (file) => {
       const token = localStorage.getItem('careerpilot_token');
@@ -107,7 +107,7 @@ export const api = {
       }).then(handleResponse)
   },
 
-  // AI Planner
+  // AI Planner (Human + AI Collaborative Planning)
   planner: {
     get: (type = 'weekly') =>
       fetch(`${API_BASE}/planner?type=${type}`, {
@@ -125,6 +125,20 @@ export const api = {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ tasks })
+      }).then(handleResponse),
+
+    analyze: (tasks) =>
+      fetch(`${API_BASE}/planner/analyze`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ tasks })
+      }).then(handleResponse),
+
+    optimize: (optimized_tasks) =>
+      fetch(`${API_BASE}/planner/optimize`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ optimized_tasks })
       }).then(handleResponse)
   },
 
@@ -177,10 +191,16 @@ export const api = {
       }).then(handleResponse)
   },
 
-  // Reminders
+  // Reminders & 2-Hour Agent Check-in
   reminders: {
     sendTest: () =>
       fetch(`${API_BASE}/reminders/test`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    checkin2h: () =>
+      fetch(`${API_BASE}/reminders/checkin-2h`, {
         method: 'POST',
         headers: getAuthHeaders()
       }).then(handleResponse),

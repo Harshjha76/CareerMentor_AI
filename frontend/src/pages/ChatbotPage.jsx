@@ -11,8 +11,13 @@ import {
   Bot,
   User,
   Loader2,
+  Copy,
+  Check,
+  Code2,
+  Briefcase,
   HelpCircle,
-  Clock
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 
 export default function ChatbotPage() {
@@ -23,6 +28,7 @@ export default function ChatbotPage() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [copiedId, setCopiedId] = useState(null);
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +45,6 @@ export default function ChatbotPage() {
       if (res.messages && res.messages.length > 0) {
         setMessages(res.messages);
       } else {
-        // Provide an initial greeting from CareerPilot
         setMessages([
           {
             id: 'init-1',
@@ -58,15 +63,15 @@ export default function ChatbotPage() {
 
   function getInitialGreeting(name, role, lang) {
     if (lang === 'hi') {
-      return `नमस्ते **${name || 'विद्यार्थी'}**! 🌟\n\nमैं आपका 24/7 **करियरपायलट मेंटर** हूँ। आपके लक्ष्य **${role || 'सॉफ्टवेयर इंजीनियर'}** के लिए साक्षात्कार की तैयारी, कोडिंग अभ्यास, और कंपनी चयन के बारे में आप मुझसे कभी भी पूछ सकते हैं।`;
+      return `नमस्ते **${name || 'विद्यार्थी'}**! 🌟\n\nमैं आपका 24/7 **करियरपायलट एआई मेंटर** हूँ। आपके लक्ष्य **${role || 'सॉफ्टवेयर इंजीनियर'}** के लिए:\n- तकनीकी व कोडिंग साक्षात्कार (DSA, System Design)\n- बिहेवियरल इंटरव्यू (STAR विधि)\n- रिज्यूमे विश्लेषण व प्रोजेक्ट मार्गदर्शन\n\nआप किस विषय में गहराई से जानना चाहते हैं?`;
     }
     if (lang === 'mr') {
-      return `नमस्कार **${name || 'विद्यार्थी मित्र'}**! 🌟\n\nमी तुमचा २४/७ **करिअरपायलट मार्गदर्शक** आहे. तुमच्या **${role || 'सॉफ्टवेअर इंजिनिअर'}** या ध्येयासाठी मुलाखत तयारी, कोडिंग सराव आणि कंपन्यांच्या निवडीबद्दल आपण कधीही विचारू शकता.`;
+      return `नमस्कार **${name || 'विद्यार्थी मित्र'}**! 🌟\n\nमी तुमचा २४/७ **करिअरपायलट मार्गदर्शक** आहे. तुमच्या **${role || 'सॉफ्टवेअर इंजिनिअर'}** या ध्येयासाठी:\n- तांत्रिक व कोडिंग मुलाखती (DSA, System Design)\n- बिहेव्हियरल प्रश्न (STAR पद्धत)\n- रेझ्युमे प्रोजेक्ट्स व कंपनी निवड\n\nआपण आज कोणत्या विषयाने सुरुवात करूया?`;
     }
     if (lang === 'sa') {
-      return `नमस्ते **${name || 'छात्र'}**! 🌟\n\nअहं तव २४/७ **करियरपायलट् वृत्तिमार्गदर्शकः** अस्मि। तव अभीष्टपदस्य **${role || 'Software Engineer'}** कृते साक्षात्कारसज्जताम्, अभ्यासयोजनां च अधिकृत्य मां यत्किञ्चित् पृच्छतु।`;
+      return `नमस्ते **${name || 'छात्र'}**! 🌟\n\nअहं तव २४/७ **करियरपायलट् वृत्तिमार्गदर्शकः** अस्मि। तव अभीष्टपदस्य **${role || 'Software Engineer'}** कृते:\n- तान्त्रिक-साक्षात्कारः (DSA, System Design)\n- व्यावहारिक-प्रश्नाः (STAR-विधिः)\n- सारांशपत्र-प्रकल्पमार्गदर्शनम्\n\nकिम् अधिकृत्य अद्य चर्चां कुर्मः?`;
     }
-    return `Hello **${name || 'there'}**! 🌟\n\nI am your 24/7 personal **CareerPilot Mentor**. I'm fully aware of your target role (**${role || 'Software Engineer'}**) and dream companies. Ask me anything about interview prep, tech stacks, or career advice!`;
+    return `Hello **${name || 'there'}**! 🌟\n\nI am your 24/7 personal **CareerPilot AI Mentor** (operating with ChatGPT-4o & Claude-level career intelligence).\n\nI am calibrated for your target role (**${role || 'Full Stack Software Engineer'}**) and dream companies:\n- **Technical Mastery**: Live mock interviews, system design blueprints, and DSA optimization.\n- **Behavioral Frameworks**: STAR method interview coaching.\n- **Portfolio Engineering**: Architecting standout projects that impress hiring managers.\n\nWhat specific challenge can we tackle together right now?`;
   }
 
   const handleSendMessage = async (textToSend) => {
@@ -94,6 +99,12 @@ export default function ChatbotPage() {
     }
   };
 
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleClearHistory = async () => {
     if (!confirm('Clear all conversation history?')) return;
     try {
@@ -118,18 +129,27 @@ export default function ChatbotPage() {
     t('chat.p4')
   ];
 
+  // Dynamic follow-up suggestion chips
+  const dynamicFollowUps = [
+    "Simulate a live 15-minute coding interview",
+    "How do I explain system design trade-offs?",
+    "Give me 3 high-impact bullet points for my resume"
+  ];
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 h-[calc(100vh-5rem)] flex flex-col">
       {/* Top Banner */}
       <div className="bg-white rounded-t-3xl border border-gray-200 border-b-0 p-4 sm:p-5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-900 to-electric-600 flex items-center justify-center text-white shadow-sm">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary-900 to-electric-600 flex items-center justify-center text-white shadow-sm">
             <Bot className="w-6 h-6" />
           </div>
           <div>
             <h2 className="font-extrabold text-gray-900 text-sm sm:text-base flex items-center gap-2">
-              CareerPilot Mentor
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              CareerPilot Agent
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">
+                ChatGPT / Claude Level
+              </span>
             </h2>
             <div className="text-xs text-gray-400 flex items-center gap-2">
               <span>{user?.target_role || 'Software Engineer'}</span>
@@ -141,7 +161,6 @@ export default function ChatbotPage() {
 
         {/* Right tools: Language switch & Clear */}
         <div className="flex items-center gap-2">
-          {/* In-chat language switcher */}
           <select
             value={language}
             onChange={(e) => changeLanguage(e.target.value)}
@@ -165,33 +184,55 @@ export default function ChatbotPage() {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 bg-slate-50/80 border-x border-gray-200 overflow-y-auto p-4 sm:p-6 space-y-4">
+      <div className="flex-1 bg-slate-50/80 border-x border-gray-200 overflow-y-auto p-4 sm:p-6 space-y-5">
         {messages.map((m) => {
           const isUser = m.sender === 'user';
           return (
             <div
               key={m.id}
-              className={`flex items-end gap-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
+              className={`flex items-start gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
             >
               {!isUser && (
-                <div className="w-8 h-8 rounded-full bg-electric-600 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-900 to-electric-600 text-white flex items-center justify-center flex-shrink-0 text-xs font-black shadow-xs mt-1">
                   AI
                 </div>
               )}
 
               <div
-                className={`max-w-xl rounded-2xl p-4 text-sm leading-relaxed ${
+                className={`max-w-2xl rounded-2xl p-5 text-sm leading-relaxed ${
                   isUser
-                    ? 'bg-gradient-to-r from-primary-900 to-electric-700 text-white rounded-br-xs shadow-md'
-                    : 'bg-white text-gray-800 border border-gray-200/90 rounded-bl-xs shadow-xs'
+                    ? 'bg-gradient-to-r from-primary-900 to-electric-700 text-white rounded-tr-xs shadow-md'
+                    : 'bg-white text-gray-800 border border-gray-200/90 rounded-tl-xs shadow-xs space-y-3'
                 }`}
               >
                 <div className="whitespace-pre-line prose prose-sm max-w-none">
                   {m.text}
                 </div>
-                <div className={`text-[10px] mt-2 flex items-center justify-end gap-1 ${isUser ? 'text-white/70' : 'text-gray-400'}`}>
-                  <Clock className="w-2.5 h-2.5" />
-                  {new Date(m.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-[10px] text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5" />
+                    {new Date(m.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+
+                  {!isUser && (
+                    <button
+                      onClick={() => copyToClipboard(m.text, m.id)}
+                      className="hover:text-gray-700 flex items-center gap-1 p-1 transition-colors"
+                    >
+                      {copiedId === m.id ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span className="text-emerald-600 font-bold">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -199,7 +240,7 @@ export default function ChatbotPage() {
                 <img
                   src={user?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
                   alt="You"
-                  className="w-8 h-8 rounded-full border border-gray-300 object-cover flex-shrink-0"
+                  className="w-8 h-8 rounded-full border border-gray-300 object-cover flex-shrink-0 mt-1"
                 />
               )}
             </div>
@@ -207,21 +248,23 @@ export default function ChatbotPage() {
         })}
 
         {sending && (
-          <div className="flex items-center gap-2.5 text-gray-400 text-xs animate-pulse">
-            <div className="w-8 h-8 rounded-full bg-electric-100 text-electric-600 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
+          <div className="flex items-center gap-3 text-gray-400 text-xs animate-pulse">
+            <div className="w-8 h-8 rounded-full bg-electric-100 text-electric-600 flex items-center justify-center font-black">
+              <Sparkles className="w-4 h-4 animate-spin" />
             </div>
-            <span>{t('chat.typing')}</span>
+            <div className="p-4 rounded-2xl bg-white border border-gray-200 text-xs text-gray-600 shadow-xs">
+              CareerPilot is analyzing technical & strategic context...
+            </div>
           </div>
         )}
 
         <div ref={chatBottomRef} />
       </div>
 
-      {/* Suggested Prompts Ribbon */}
-      <div className="bg-white border-x border-t border-gray-200 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-        <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap">
-          Quick Ask:
+      {/* Suggested Topics / Follow-ups */}
+      <div className="bg-white border-x border-t border-gray-200 px-4 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-electric-600" /> Prompts:
         </span>
         {quickPrompts.map((p, i) => (
           <button
@@ -251,7 +294,7 @@ export default function ChatbotPage() {
           <button
             type="submit"
             disabled={!inputText.trim() || sending}
-            className="px-5 py-3 rounded-2xl bg-electric-600 hover:bg-electric-700 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-electric-600/25 transition-all flex items-center gap-1.5"
+            className="px-6 py-3 rounded-2xl bg-electric-600 hover:bg-electric-700 disabled:opacity-50 text-white font-bold text-sm shadow-md shadow-electric-600/25 transition-all flex items-center gap-2"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             <span className="hidden sm:inline">{t('chat.btn_send')}</span>

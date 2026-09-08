@@ -10,6 +10,7 @@ import {
   Calendar,
   MessageSquare,
   Target,
+  BrainCircuit,
   BarChart2,
   Settings,
   LogOut,
@@ -27,6 +28,7 @@ export default function Navbar() {
 
   const navLinks = [
     { to: '/dashboard', label: t('nav.dashboard'), icon: Compass },
+    { to: '/what-i-know', label: t('nav.what_i_know'), icon: BrainCircuit },
     { to: '/resume', label: t('nav.resume'), icon: FileText },
     { to: '/roadmap', label: t('nav.roadmap'), icon: Map },
     { to: '/planner', label: t('nav.planner'), icon: Calendar },

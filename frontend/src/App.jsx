@@ -10,6 +10,7 @@ import RoadmapPage from './pages/RoadmapPage';
 import PlannerPage from './pages/PlannerPage';
 import ChatbotPage from './pages/ChatbotPage';
 import GoalsPage from './pages/GoalsPage';
+import WhatIKnowPage from './pages/WhatIKnowPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
 
@@ -29,7 +30,6 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/" replace />;
   }
 
-  // Redirect to onboarding if not onboarded yet and not currently on /onboarding
   if (user && !user.is_onboarded && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
@@ -44,7 +44,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-900">
-      {/* Render Navbar on all pages except Landing (which has its own header) and Onboarding */}
       {!isLandingPage && !isOnboarding && <Navbar />}
 
       <main className="flex-1">
@@ -63,6 +62,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/what-i-know"
+            element={
+              <ProtectedRoute>
+                <WhatIKnowPage />
               </ProtectedRoute>
             }
           />

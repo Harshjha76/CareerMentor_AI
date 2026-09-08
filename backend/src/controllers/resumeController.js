@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
 import { extractTextFromFile } from '../services/resumeParser.js';
-import { analyzeResumeWithAI } from '../services/aiService.js';
+import { analyzeResumeWithAI, extractStructuredResumeDetails } from '../services/aiService.js';
 
 export async function uploadAndAnalyzeResume(req, res) {
   try {
@@ -13,16 +13,24 @@ export async function uploadAndAnalyzeResume(req, res) {
     const userRole = req.user.target_role || 'Software Engineer';
     const language = req.user.preferred_language || 'en';
 
-    console.log(`📄 Analyzing resume: ${req.file.originalname} for ${userRole} in language [${language}]`);
+    console.log(`📄 Deep parsing resume: ${req.file.originalname} for ${userRole} in [${language}]`);
 
     // Extract text
     const textContent = await extractTextFromFile(req.file.path, req.file.mimetype, req.file.originalname);
 
-    // Analyze with AI
-    const analysis = await analyzeResumeWithAI(textContent, userRole, language);
+    // Run parallel AI analysis: ATS scoring + deep structured profile extraction
+    const [analysis, extractedProfile] = await Promise.all([
+      analyzeResumeWithAI(textContent, userRole, language),
+      extractStructuredResumeDetails(textContent, language)
+    ]);
 
     const resumeId = uuidv4();
-    const score = analysis.score || 78;
+    const score = analysis.score || 85;
+
+    const combinedPayload = {
+      analysis,
+      extractedProfile
+    };
 
     await query(
       `INSERT INTO resumes (id, user_id, file_url, ai_feedback, score)
@@ -31,16 +39,17 @@ export async function uploadAndAnalyzeResume(req, res) {
         resumeId,
         userId,
         req.file.filename,
-        JSON.stringify(analysis),
+        JSON.stringify(combinedPayload),
         score
       ]
     );
 
     return res.json({
-      message: 'Resume analyzed successfully',
+      message: 'Resume analyzed and structured profile extracted successfully',
       resumeId,
       score,
       analysis,
+      extractedProfile,
       fileName: req.file.originalname
     });
   } catch (err) {
@@ -62,21 +71,27 @@ export async function getLatestResume(req, res) {
     }
 
     const resume = result.rows[0];
-    let feedback = resume.ai_feedback;
-    if (typeof feedback === 'string') {
+    let payload = resume.ai_feedback;
+    if (typeof payload === 'string') {
       try {
-        feedback = JSON.parse(feedback);
+        payload = JSON.parse(payload);
       } catch {
-        // Keep string
+        payload = {};
       }
     }
+
+    // Support both new combined schema and legacy schema
+    const analysis = payload.analysis || payload;
+    const extractedProfile = payload.extractedProfile || null;
 
     return res.json({
       resume: {
         id: resume.id,
         score: resume.score,
         uploaded_at: resume.uploaded_at,
-        feedback
+        analysis,
+        extractedProfile,
+        feedback: analysis // backward compatibility
       }
     });
   } catch (err) {

@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
+import { evaluateStudyPlanProsAndCons } from '../services/aiService.js';
 
 export async function getPlan(req, res) {
   try {
@@ -74,7 +75,7 @@ export async function generateAIPlan(req, res) {
         time: '18:00 - 20:00',
         description: taskTitle,
         is_completed: false,
-        status: 'pending', // 'pending' | 'completed' | 'overdue'
+        status: 'pending',
         is_ai_suggested: true
       });
     });
@@ -114,7 +115,6 @@ export async function savePlanTasks(req, res) {
     const userId = req.user.id;
     const { tasks } = req.body;
 
-    // Fetch existing weekly plan or create new
     const existing = await query(
       `SELECT * FROM plans WHERE user_id = $1 AND plan_type = 'weekly' ORDER BY start_date DESC LIMIT 1`,
       [userId]
@@ -140,5 +140,55 @@ export async function savePlanTasks(req, res) {
   } catch (err) {
     console.error('Save Plan Error:', err);
     return res.status(500).json({ error: 'Failed to update tasks: ' + err.message });
+  }
+}
+
+/**
+ * Analyze Plan: Evaluates user's plan with AI for Pros and Cons
+ */
+export async function analyzePlanProsAndCons(req, res) {
+  try {
+    const userId = req.user.id;
+    const { tasks } = req.body;
+    const targetRole = req.user.target_role || 'Software Engineer';
+    const dailyHours = req.user.daily_study_hours || 2;
+    const language = req.user.preferred_language || 'en';
+
+    console.log(`🤖 Evaluating study plan for ${targetRole} with AI (${tasks?.length || 0} tasks) in [${language}]`);
+
+    const evaluation = await evaluateStudyPlanProsAndCons(tasks || [], targetRole, dailyHours, language);
+
+    return res.json({
+      message: 'Plan evaluation completed',
+      evaluation
+    });
+  } catch (err) {
+    console.error('Analyze Plan Error:', err);
+    return res.status(500).json({ error: 'Failed to evaluate plan: ' + err.message });
+  }
+}
+
+/**
+ * Apply AI Optimization: Overwrites/merges current plan with AI-optimized schedule
+ */
+export async function applyAIOptimization(req, res) {
+  try {
+    const userId = req.user.id;
+    const { optimized_tasks } = req.body;
+
+    if (!Array.isArray(optimized_tasks) || optimized_tasks.length === 0) {
+      return res.status(400).json({ error: 'Optimized tasks array is required' });
+    }
+
+    const tasksWithIds = optimized_tasks.map(t => ({
+      ...t,
+      id: t.id || uuidv4(),
+      status: t.is_completed ? 'completed' : 'pending'
+    }));
+
+    await savePlanTasks({ user: req.user, body: { tasks: tasksWithIds } }, res);
+  } catch (err) {
+    console.error('Apply AI Optimization Error:', err);
+    return res.status(500).json({ error: 'Failed to apply optimization: ' + err.message });
   }
 }

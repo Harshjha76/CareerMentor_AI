@@ -25,7 +25,9 @@ import {
 import {
   getPlan,
   generateAIPlan,
-  savePlanTasks
+  savePlanTasks,
+  analyzePlanProsAndCons,
+  applyAIOptimization
 } from '../controllers/plannerController.js';
 
 import {
@@ -43,6 +45,7 @@ import {
 
 import {
   sendTestReminder,
+  simulate2HourCheckin,
   getReminders
 } from '../controllers/reminderController.js';
 
@@ -59,7 +62,7 @@ router.post('/auth/onboarding', authenticateToken, saveOnboarding);
 router.get('/auth/me', authenticateToken, getMe);
 router.put('/user/profile', authenticateToken, updateProfile);
 
-// 2. Resume Analyzer
+// 2. Resume Analyzer & Deep Information Extraction
 router.post('/resume/analyze', authenticateToken, uploadResume.single('resume'), uploadAndAnalyzeResume);
 router.get('/resume/latest', authenticateToken, getLatestResume);
 
@@ -69,10 +72,12 @@ router.get('/roadmap', authenticateToken, getUserRoadmaps);
 router.put('/roadmap/tasks/:taskId/toggle', authenticateToken, toggleTaskComplete);
 router.put('/roadmap/tasks/:taskId', authenticateToken, updateTask);
 
-// 4. AI Planner
+// 4. AI Planner (Human + AI Co-Planning)
 router.get('/planner', authenticateToken, getPlan);
 router.post('/planner/generate', authenticateToken, generateAIPlan);
 router.post('/planner/tasks', authenticateToken, savePlanTasks);
+router.post('/planner/analyze', authenticateToken, analyzePlanProsAndCons);
+router.post('/planner/optimize', authenticateToken, applyAIOptimization);
 
 // 5. 24/7 Career Chatbot
 router.get('/chat/history', authenticateToken, getChatHistory);
@@ -85,8 +90,9 @@ router.post('/goals', authenticateToken, createGoal);
 router.put('/goals/:goalId', authenticateToken, updateGoalProgress);
 router.delete('/goals/:goalId', authenticateToken, deleteGoal);
 
-// 7. Reminders
+// 7. Reminders & 2-Hour Autonomous Agent Check-in
 router.post('/reminders/test', authenticateToken, sendTestReminder);
+router.post('/reminders/checkin-2h', authenticateToken, simulate2HourCheckin);
 router.get('/reminders', authenticateToken, getReminders);
 
 // 8. Admin Analytics

@@ -11,17 +11,26 @@ import {
   CheckCircle2,
   Mail,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ThumbsUp,
+  AlertTriangle,
+  Lightbulb,
+  ArrowRight,
+  Zap,
+  Bell
 } from 'lucide-react';
 
 export default function PlannerPage() {
   const { user } = useAuth();
   const { t, language } = useLanguage();
 
-  const [viewMode, setViewMode] = useState('weekly'); // 'weekly' | 'daily'
+  const [viewMode, setViewMode] = useState('weekly');
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [analyzingPlan, setAnalyzingPlan] = useState(false);
+  const [planEvaluation, setPlanEvaluation] = useState(null);
+  const [applyingOpt, setApplyingOpt] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderToast, setReminderToast] = useState(null);
 
@@ -29,7 +38,7 @@ export default function PlannerPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskDay, setNewTaskDay] = useState('Monday');
-  const [newTaskTime, setNewTaskTime] = useState('18:00 - 19:30');
+  const [newTaskTime, setNewTaskTime] = useState('18:00 - 20:00');
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -43,7 +52,6 @@ export default function PlannerPage() {
       if (res.tasks && res.tasks.length > 0) {
         setTasks(res.tasks);
       } else {
-        // Automatically suggest initial AI plan if empty
         await handleGenerateAIPlan();
       }
     } catch (err) {
@@ -62,6 +70,38 @@ export default function PlannerPage() {
       alert('Error generating plan: ' + err.message);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleAnalyzePlan = async () => {
+    setAnalyzingPlan(true);
+    try {
+      const res = await api.planner.analyze(tasks);
+      setPlanEvaluation(res.evaluation);
+    } catch (err) {
+      alert('Failed to evaluate plan: ' + err.message);
+    } finally {
+      setAnalyzingPlan(false);
+    }
+  };
+
+  const handleApplyAIOptimization = async () => {
+    if (!planEvaluation?.optimized_tasks) return;
+    setApplyingOpt(true);
+    try {
+      await api.planner.optimize(planEvaluation.optimized_tasks);
+      setTasks(planEvaluation.optimized_tasks);
+      setPlanEvaluation(null);
+      setReminderToast({
+        title: 'Plan Optimized by AI!',
+        body: 'Your weekly schedule has been calibrated with system design and review buffer sessions.',
+        to: user?.email
+      });
+      setTimeout(() => setReminderToast(null), 6000);
+    } catch (err) {
+      alert('Failed to apply optimization: ' + err.message);
+    } finally {
+      setApplyingOpt(false);
     }
   };
 
@@ -138,19 +178,33 @@ export default function PlannerPage() {
     }
   };
 
+  const handle2HourCheckin = async () => {
+    try {
+      const res = await api.reminders.checkin2h();
+      setReminderToast({
+        title: res.title || '2-Hour Study Check-in Alert',
+        body: res.body,
+        to: user?.email
+      });
+      setTimeout(() => setReminderToast(null), 8000);
+    } catch (err) {
+      alert('Failed to trigger checkin: ' + err.message);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Toast */}
       {reminderToast && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-md bg-white rounded-2xl border border-electric-200 shadow-2xl p-4 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 right-6 z-50 max-w-md bg-white rounded-2xl border-2 border-electric-500 shadow-2xl p-4 animate-in slide-in-from-bottom-5">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-electric-100 text-electric-600 flex items-center justify-center flex-shrink-0">
-              <Mail className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-electric-100 text-electric-700 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-gray-900">{reminderToast.title}</h4>
-              <p className="text-xs text-gray-500 mt-0.5">To: {reminderToast.to}</p>
-              <div className="mt-2 p-2 rounded-lg bg-slate-50 border border-gray-100 text-xs text-gray-700">
+              <h4 className="font-extrabold text-sm text-gray-900">{reminderToast.title}</h4>
+              <p className="text-xs text-gray-500 mt-0.5">Recipient: {reminderToast.to}</p>
+              <div className="mt-2 p-2.5 rounded-xl bg-slate-50 border border-gray-100 text-xs text-gray-800 leading-relaxed font-medium">
                 "{reminderToast.body}"
               </div>
             </div>
@@ -170,58 +224,118 @@ export default function PlannerPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* View toggle */}
-          <div className="bg-white border border-gray-200 rounded-xl p-1 flex items-center shadow-xs">
-            <button
-              onClick={() => setViewMode('weekly')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'weekly'
-                  ? 'bg-electric-600 text-white shadow-xs'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {t('planner.weekly_view')}
-            </button>
-            <button
-              onClick={() => setViewMode('daily')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'daily'
-                  ? 'bg-electric-600 text-white shadow-xs'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {t('planner.daily_view')}
-            </button>
-          </div>
-
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Analyze Plan with AI (Pros & Cons) */}
           <button
-            onClick={handleGenerateAIPlan}
-            disabled={generating}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-electric-50 border border-electric-200 text-electric-700 hover:bg-electric-100 text-xs font-bold transition-all"
+            onClick={handleAnalyzePlan}
+            disabled={analyzingPlan}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-900 to-electric-700 hover:from-primary-800 hover:to-electric-600 text-white text-xs font-bold shadow-md shadow-electric-600/25 transition-all"
           >
-            {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-electric-600" />}
-            {t('planner.btn_ai_generate')}
+            {analyzingPlan ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-tealBrand-300" />}
+            {t('planner.btn_analyze_plan')}
           </button>
 
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-bold shadow-xs transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-bold shadow-xs transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             {t('planner.btn_add_task')}
           </button>
 
           <button
+            onClick={handle2HourCheckin}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs font-bold transition-all"
+            title="Simulate 2-Hour Autonomous AI Agent Study Alert"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-600" />
+            {t('planner.btn_checkin_2h')}
+          </button>
+
+          <button
             onClick={handleSendReminder}
             disabled={sendingReminder}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-tealBrand-600 hover:bg-tealBrand-700 text-white text-xs font-bold shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-tealBrand-600 hover:bg-tealBrand-700 text-white text-xs font-bold shadow-xs transition-all"
           >
             {sendingReminder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
             {t('planner.btn_send_reminder')}
           </button>
         </div>
       </div>
+
+      {/* AI STRATEGIC CO-PLANNING ANALYSIS CARD (Pros & Cons requested!) */}
+      {planEvaluation && (
+        <div className="bg-white rounded-3xl border-2 border-electric-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-electric-100 text-electric-800 text-xs font-extrabold mb-1">
+                <Zap className="w-3.5 h-3.5 text-electric-600" /> Co-Pilot Evaluation
+              </div>
+              <h3 className="text-xl font-black text-gray-900">
+                {t('planner.analysis_title')}
+              </h3>
+            </div>
+
+            <button
+              onClick={handleApplyAIOptimization}
+              disabled={applyingOpt}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/25 transition-all self-start sm:self-auto"
+            >
+              {applyingOpt ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              {t('planner.btn_apply_ai')}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Pros / Strengths */}
+            <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+              <h4 className="font-extrabold text-sm text-emerald-900 flex items-center gap-2">
+                <ThumbsUp className="w-4 h-4 text-emerald-600" />
+                {t('planner.pros_heading')}
+              </h4>
+              <ul className="space-y-2 text-xs text-emerald-950">
+                {(planEvaluation.pros || []).map((pro, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-emerald-600 font-bold">✓</span>
+                    <span>{pro}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Cons / Risks */}
+            <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-3">
+              <h4 className="font-extrabold text-sm text-rose-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                {t('planner.cons_heading')}
+              </h4>
+              <ul className="space-y-2 text-xs text-rose-950">
+                {(planEvaluation.cons || []).map((con, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-rose-600 font-bold">⚠</span>
+                    <span>{con}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Recommendations */}
+          <div className="p-5 rounded-2xl bg-slate-50 border border-gray-200 space-y-2">
+            <h4 className="font-extrabold text-sm text-gray-900 flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+              {t('planner.recs_heading')}
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {(planEvaluation.recommendations || []).map((rec, i) => (
+                <div key={i} className="p-3 rounded-xl bg-white border border-gray-200 text-xs text-gray-700 leading-snug">
+                  {rec}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Schedule Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -287,7 +401,7 @@ export default function PlannerPage() {
 
                           {task.is_ai_suggested && (
                             <span className="inline-block mt-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-electric-100 text-electric-700">
-                              AI Suggestion
+                              AI Optimized
                             </span>
                           )}
                         </div>
