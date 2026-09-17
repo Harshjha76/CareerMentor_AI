@@ -31,6 +31,22 @@ export async function createRoadmap(req, res) {
     for (const week of curriculum) {
       for (const task of week.tasks) {
         const taskId = uuidv4();
+        let payload = task.resource_links || [];
+        if (task.day_number === 1) {
+          payload = {
+            links: task.resource_links || [],
+            week_title: week.title,
+            milestone: week.milestone,
+            milestone_project: week.milestone_project || null,
+            time_distribution: week.time_distribution || {
+              theory_percent: 25,
+              dsa_practice_percent: 40,
+              project_percent: 25,
+              revision_percent: 10
+            }
+          };
+        }
+
         await query(
           `INSERT INTO roadmap_tasks (
             id, roadmap_id, week_number, day_number, task_description, resource_links, is_completed
@@ -41,7 +57,7 @@ export async function createRoadmap(req, res) {
             week.week_number,
             task.day_number,
             task.task_description,
-            JSON.stringify(task.resource_links || []),
+            JSON.stringify(payload),
             false
           ]
         );
@@ -81,17 +97,52 @@ export async function getUserRoadmaps(req, res) {
       const completedTasks = tasksRes.rows.filter(t => !!t.is_completed).length;
       const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-      // Group tasks by week
+      // Group tasks by week with milestone project and time distribution unpack
       const weeksMap = {};
+      let detectedTimeDistribution = null;
+
       tasksRes.rows.forEach(t => {
+        let links = [];
+        let weekTitle = null;
+        let milestone = null;
+        let milestoneProject = null;
+
+        if (typeof t.resource_links === 'string') {
+          try {
+            const parsed = JSON.parse(t.resource_links);
+            if (Array.isArray(parsed)) {
+              links = parsed;
+            } else if (parsed && typeof parsed === 'object') {
+              links = parsed.links || [];
+              weekTitle = parsed.week_title || null;
+              milestone = parsed.milestone || null;
+              milestoneProject = parsed.milestone_project || null;
+              if (parsed.time_distribution) {
+                detectedTimeDistribution = parsed.time_distribution;
+              }
+            }
+          } catch {}
+        } else if (Array.isArray(t.resource_links)) {
+          links = t.resource_links;
+        }
+
         if (!weeksMap[t.week_number]) {
           weeksMap[t.week_number] = {
             week_number: t.week_number,
+            title: weekTitle || `Week ${t.week_number}`,
+            milestone: milestone || '',
+            milestone_project: milestoneProject || null,
             tasks: []
           };
+        } else {
+          if (weekTitle) weeksMap[t.week_number].title = weekTitle;
+          if (milestone) weeksMap[t.week_number].milestone = milestone;
+          if (milestoneProject) weeksMap[t.week_number].milestone_project = milestoneProject;
         }
+
         weeksMap[t.week_number].tasks.push({
           ...t,
+          resource_links: links,
           is_completed: !!t.is_completed
         });
       });
@@ -101,6 +152,12 @@ export async function getUserRoadmaps(req, res) {
         progress,
         totalTasks,
         completedTasks,
+        time_distribution: detectedTimeDistribution || {
+          theory_percent: 25,
+          dsa_practice_percent: 40,
+          project_percent: 25,
+          revision_percent: 10
+        },
         weeks: Object.values(weeksMap)
       });
     }
