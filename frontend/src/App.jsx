@@ -10,6 +10,7 @@ import RoadmapPage from './pages/RoadmapPage';
 import PlannerPage from './pages/PlannerPage';
 import ChatbotPage from './pages/ChatbotPage';
 import GoalsPage from './pages/GoalsPage';
+import InternshipsPage from './pages/InternshipsPage';
 import WhatIKnowPage from './pages/WhatIKnowPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
@@ -110,6 +111,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <GoalsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/internships"
+            element={
+              <ProtectedRoute>
+                <InternshipsPage />
               </ProtectedRoute>
             }
           />

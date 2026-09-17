@@ -1732,3 +1732,215 @@ export function generateLocalizedReminder(userName, pendingCount, language = 'en
     body: `Hi ${userName}, you have ${count} tasks scheduled for today on your CareerPilot AI study plan. Keep up the momentum toward your dream role! Log in now to track your progress.`
   };
 }
+
+/**
+ * 9. Autonomous AI Goal Inconsistency & Accountability Nudge Generator
+ */
+export async function generateGoalInconsistencyEmail({ userName = 'Student', targetRole = 'Software Engineer', goals = [], pendingTasks = [], streakDays = 0, inactiveDays = 2, language = 'en' }) {
+  const goalTitles = goals.map(g => g.goal_description || g.title).filter(Boolean).join(', ') || 'Target Career Roadmap';
+  const pendingCount = pendingTasks.length || 3;
+
+  const systemPrompt = `You are "CareerPilot AI Accountability Guardian", an encouraging, empathetic, yet highly motivating AI mentor.
+A student is showing inconsistency or falling behind on their career preparation for the target role: "${targetRole}".
+Their active goals: "${goalTitles}".
+Pending tasks: ${pendingCount}. Inactive duration: ${inactiveDays} days.
+
+Generate a deeply motivating and actionable accountability email nudge in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.
+Return ONLY a valid JSON object without markdown fences, formatted as:
+{
+  "subject": "⚠️ [CareerMentor AI] Hey ${userName}, let's get back on track with your ${targetRole} goals!",
+  "headline": "...",
+  "inconsistency_diagnosis": "...",
+  "motivation_message": "...",
+  "quick_action_step": "...",
+  "pending_tasks_summary": ["..."],
+  "plain_text": "..."
+}`;
+
+  const userPrompt = `Student Name: ${userName}\nRole: ${targetRole}\nGoals: ${goalTitles}\nPending Tasks: ${pendingCount}\nDays Inactive: ${inactiveDays}`;
+  const aiText = await callGemini(systemPrompt, userPrompt, language);
+
+  if (aiText) {
+    try {
+      const clean = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      if (parsed && parsed.subject && parsed.quick_action_step) {
+        return parsed;
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  // Multilingual fallback
+  if (language === 'hi') {
+    return {
+      subject: `⚠️ [CareerMentor AI] ${userName}, अपने ${targetRole} लक्ष्य की ओर वापस लौटें! 🚀`,
+      headline: `निरंतरता ही सफलता की कुंजी है — आइए आज से पुनः शुरुआत करें!`,
+      inconsistency_diagnosis: `हमने देखा कि पिछले ${inactiveDays} दिनों से आपके अध्ययन लक्ष्यों में कोई प्रगति दर्ज नहीं हुई है और ${pendingCount} कार्य लंबित हैं।`,
+      motivation_message: `बड़ा लक्ष्य हासिल करने के लिए हर दिन का छोटा कदम जरूरी है। जब आप रुक जाते हैं, तो प्रतियोगिता आगे निकल जाती है। आप में क्षमता है, बस आज 15 मिनट से दोबारा शुरुआत करें!`,
+      quick_action_step: `आज केवल 1 महत्वपूर्ण कार्य या 1 LeetCode प्रश्न हल करें।`,
+      pending_tasks_summary: [
+        'लंबित रोडमैप मॉड्यूल की समीक्षा करें',
+        'दैनिक 45 मिनट कोडिंग सत्र पूरा करें',
+        'इंटरव्यू तैयारी प्रश्नोत्तरी का 1 उत्तर अभ्यास करें'
+      ],
+      plain_text: `नमस्ते ${userName},\n\nहमने देखा कि पिछले ${inactiveDays} दिनों से आपके ${targetRole} अध्ययन लक्ष्यों में प्रगति रुक गई है। ${pendingCount} कार्य बाकी हैं।\n\nनिरंतरता ही आपको शीर्ष 1% इंजीनियर्स में शामिल करेगी। आज ही सिर्फ 15 मिनट दें और अपने लंबित कार्यों को पूरा करें!\n\nसस्नेह,\nCareerMentor AI टीम`
+    };
+  }
+
+  if (language === 'mr') {
+    return {
+      subject: `⚠️ [CareerMentor AI] ${userName}, तुमच्या ${targetRole} ध्येयाकडे पुन्हा वळा! 🚀`,
+      headline: `सातत्य हेच यशाचे गमक आहे — आजच पुन्हा सुरुवात करा!`,
+      inconsistency_diagnosis: `गेल्या ${inactiveDays} दिवसांत तुमच्या अभ्यास नियोजनात कोणतीही नोंद झालेली नाही आणि ${pendingCount} कामे प्रलंबित आहेत.`,
+      motivation_message: `स्वप्ने मोठी असतील तर रोज लहान पाऊल उचलणे गरजेचे आहे. आज फक्त १५ मिनिटे देऊन पुन्हा गती मिळवा!`,
+      quick_action_step: `आज फक्त १ कोडिंग प्रश्न किंवा प्रलंबित कार्य पूर्ण करा.`,
+      pending_tasks_summary: [
+        'प्रलंबित रोडमॅप घटकांची उजळणी',
+        'दैनिक कोडिंग सराव पूर्ण करणे',
+        'मुलाखत तयारीचा १ प्रश्न सोडवणे'
+      ],
+      plain_text: `नमस्कार ${userName},\n\nगेल्या ${inactiveDays} दिवसांपासून तुमच्या ${targetRole} ध्येयात प्रगती थांबलेली दिसते. ${pendingCount} कामे बाकी आहेत.\n\nआजच १५ मिनिटे देऊन अभ्यासाला लागा!\n\nआपली,\nCareerMentor AI टीम`
+    };
+  }
+
+  if (language === 'sa') {
+    return {
+      subject: `⚠️ [CareerMentor AI] ${userName}, स्वलक्ष्यं प्रति पुनः प्रवर्तताम्! 🚀`,
+      headline: `निरन्तरता एव सफलतायाः मूलम् — अद्यैव पुनः आरभताम्!`,
+      inconsistency_diagnosis: `विगतेषु ${inactiveDays} दिनेषु तव लक्ष्यसाधने गतिरोधः दृश्यते, ${pendingCount} कार्याणि शेषाणि सन्ति।`,
+      motivation_message: `"न हि सुप्तस्य सिंहस्य प्रविशन्ति मुखे मृगाः।" उद्योगं विना किमपि न सिध्यति। अद्यैव पुनः अध्ययनं प्रारभस्व!`,
+      quick_action_step: `अद्य पञ्चदश निमेषान् यावत् एकं कार्यं साधयतु।`,
+      pending_tasks_summary: [
+        'अवशिष्ट-कार्याणां पुनरावलोकनम्',
+        'दैनिक-समस्या-समाधानम्',
+        'साक्षात्कार-प्रश्नोत्तरी-सज्जता'
+      ],
+      plain_text: `नमस्ते ${userName},\n\nविगतेषु ${inactiveDays} दिनेषु तव ${targetRole} अध्ययनकार्येषु ${pendingCount} कार्याणि अवशिष्टानि। अद्यैव पुनः आरभताम्!\n\nCareerMentor AI`
+    };
+  }
+
+  return {
+    subject: `⚠️ [CareerMentor AI] Hey ${userName}, let's get back on track with your ${targetRole} goals! 🚀`,
+    headline: `Consistency is the difference between dreaming and achieving. Let's restart today!`,
+    inconsistency_diagnosis: `We noticed you haven't checked off any study tasks over the last ${inactiveDays} days, and you currently have ${pendingCount} pending milestones waiting.`,
+    motivation_message: `Top software engineering roles at top tech companies are won by compounding 45 minutes of daily focus, not last-minute cramming. You have the intellect and the plan — all you need is today's momentum.`,
+    quick_action_step: `Complete just 1 pending roadmap task or solve 1 targeted DSA problem in the next 20 minutes to restore your study streak.`,
+    pending_tasks_summary: [
+      'Review pending high-priority roadmap modules',
+      'Complete scheduled daily coding practice',
+      'Tackle 1 internship interview question in the Sandbox'
+    ],
+    plain_text: `Hi ${userName},\n\nWe noticed a break in your study consistency for ${targetRole} over the past ${inactiveDays} days. You currently have ${pendingCount} pending tasks.\n\nGreat careers are built one focused day at a time. Spend just 15 minutes today to tackle your first pending task and rebuild your streak!\n\nBest,\nYour CareerMentor AI Guardian`
+  };
+}
+
+/**
+ * 10. AI Internship Interview Question Answer Evaluator (Question Tackle Engine)
+ */
+export async function evaluateInternshipAnswerAI({ question, answer, category = 'Technical', role = 'Software Engineer Intern', language = 'en' }) {
+  const systemPrompt = `You are a Principal Software Engineer and Staff Hiring Manager conducting an internship interview for the role "${role}".
+Evaluate the candidate's answer to the question: "${question}".
+Category: "${category}".
+Candidate's response: "${answer}".
+
+Provide rigorous, constructive, actionable evaluation in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.
+Evaluation criteria:
+1. "score": Numerical rating from 1.0 to 10.0 (e.g. 8.2).
+2. "grade": One of ["Exceptional / Strong Hire", "Solid Pass / Hire", "Borderline / Needs Depth", "Unsatisfactory"].
+3. "strengths": Array of 2 to 3 strong points the candidate clearly demonstrated.
+4. "blindspots": Array of 2 to 3 critical omissions, missing trade-offs, edge cases, or lack of STAR structure.
+5. "senior_mentor_model_answer": A masterclass, high-scoring model answer demonstrating the STAR technique (Situation, Task, Action, Result) for behavioral questions or technical depth with Big-O & architectural trade-offs for technical questions.
+6. "key_takeaway": One concise tip to remember in the live interview.
+
+Return ONLY a valid JSON object without markdown fences, formatted as:
+{
+  "score": 8.5,
+  "grade": "Solid Pass / Hire",
+  "strengths": ["..."],
+  "blindspots": ["..."],
+  "senior_mentor_model_answer": "...",
+  "key_takeaway": "..."
+}`;
+
+  const aiText = await callGemini(systemPrompt, `Question: ${question}\nCandidate Answer: ${answer}`, language);
+
+  if (aiText) {
+    try {
+      const clean = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      if (parsed && typeof parsed.score === 'number' && parsed.senior_mentor_model_answer) {
+        return parsed;
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  // Responsive fallback evaluator
+  const wordCount = (answer || '').trim().split(/\s+/).filter(Boolean).length;
+  let score = 7.5;
+  let grade = "Solid Pass / Hire";
+
+  if (wordCount < 15) {
+    score = 4.5;
+    grade = "Borderline / Needs Depth";
+  } else if (wordCount > 60 && (answer.toLowerCase().includes('result') || answer.toLowerCase().includes('measured') || answer.toLowerCase().includes('reduced') || answer.toLowerCase().includes('improved'))) {
+    score = 9.2;
+    grade = "Exceptional / Strong Hire";
+  } else if (wordCount >= 30) {
+    score = 8.0;
+    grade = "Solid Pass / Hire";
+  }
+
+  if (language === 'hi') {
+    return {
+      score,
+      grade,
+      strengths: [
+        'आपने मुख्य अवधारणा को सीधे और स्पष्ट रूप से संबोधित किया',
+        'व्यावहारिक उदाहरण और प्रासंगिक तकनीकी शब्दों का उपयोग किया'
+      ],
+      blindspots: [
+        'परिणामों में मात्रात्मक मेट्रिक्स (उदा. 30% प्रदर्शन सुधार) का उल्लेख करें',
+        'संभावित एज केस (Edge Cases) और ट्रेड-ऑफ्स का विश्लेषण जोड़ें'
+      ],
+      senior_mentor_model_answer: `आदर्श उत्तर (STAR मॉडल):\n"मैंने अपनी पिछली परियोजना में इस चुनौती का सामना किया। स्थिति (Situation) यह थी कि सिस्टम की प्रतिक्रिया धीमी हो रही थी। मेरा कार्य (Task) विलंबता को कम करना था। मैंने (Action) डेटाबेस इंडेक्सिंग और रेडिस कैशिंग लागू की। परिणामस्वरूप (Result), क्वेरी प्रतिक्रिया समय 400ms से घटकर 85ms हो गया।"`,
+      key_takeaway: 'साक्षात्कारकर्ता को हमेशा समाधान के साथ-साथ उसके कारण और परिणाम (Impact) भी बताएं।'
+    };
+  }
+
+  if (language === 'mr') {
+    return {
+      score,
+      grade,
+      strengths: [
+        'संकल्पना स्पष्ट शब्दांत मांडण्याचा चांगला प्रयत्न केला',
+        'तांत्रिक संज्ञांचा योग्य वापर केला'
+      ],
+      blindspots: [
+        'अचूक संख्यात्मक परिणाम आणि मेट्रिक्स नमूद करणे आवश्यक आहे',
+        'सिस्टममधील मर्यादा आणि पर्यायी उपायांचा उल्लेख वाढवा'
+      ],
+      senior_mentor_model_answer: `आदर्श उत्तर (STAR पद्धत):\n"माझ्या प्रकल्पात उच्च रहदारीमुळे लेटन्सी वाढली होती. माझे काम लेटन्सी कमी करण्याचे होते. मी गैर-अतिव्याप्त इंडेक्सिंग आणि कॅशिंग लागू केले. त्यामुळे रिस्पॉन्स टाईम ३५% नी सुधारला."`,
+      key_takeaway: 'तांत्रिक उत्तरात नेहमी कामगिरीचे मोजमाप (Metrics) आणि परिणामांचा उल्लेख करा.'
+    };
+  }
+
+  return {
+    score,
+    grade,
+    strengths: [
+      'Directly addressed the core interview prompt with clear technical terminology',
+      'Demonstrated structured problem-solving intuition'
+    ],
+    blindspots: [
+      'Quantified business/performance impact metrics (e.g. % latency reduction or throughput scale) could be sharper',
+      'Explicit discussion of trade-offs, alternative approaches, and edge-case handling'
+    ],
+    senior_mentor_model_answer: `Masterclass STAR Response:\n"In my recent project, we encountered this exact architectural bottleneck (Situation). My objective was to optimize throughput while maintaining sub-150ms response times (Task). I implemented Redis cache-aside invalidation and optimized PostgreSQL composite indexes (Action). As a direct result, average query latency dropped by 48% under 2,000 concurrent requests without data inconsistencies (Result)."`,
+    key_takeaway: 'Always close your answer by quantifying the outcome (Result) and summarizing the architectural trade-off.'
+  };
+}
+

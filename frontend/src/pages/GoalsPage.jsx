@@ -110,6 +110,23 @@ export default function GoalsPage() {
     });
   };
 
+  const [sendingNudge, setSendingNudge] = useState(false);
+  const [nudgeSuccess, setNudgeSuccess] = useState(null);
+
+  const handleTestInconsistencyEmail = async () => {
+    setSendingNudge(true);
+    setNudgeSuccess(null);
+    try {
+      const res = await api.reminders.sendInconsistencyNudge();
+      setNudgeSuccess(res);
+      setTimeout(() => setNudgeSuccess(null), 7000);
+    } catch (err) {
+      alert('Error sending accountability email: ' + err.message);
+    } finally {
+      setSendingNudge(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
       {/* Header */}
@@ -124,14 +141,49 @@ export default function GoalsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#3B82F6]/25 transition-all self-start md:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          {t('goals.btn_new_goal')}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleTestInconsistencyEmail}
+            disabled={sendingNudge}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition-all disabled:opacity-50"
+            title="Sends an autonomous AI nudge email to your inbox if goal milestones are lagging"
+          >
+            {sendingNudge ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            ⚡ Send AI Inconsistency Nudge Email
+          </button>
+
+          <button
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#3B82F6]/25 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            {t('goals.btn_new_goal')}
+          </button>
+        </div>
       </div>
+
+      {/* AI Nudge Dispatched Alert */}
+      {nudgeSuccess && (
+        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/50 flex items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-white">
+                Accountability Email Dispatched to {nudgeSuccess.recipient}!
+              </p>
+              <p className="text-xs text-emerald-300/90 mt-0.5">
+                {nudgeSuccess.nudge?.subject || 'CareerMentor AI has sent your personalized study streak recovery plan.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setNudgeSuccess(null)}
+            className="text-xs text-slate-400 hover:text-white px-2 py-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Goals List */}
       {goals.length === 0 && !loading ? (

@@ -53,8 +53,16 @@ import {
 import {
   sendTestReminder,
   simulate2HourCheckin,
-  getReminders
+  getReminders,
+  sendInconsistencyNudge,
+  getInconsistencyStatus
 } from '../controllers/reminderController.js';
+
+import {
+  getRecommendedInternships,
+  getInternshipQuestions,
+  evaluateInternshipAnswer
+} from '../controllers/internshipController.js';
 
 import {
   getAdminStats
@@ -105,12 +113,19 @@ router.post('/goals', authenticateToken, createGoal);
 router.put('/goals/:goalId', authenticateToken, updateGoalProgress);
 router.delete('/goals/:goalId', authenticateToken, deleteGoal);
 
-// 7. Reminders & 2-Hour Autonomous Agent Check-in
+// 7. Reminders & Autonomous AI Accountability Inconsistency Guardian
 router.post('/reminders/test', authenticateToken, sendTestReminder);
 router.post('/reminders/checkin-2h', authenticateToken, simulate2HourCheckin);
+router.post('/reminders/inconsistency-nudge', authenticateToken, sendInconsistencyNudge);
+router.get('/reminders/inconsistency-status', authenticateToken, getInconsistencyStatus);
 router.get('/reminders', authenticateToken, getReminders);
 
-// 8. Admin Analytics
+// 8. Smart Resume-Tailored Internship Matcher & Interview Tackle Engine
+router.get('/internships/recommendations', authenticateToken, getRecommendedInternships);
+router.get('/internships/questions', authenticateToken, getInternshipQuestions);
+router.post('/internships/evaluate-answer', authenticateToken, evaluateInternshipAnswer);
+
+// 9. Admin Analytics
 router.get('/admin/stats', getAdminStats);
 
 export default router;

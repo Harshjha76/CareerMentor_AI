@@ -239,7 +239,7 @@ export const api = {
       }).then(handleResponse)
   },
 
-  // Reminders & 2-Hour Agent Check-in
+  // Reminders & Autonomous AI Accountability Inconsistency Guardian
   reminders: {
     sendTest: () =>
       fetch(`${API_BASE}/reminders/test`, {
@@ -253,9 +253,40 @@ export const api = {
         headers: getAuthHeaders()
       }).then(handleResponse),
 
+    sendInconsistencyNudge: () =>
+      fetch(`${API_BASE}/reminders/inconsistency-nudge`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    getInconsistencyStatus: () =>
+      fetch(`${API_BASE}/reminders/inconsistency-status`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
     getAll: () =>
       fetch(`${API_BASE}/reminders`, {
         headers: getAuthHeaders()
+      }).then(handleResponse)
+  },
+
+  // Smart Resume-Tailored Internship Matcher & Interview Tackle Engine
+  internships: {
+    getRecommendations: () =>
+      fetch(`${API_BASE}/internships/recommendations`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    getQuestions: () =>
+      fetch(`${API_BASE}/internships/questions`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    evaluateAnswer: (data) =>
+      fetch(`${API_BASE}/internships/evaluate-answer`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
       }).then(handleResponse)
   },
 
@@ -265,3 +296,4 @@ export const api = {
       fetch(`${API_BASE}/admin/stats`).then(handleResponse)
   }
 };
+
