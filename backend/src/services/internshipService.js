@@ -206,7 +206,12 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
 
     return {
       ...item,
+      matching_skills: matchingSkills,
+      missing_skills: missingSkills,
+      matchingSkills: matchingSkills,
+      skillsToLearn: missingSkills,
       match_score: matchScore,
+      matchScore: matchScore,
       match_tier: matchTier,
       fit_analysis: `Your skills in ${matchingSkills.slice(0, 3).join(', ')} align closely with ${item.company}'s requirements. Review ${missingSkills.slice(0, 2).join(' & ') || 'system architecture'} for competitive advantage.`
     };

@@ -23,9 +23,11 @@ import {
   Clock,
   ShieldCheck,
   TrendingUp,
-  Brain
+  Brain,
+  Linkedin
 } from 'lucide-react';
 import { api } from '../services/api';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 export default function InternshipsPage() {
   const [activeTab, setActiveTab] = useState('matched'); // 'matched' | 'interview' | 'accountability'
@@ -54,18 +56,25 @@ export default function InternshipsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [internshipsRes, questionsRes, statusRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.internships.getRecommendations(),
         api.internships.getQuestions(),
         api.reminders.getInconsistencyStatus()
       ]);
 
-      setInternshipsData(internshipsRes);
-      setQuestions(questionsRes.questions || []);
-      if (questionsRes.questions && questionsRes.questions.length > 0) {
-        setSelectedQuestion(questionsRes.questions[0]);
+      if (results[0].status === 'fulfilled' && results[0].value) {
+        setInternshipsData(results[0].value);
       }
-      setConsistencyStatus(statusRes);
+      if (results[1].status === 'fulfilled' && results[1].value) {
+        const qList = results[1].value.questions || [];
+        setQuestions(qList);
+        if (qList.length > 0) {
+          setSelectedQuestion(qList[0]);
+        }
+      }
+      if (results[2].status === 'fulfilled' && results[2].value) {
+        setConsistencyStatus(results[2].value);
+      }
     } catch (err) {
       console.error('Error loading internships data:', err);
     } finally {
@@ -103,7 +112,6 @@ export default function InternshipsPage() {
     try {
       const res = await api.reminders.sendInconsistencyNudge();
       setNudgeResult(res);
-      // Refresh status
       const statusRes = await api.reminders.getInconsistencyStatus();
       setConsistencyStatus(statusRes);
     } catch (err) {
@@ -120,13 +128,19 @@ export default function InternshipsPage() {
     setTimeout(() => setCopiedAnswer(false), 2500);
   };
 
-  // Filtered internships
+  // Safe Filtered internships
   const filteredInternships = (internshipsData?.top_internships || []).filter(item => {
-    const matchesDomain = domainFilter === 'All' || item.domain.toLowerCase().includes(domainFilter.toLowerCase()) || item.role.toLowerCase().includes(domainFilter.toLowerCase());
+    if (!item) return false;
+    const domain = (item.domain || '').toLowerCase();
+    const role = (item.role || '').toLowerCase();
+    const company = (item.company || '').toLowerCase();
+    const reqSkills = Array.isArray(item.required_skills) ? item.required_skills : [];
+
+    const matchesDomain = domainFilter === 'All' || domain.includes(domainFilter.toLowerCase()) || role.includes(domainFilter.toLowerCase());
     const matchesSearch = searchQuery === '' ||
-      item.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.required_skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+      company.includes(searchQuery.toLowerCase()) ||
+      role.includes(searchQuery.toLowerCase()) ||
+      reqSkills.some(s => (s || '').toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesDomain && matchesSearch;
   });
 
@@ -356,17 +370,17 @@ export default function InternshipsPage() {
                         <div className="mt-4 space-y-2">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-[11px] text-emerald-400 font-semibold mr-1">Matched:</span>
-                            {internship.matching_skills.map((sk, i) => (
+                            {(internship.matching_skills || internship.matchingSkills || []).map((sk, i) => (
                               <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium">
                                 <Check className="w-2.5 h-2.5" /> {sk}
                               </span>
                             ))}
                           </div>
 
-                          {internship.missing_skills.length > 0 && (
+                          {(internship.missing_skills || internship.skillsToLearn || []).length > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className="text-[11px] text-amber-400 font-semibold mr-1">To Brush Up:</span>
-                              {internship.missing_skills.map((sk, i) => (
+                              {(internship.missing_skills || internship.skillsToLearn || []).map((sk, i) => (
                                 <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-medium">
                                   ⚡ {sk}
                                 </span>
@@ -376,33 +390,29 @@ export default function InternshipsPage() {
                         </div>
                       </div>
 
-                      {/* Card Bottom: 1-Click Application Portals */}
+                      {/* Card Bottom: 1-Click Application Portals & Recruiter Outreach */}
                       <div className="pt-4 border-t border-slate-800/80 space-y-2">
                         <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block">
-                          Apply via Direct Portals:
+                          Apply via Direct Portals & Recruiter Connect:
                         </span>
                         <div className="flex flex-wrap gap-2">
-                          {internship.apply_urls.careers && (
-                            <a
-                              href={internship.apply_urls.careers}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" /> Company Portal
-                            </a>
-                          )}
-                          {internship.apply_urls.linkedin && (
-                            <a
-                              href={internship.apply_urls.linkedin}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#0A66C2]/80 hover:bg-[#0A66C2] text-white text-xs font-semibold transition-all"
-                            >
-                              LinkedIn
-                            </a>
-                          )}
-                          {internship.apply_urls.internshala && (
+                          <a
+                            href={internship.apply_urls?.careers || internship.applyUrl || `https://www.google.com/search?q=${encodeURIComponent(internship.company + ' ' + internship.role + ' careers')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Company Portal
+                          </a>
+                          <a
+                            href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(internship.company + ' Technical Recruiter')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#0A66C2]/80 hover:bg-[#0A66C2] text-white text-xs font-semibold transition-all"
+                          >
+                            <Linkedin className="w-3.5 h-3.5" /> Recruiters
+                          </a>
+                          {internship.apply_urls?.internshala && (
                             <a
                               href={internship.apply_urls.internshala}
                               target="_blank"
@@ -412,7 +422,7 @@ export default function InternshipsPage() {
                               Internshala
                             </a>
                           )}
-                          {internship.apply_urls.wellfound && (
+                          {internship.apply_urls?.wellfound && (
                             <a
                               href={internship.apply_urls.wellfound}
                               target="_blank"
@@ -622,9 +632,9 @@ export default function InternshipsPage() {
                                 <span>{copiedAnswer ? 'Copied' : 'Copy'}</span>
                               </button>
                             </div>
-                            <p className="text-xs text-slate-200 whitespace-pre-line leading-relaxed font-mono bg-slate-950/80 p-4 rounded-lg border border-slate-800">
-                              {evaluationResult.senior_mentor_model_answer}
-                            </p>
+                            <div className="bg-slate-950/80 p-4 rounded-lg border border-slate-800">
+                              <MarkdownRenderer content={evaluationResult.senior_mentor_model_answer} />
+                            </div>
                           </div>
                         </div>
                       )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
   MessageSquare,
   Send,
@@ -512,9 +513,13 @@ export default function ChatbotPage() {
                       </div>
                     )}
 
-                    <div className="whitespace-pre-line prose prose-invert prose-sm max-w-none text-[#F8FAFC]">
-                      {m.text}
-                    </div>
+                    {isUser ? (
+                      <div className="whitespace-pre-line text-white">
+                        {m.text}
+                      </div>
+                    ) : (
+                      <MarkdownRenderer content={m.text} />
+                    )}
 
                     <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[10px] text-[#94A3B8]">
                       <span className="flex items-center gap-1">
