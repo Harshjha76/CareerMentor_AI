@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 import { jsPDF } from 'jspdf';
+import { Link } from 'react-router-dom';
 import {
   UploadCloud,
   FileText,
@@ -28,7 +29,11 @@ import {
   Lightbulb,
   ShieldAlert,
   PlusCircle,
-  Quote
+  Quote,
+  Building2,
+  Send,
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 
 export default function ResumeAnalyzerPage() {
@@ -40,8 +45,26 @@ export default function ResumeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState('extracted');
   const [analysisResult, setAnalysisResult] = useState(null);
   const [extractedProfile, setExtractedProfile] = useState(null);
+  const [matchedInternships, setMatchedInternships] = useState([]);
+  const [loadingInternships, setLoadingInternships] = useState(false);
+  const [selectedCompanyRecruiter, setSelectedCompanyRecruiter] = useState(null);
+  const [copiedMsg, setCopiedMsg] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
+
+  const fetchMatchedInternships = async () => {
+    setLoadingInternships(true);
+    try {
+      const res = await api.internships.getRecommendations();
+      if (res && res.top_internships) {
+        setMatchedInternships(res.top_internships);
+      }
+    } catch (err) {
+      console.warn('Notice loading matched internships:', err.message);
+    } finally {
+      setLoadingInternships(false);
+    }
+  };
 
   useEffect(() => {
     // Load existing analyzed resume if available
@@ -55,6 +78,7 @@ export default function ResumeAnalyzerPage() {
           if (res.resume.extractedProfile) {
             setExtractedProfile(res.resume.extractedProfile);
           }
+          fetchMatchedInternships();
         }
       })
       .catch(() => {});
@@ -85,6 +109,7 @@ export default function ResumeAnalyzerPage() {
       });
       setExtractedProfile(res.extractedProfile);
       setActiveTab('extracted');
+      fetchMatchedInternships();
     } catch (err) {
       alert('Analysis error: ' + err.message);
     } finally {
@@ -141,6 +166,7 @@ Certifications:
       });
       setExtractedProfile(res.extractedProfile);
       setActiveTab('extracted');
+      fetchMatchedInternships();
     } catch (err) {
       alert('Error analyzing sample: ' + err.message);
     } finally {
@@ -552,6 +578,7 @@ Certifications:
             <div className="flex overflow-x-auto border-b border-[#1E293B] bg-[#0B1220] p-2 gap-1.5">
               {[
                 { id: 'extracted', label: 'Extracted Profile & Experience' },
+                { id: 'internships', label: '🎯 Matched Internships & Recruiter Connect' },
                 { id: 'issues', label: '🔥 Exact Issues & X-Y-Z Rewrites' },
                 { id: 'what_to_add', label: '✨ What You MUST Add' },
                 { id: 'summary', label: t('resume.tab_summary') },
@@ -767,6 +794,162 @@ Certifications:
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB: MATCHED INTERNSHIPS & RECRUITER CONNECT */}
+              {activeTab === 'internships' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-[#172033] to-[#1E293B] border border-[#3B82F6]/30 shadow-lg">
+                    <div>
+                      <h3 className="text-base font-bold text-[#F8FAFC] flex items-center gap-2">
+                        <Briefcase className="w-5 h-5 text-[#3B82F6]" />
+                        Matched Internships for Your Target Role & Extracted Skills
+                      </h3>
+                      <p className="text-xs text-[#94A3B8] mt-1">
+                        Ranked by ATS fit score. Use the 1-click apply links and reach out directly to tech recruiters with AI-crafted outreach messages.
+                      </p>
+                    </div>
+                    <Link
+                      to="/internships"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-bold shadow transition-all self-start sm:self-auto whitespace-nowrap"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      Open Full Internship Sandbox & Prep
+                    </Link>
+                  </div>
+
+                  {loadingInternships ? (
+                    <div className="py-12 text-center space-y-3">
+                      <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin mx-auto" />
+                      <p className="text-sm font-semibold text-[#F8FAFC]">
+                        Matching top internships and identifying hiring recruiters...
+                      </p>
+                    </div>
+                  ) : matchedInternships.length === 0 ? (
+                    <div className="p-8 text-center rounded-2xl border border-dashed border-[#1E293B] bg-[#0B1220] space-y-3">
+                      <Briefcase className="w-10 h-10 text-[#94A3B8] mx-auto opacity-50" />
+                      <p className="text-sm font-semibold text-[#CBD5E1]">
+                        No active matched internships loaded yet.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={fetchMatchedInternships}
+                        className="px-4 py-2 rounded-xl bg-[#172033] hover:bg-[#1E293B] text-[#3B82F6] text-xs font-bold border border-[#1E293B] transition-colors"
+                      >
+                        Fetch Top Recommendations Now
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                      {matchedInternships.map((internship, idx) => {
+                        const recruiterSearchUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(internship.company + ' Technical Recruiter ' + (user?.target_role || 'Software Engineer'))}`;
+                        const outreachMessage = `Hi [Recruiter Name],\n\nI noticed the ${internship.role} opening at ${internship.company}. With a ${internship.matchScore}% skill alignment in ${(internship.matchingSkills || []).slice(0, 3).join(', ')} and production capstone experience in scalable software engineering, I would love to connect and share how I can add immediate value to your engineering team!\n\nBest regards,\n${user?.name || extractedProfile?.personal_info?.name || 'Aarav Sharma'}`;
+
+                        return (
+                          <div
+                            key={internship.id || idx}
+                            className="p-6 rounded-2xl border border-[#1E293B] bg-[#0B1220] hover:border-[#3B82F6]/50 transition-all flex flex-col justify-between space-y-4 shadow-md"
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-[#3B82F6]" />
+                                    <span className="text-xs font-bold uppercase tracking-wider text-[#94A3B8]">
+                                      {internship.company}
+                                    </span>
+                                  </div>
+                                  <h4 className="text-base font-extrabold text-[#F8FAFC] mt-0.5">
+                                    {internship.role}
+                                  </h4>
+                                </div>
+                                <span className="px-3 py-1 rounded-full text-xs font-black bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                                  {internship.matchScore}% Fit
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-[#CBD5E1] leading-relaxed line-clamp-2">
+                                {internship.description}
+                              </p>
+
+                              <div className="flex flex-wrap gap-3 text-xs text-[#94A3B8] pt-1">
+                                <span>📍 {internship.location || 'Remote / Hybrid'}</span>
+                                <span>⏱️ {internship.duration || '3-6 Months'}</span>
+                                <span className="text-[#10B981] font-semibold">💰 {internship.stipend || 'Competitive'}</span>
+                              </div>
+
+                              {/* Skills */}
+                              <div>
+                                <span className="text-[11px] font-bold text-[#94A3B8] block mb-1.5">
+                                  Matching Skills from Your Resume:
+                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(internship.matchingSkills || []).map((skill, si) => (
+                                    <span key={si} className="px-2.5 py-0.5 rounded-md bg-[#10B981]/10 text-[#10B981] text-[11px] font-semibold border border-[#10B981]/30">
+                                      ✓ {skill}
+                                    </span>
+                                  ))}
+                                  {(internship.skillsToLearn || []).map((skill, si) => (
+                                    <span key={si} className="px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-[11px] font-semibold border border-amber-500/30">
+                                      + Learn {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons: Apply & Recruiter Connect */}
+                            <div className="pt-3 border-t border-[#1E293B] space-y-2.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <a
+                                  href={internship.applyUrl || `https://www.google.com/search?q=${encodeURIComponent(internship.company + ' ' + internship.role + ' careers')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-bold transition-all shadow-sm"
+                                >
+                                  Apply on Careers Portal <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+
+                                <a
+                                  href={recruiterSearchUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0B66C2]/20 hover:bg-[#0B66C2]/35 border border-[#0B66C2]/40 text-[#38BDF8] text-xs font-bold transition-all"
+                                >
+                                  <Linkedin className="w-3.5 h-3.5 text-[#38BDF8]" />
+                                  Find Recruiters
+                                </a>
+                              </div>
+
+                              {/* 1-Click Copy Outreach Note */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(outreachMessage);
+                                  setSelectedCompanyRecruiter(internship.id || idx);
+                                  setTimeout(() => setSelectedCompanyRecruiter(null), 3000);
+                                }}
+                                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#172033] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-semibold text-[#CBD5E1] transition-all"
+                              >
+                                {selectedCompanyRecruiter === (internship.id || idx) ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                                    <span className="text-[#10B981] font-bold">Custom Recruiter Note Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-[#94A3B8]" />
+                                    <span>Copy 1-Click LinkedIn Outreach Message</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

@@ -23,9 +23,102 @@ import {
   Check,
   Flame,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Play
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const YOUTUBE_PLAYLIST_RECOMMENDATIONS = {
+  dsa_java: [
+    {
+      title: 'Complete Java + DSA Bootcamp (Beginner to Advanced)',
+      channel: 'Kunal Kushwaha',
+      videos: '65+ Comprehensive Videos',
+      rating: '4.9 ★ (1.2M+ Students)',
+      url: 'https://www.youtube.com/playlist?list=PL9gnSGHSqcnr_DxHsP7mUgf54YjV4b4DQ',
+      description: 'Comprehensive Java syntax, OOP, Bitwise operations, Recursion, Sorting, Trees, Graphs, Dynamic Programming & interview solutions.',
+      tag: '⭐ Complete 12-Month Java Masterclass'
+    },
+    {
+      title: 'Striver A2Z DSA Course / Playlist',
+      channel: 'take U forward (Striver)',
+      videos: '100+ Videos',
+      rating: '5.0 ★ (Industry Standard)',
+      url: 'https://www.youtube.com/playlist?list=PLgUwDviBIf0oF6QL8m22w1hIDC1vJ_BHz',
+      description: 'Step-by-step topic-wise A2Z DSA sheet from basic math to advanced DP & Graph algorithms with code walkthroughs.',
+      tag: '🔥 Top Tier Placement Standard'
+    },
+    {
+      title: 'Mastering Data Structures & Algorithms',
+      channel: 'Abdul Bari',
+      videos: '84 Lectures',
+      rating: '4.9 ★ (Legendary Pedagogy)',
+      url: 'https://www.youtube.com/playlist?list=PLAXnLdrLnQpRcveZTtD644gM9uzYqJCwr',
+      description: 'Crystal-clear chalkboard explanations of algorithmic complexity, recurrence relations, tree rotations, and dynamic programming.',
+      tag: '🏛️ Deep Theoretical Foundations'
+    },
+    {
+      title: 'NeetCode 150 & Blind 75 Pattern Mastery',
+      channel: 'NeetCode',
+      videos: '150 High-Yield Solutions',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/c/NeetCode/playlists',
+      description: 'Clean, optimal explanations covering the 18 essential coding patterns asked in Google, Microsoft, and Amazon interviews.',
+      tag: '🎯 LeetCode Pattern Blueprint'
+    }
+  ],
+  web_fullstack: [
+    {
+      title: 'Complete JavaScript & Modern React Mastery',
+      channel: 'Chai aur Code (Hitesh Choudhary)',
+      videos: '85+ In-depth Episodes',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/playlist?list=PLu71SKxNbfoBuX3f4EOACle2yCjtBgEIO',
+      description: 'Hands-on practical full-stack engineering covering modern ES6+, DOM manipulation, React hooks, Redux Toolkit, and production builds.',
+      tag: '⭐ Full Stack Front-to-Back'
+    },
+    {
+      title: 'Full Stack Node.js, Express & Database Systems',
+      channel: 'freeCodeCamp.org',
+      videos: '8+ Hours Complete Course',
+      rating: '4.8 ★',
+      url: 'https://www.youtube.com/watch?v=Oe421EPjeBE',
+      description: 'Production backend architecture, REST API design, JWT auth, MongoDB / PostgreSQL schema modeling, and microservice deployment.',
+      tag: '🚀 Backend & Cloud Infrastructure'
+    }
+  ],
+  system_design: [
+    {
+      title: 'System Design Interview & Microservices Architecture',
+      channel: 'Gaurav Sen',
+      videos: '45+ Videos',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/playlist?list=PLMCXHnjXnTnvo6alSjVkgxV-VH6EPyvoX',
+      description: 'Distributed systems fundamentals: load balancing, consistent hashing, database sharding, CAP theorem, and message queues.',
+      tag: '🏛️ Distributed Systems Core'
+    },
+    {
+      title: 'ByteByteGo Visual System Design Series',
+      channel: 'ByteByteGo (Alex Xu)',
+      videos: '35+ Visual Animations',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/@ByteByteGo',
+      description: 'Visual system design architecture diagrams breaking down large scale platforms like WhatsApp, YouTube, and Uber.',
+      tag: '💡 Visual High-Scale Architecture'
+    }
+  ],
+  python_ai: [
+    {
+      title: 'Complete Data Science & Generative AI Masterclass',
+      channel: 'Krish Naik',
+      videos: '70+ Videos',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/playlist?list=PLZoTAELRMXVN7mGZtXn3tEevnZ_VlXm4J',
+      description: 'Python for AI, Pandas/NumPy, LangChain, HuggingFace Transformers, OpenAI API, Vector Databases (Chroma/Pinecone), and LLMOps.',
+      tag: '🤖 Generative AI & Deep Learning'
+    }
+  ]
+};
 
 const SUGGESTED_SKILLS = [
   'DSA in Java (12 Months Complete Mastery)',
@@ -339,6 +432,20 @@ export default function RoadmapPage() {
     }
   ];
 
+  const getRecommendedPlaylists = (skill) => {
+    const s = (skill || '').toLowerCase();
+    if (s.includes('java') || s.includes('dsa') || s.includes('algorithm') || s.includes('c++')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.dsa_java;
+    }
+    if (s.includes('system design') || s.includes('microservice') || s.includes('architecture')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.system_design;
+    }
+    if (s.includes('python') || s.includes('ai') || s.includes('data')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.python_ai;
+    }
+    return YOUTUBE_PLAYLIST_RECOMMENDATIONS.web_fullstack;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
       {/* Header */}
@@ -504,59 +611,89 @@ export default function RoadmapPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               {/* SVG Donut Chart */}
               <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
-                <svg className="w-56 h-56 transform -rotate-90 cursor-pointer" viewBox="0 0 100 100">
-                  {/* Circle 1: LeetCode (40%) -> strokeDasharray="40 60", strokeDashoffset="0" */}
+                <svg className="w-60 h-60 transform -rotate-90 cursor-pointer drop-shadow-[0_0_20px_rgba(59,130,246,0.15)]" viewBox="0 0 100 100">
+                  <defs>
+                    <filter id="glow-dsa" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#10B981" floodOpacity="0.5" />
+                    </filter>
+                    <filter id="glow-proj" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#06B6D4" floodOpacity="0.5" />
+                    </filter>
+                    <filter id="glow-theory" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#3B82F6" floodOpacity="0.5" />
+                    </filter>
+                    <filter id="glow-rev" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#8B5CF6" floodOpacity="0.5" />
+                    </filter>
+                  </defs>
+
+                  {/* Track base */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="transparent"
+                    stroke="#1E293B"
+                    strokeWidth="8"
+                    opacity="0.4"
+                  />
+
+                  {/* Circle 1: LeetCode (40%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#10B981"
-                    strokeWidth={hoveredSlice === 'dsa' ? '14' : '10'}
+                    strokeWidth={hoveredSlice === 'dsa' ? '15' : '10'}
                     strokeDasharray="40 60"
                     strokeDashoffset="0"
+                    filter={hoveredSlice === 'dsa' ? 'url(#glow-dsa)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
                     onMouseEnter={() => setHoveredSlice('dsa')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
-                  {/* Circle 2: Projects (25%) -> strokeDasharray="25 75", strokeDashoffset="-40" */}
+                  {/* Circle 2: Projects (25%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#06B6D4"
-                    strokeWidth={hoveredSlice === 'project' ? '14' : '10'}
+                    strokeWidth={hoveredSlice === 'project' ? '15' : '10'}
                     strokeDasharray="25 75"
                     strokeDashoffset="-40"
+                    filter={hoveredSlice === 'project' ? 'url(#glow-proj)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
                     onMouseEnter={() => setHoveredSlice('project')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
-                  {/* Circle 3: Theory (25%) -> strokeDasharray="25 75", strokeDashoffset="-65" */}
+                  {/* Circle 3: Theory (25%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#3B82F6"
-                    strokeWidth={hoveredSlice === 'theory' ? '14' : '10'}
+                    strokeWidth={hoveredSlice === 'theory' ? '15' : '10'}
                     strokeDasharray="25 75"
                     strokeDashoffset="-65"
+                    filter={hoveredSlice === 'theory' ? 'url(#glow-theory)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
                     onMouseEnter={() => setHoveredSlice('theory')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
-                  {/* Circle 4: Revision (10%) -> strokeDasharray="10 90", strokeDashoffset="-90" */}
+                  {/* Circle 4: Revision (10%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#8B5CF6"
-                    strokeWidth={hoveredSlice === 'revision' ? '14' : '10'}
+                    strokeWidth={hoveredSlice === 'revision' ? '15' : '10'}
                     strokeDasharray="10 90"
                     strokeDashoffset="-90"
+                    filter={hoveredSlice === 'revision' ? 'url(#glow-rev)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
                     onMouseEnter={() => setHoveredSlice('revision')}
                     onMouseLeave={() => setHoveredSlice(null)}
@@ -618,6 +755,69 @@ export default function RoadmapPage() {
                   );
                 })}
               </div>
+            </div>
+          </div>
+
+          {/* YOUTUBE PLAYLIST RECOMMENDATIONS FOR GOAL & ROLE */}
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1E293B] pb-4">
+              <div>
+                <h3 className="text-base font-bold text-[#F8FAFC] flex items-center gap-2">
+                  <Video className="w-5 h-5 text-rose-500" />
+                  Recommended YouTube Playlists for Your Goal & Role
+                </h3>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  Curated end-to-end masterclass playlists matched to <strong className="text-[#F8FAFC]">{activeRoadmap.skill_name}</strong>.
+                </p>
+              </div>
+              <span className="text-xs text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full font-bold border border-rose-500/30 self-start sm:self-auto flex items-center gap-1.5">
+                <Play className="w-3 h-3 fill-rose-400" />
+                100% Free Curated Playlists
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {getRecommendedPlaylists(activeRoadmap.skill_name).map((playlist, idx) => (
+                <div
+                  key={idx}
+                  className="p-5 rounded-2xl border border-[#1E293B] bg-[#0B1220] hover:border-rose-500/40 transition-all flex flex-col justify-between space-y-4 group"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                        {playlist.tag}
+                      </span>
+                      <span className="text-[11px] text-[#94A3B8] font-bold">
+                        {playlist.rating}
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-[#F8FAFC] group-hover:text-rose-400 transition-colors">
+                      {playlist.title}
+                    </h4>
+
+                    <div className="flex items-center gap-3 text-xs text-[#94A3B8]">
+                      <span className="font-semibold text-[#CBD5E1]">👤 {playlist.channel}</span>
+                      <span>•</span>
+                      <span>📺 {playlist.videos}</span>
+                    </div>
+
+                    <p className="text-xs text-[#94A3B8] leading-relaxed line-clamp-2">
+                      {playlist.description}
+                    </p>
+                  </div>
+
+                  <a
+                    href={playlist.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    Watch Full Playlist on YouTube <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                  </a>
+                </div>
+              ))}
             </div>
           </div>
 
