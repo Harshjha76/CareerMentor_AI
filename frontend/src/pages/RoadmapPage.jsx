@@ -432,12 +432,13 @@ export default function RoadmapPage() {
     doc.text('1. Senior Mentor Time Allocation Framework', 20, y);
     y += 8;
 
-    const timeDist = [
-      { category: 'LeetCode / Algorithmic Problem Solving', percent: '40%', time: `${Math.round(dailyMins * 0.4)} mins/day`, focus: 'Pattern mastery (Two Pointers, Sliding Window, Graphs, DP)' },
-      { category: 'Hands-on Milestone Portfolio Projects', percent: '25%', time: `${Math.round(dailyMins * 0.25)} mins/day`, focus: 'Building production architectures & testable modules' },
-      { category: 'Core Theory & Computer Science Foundations', percent: '25%', time: `${Math.round(dailyMins * 0.25)} mins/day`, focus: 'Memory architecture, Big-O analysis & system invariants' },
-      { category: 'Weekly Revision, Mock Testing & Retros', percent: '10%', time: `${Math.round(dailyMins * 0.1)} mins/day`, focus: 'Timed coding simulations and GitHub documentation' }
-    ];
+    const domainDist = getDomainTimeDistribution(activeRoadmap.skill_name, activeRoadmap.daily_hours || 2);
+    const timeDist = domainDist.map(td => ({
+      category: td.label,
+      percent: `${td.percent}%`,
+      time: `${td.dailyMins} mins/day`,
+      focus: td.guideline
+    }));
 
     timeDist.forEach(td => {
       doc.setFillColor(23, 32, 51);
@@ -525,45 +526,224 @@ export default function RoadmapPage() {
     doc.save(`CareerMentor_Roadmap_${activeRoadmap.skill_name.replace(/\s+/g, '_')}.pdf`);
   };
 
-  // Pie/Donut Chart Slices Data
-  const chartData = [
-    {
-      id: 'dsa',
-      label: 'LeetCode & Algorithmic Problem Solving',
-      percent: 40,
-      color: '#10B981',
-      dailyMins: Math.round(((activeRoadmap?.daily_hours || dailyHours) * 60) * 0.4),
-      weeklyHours: (((activeRoadmap?.daily_hours || dailyHours) * 7) * 0.4).toFixed(1),
-      guideline: 'High-frequency LeetCode patterns (Two Pointers, Sliding Window, Trees, Graphs, DP). Focus on edge cases and optimal Big-O complexity.'
-    },
-    {
-      id: 'project',
-      label: 'Hands-on Milestone Portfolio Projects',
-      percent: 25,
-      color: '#06B6D4',
-      dailyMins: Math.round(((activeRoadmap?.daily_hours || dailyHours) * 60) * 0.25),
-      weeklyHours: (((activeRoadmap?.daily_hours || dailyHours) * 7) * 0.25).toFixed(1),
-      guideline: 'Apply data structures and system design principles into tangible portfolio applications with test suites and clean architecture.'
-    },
-    {
-      id: 'theory',
-      label: 'Core Theory & Language Foundations',
-      percent: 25,
-      color: '#3B82F6',
-      dailyMins: Math.round(((activeRoadmap?.daily_hours || dailyHours) * 60) * 0.25),
-      weeklyHours: (((activeRoadmap?.daily_hours || dailyHours) * 7) * 0.25).toFixed(1),
-      guideline: 'Master JVM/Memory models, concurrency, database indexing, and underlying mathematical fundamentals.'
-    },
-    {
-      id: 'revision',
-      label: 'Weekly Retros, Timed Mock Tests & Buffer',
-      percent: 10,
-      color: '#8B5CF6',
-      dailyMins: Math.round(((activeRoadmap?.daily_hours || dailyHours) * 60) * 0.1),
-      weeklyHours: (((activeRoadmap?.daily_hours || dailyHours) * 7) * 0.1).toFixed(1),
-      guideline: '45-minute timed interview challenge every Saturday, GitHub commit polishing, and upcoming week sprint planning.'
+  // Dynamic Domain-Specific Time Allocation Framework
+  const getDomainTimeDistribution = (skill, hours = 2) => {
+    const s = (skill || '').toLowerCase();
+    const dailyMins = Math.round(hours * 60);
+
+    // 1. FULL STACK WEB DEVELOPMENT
+    if (/full\s*stack|mern|mean|react|frontend|next|web\s*dev|node|express|vue|angular|backend|javascript|typescript|html|css/i.test(s)) {
+      return [
+        {
+          id: 'slice_1',
+          label: 'Frontend & Backend Code Building (Hands-on)',
+          percent: 40,
+          color: '#10B981',
+          dailyMins: Math.round(dailyMins * 0.4),
+          weeklyHours: ((hours * 7) * 0.4).toFixed(1),
+          guideline: 'Active coding: building responsive React components, Express/Node.js REST APIs, and database migrations with zero copy-pasting.'
+        },
+        {
+          id: 'slice_2',
+          label: 'API Architecture, Database Schemas & Security',
+          percent: 25,
+          color: '#06B6D4',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Designing normalized PostgreSQL schemas, indexing strategies, JWT authentication pipelines, and state machines.'
+        },
+        {
+          id: 'slice_3',
+          label: 'Web Standards, DOM Protocols & Framework Internals',
+          percent: 25,
+          color: '#3B82F6',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Deep-dive into JavaScript execution contexts, event loop microtasks, React Fiber reconciliation, and HTTP/browser protocols.'
+        },
+        {
+          id: 'slice_4',
+          label: 'Testing (Vitest/Playwright), CI/CD & Deployments',
+          percent: 10,
+          color: '#8B5CF6',
+          dailyMins: Math.round(dailyMins * 0.1),
+          weeklyHours: ((hours * 7) * 0.1).toFixed(1),
+          guideline: 'Automated unit tests with Vitest, end-to-end user checkout flows with Playwright, and GitHub Actions deployments.'
+        }
+      ];
     }
-  ];
+
+    // 2. PYTHON, AI & MACHINE LEARNING
+    if (/python|ai|machine\s*learning|data\s*science|deep\s*learning|pytorch|tensorflow|nlp|llm|langchain|rag|genai/i.test(s)) {
+      return [
+        {
+          id: 'slice_1',
+          label: 'Model Building, Data Pipelines & Experiments',
+          percent: 40,
+          color: '#10B981',
+          dailyMins: Math.round(dailyMins * 0.4),
+          weeklyHours: ((hours * 7) * 0.4).toFixed(1),
+          guideline: 'Writing PyTorch neural network modules, Scikit-Learn pipelines, and LangChain RAG vector retrieval workflows.'
+        },
+        {
+          id: 'slice_2',
+          label: 'Mathematical Foundations & Algorithm Theory',
+          percent: 25,
+          color: '#06B6D4',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Linear algebra (matrix dot products, eigenvalues), gradient descent calculus, and attention mechanism formulas.'
+        },
+        {
+          id: 'slice_3',
+          label: 'Data Cleaning, Feature Engineering & Vector DBs',
+          percent: 25,
+          color: '#3B82F6',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Pandas data wrangling, missing value imputation, text tokenization, and vector database indexing (Chroma/Pinecone).'
+        },
+        {
+          id: 'slice_4',
+          label: 'Model Evaluation, Hyperparameter Tuning & Retros',
+          percent: 10,
+          color: '#8B5CF6',
+          dailyMins: Math.round(dailyMins * 0.1),
+          weeklyHours: ((hours * 7) * 0.1).toFixed(1),
+          guideline: 'Stratified cross-validation, ROC-AUC curve analysis, error residual diagnostics, and model serialization.'
+        }
+      ];
+    }
+
+    // 3. CLOUD & DEVOPS
+    if (/devops|cloud|kubernetes|docker|aws|terraform|ci\/?cd|linux|sysadmin|azure|gcp/i.test(s)) {
+      return [
+        {
+          id: 'slice_1',
+          label: 'Containers, Cluster Orchestration & IaC Labs',
+          percent: 40,
+          color: '#10B981',
+          dailyMins: Math.round(dailyMins * 0.4),
+          weeklyHours: ((hours * 7) * 0.4).toFixed(1),
+          guideline: 'Authoring multi-stage Dockerfiles, Kubernetes manifests, Helm charts, and modular Terraform configurations.'
+        },
+        {
+          id: 'slice_2',
+          label: 'Cloud Architecture & Security Hardening',
+          percent: 25,
+          color: '#06B6D4',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Architecting AWS VPC subnets, NAT gateways, ALB load balancing, and IAM least-privilege policies.'
+        },
+        {
+          id: 'slice_3',
+          label: 'Linux Kernel, Systemd & Networking Protocols',
+          percent: 25,
+          color: '#3B82F6',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Linux namespaces/cgroups, process signals, bash automation scripts, and TCP/IP routing tables.'
+        },
+        {
+          id: 'slice_4',
+          label: 'Observability (Prometheus/Grafana) & CI/CD Pipelines',
+          percent: 10,
+          color: '#8B5CF6',
+          dailyMins: Math.round(dailyMins * 0.1),
+          weeklyHours: ((hours * 7) * 0.1).toFixed(1),
+          guideline: 'PromQL alerting metrics, Grafana dashboards, automated GitHub Actions pipelines, and disaster recovery.'
+        }
+      ];
+    }
+
+    // 4. DATA STRUCTURES & ALGORITHMS (DSA)
+    if (/dsa|data\s*structures|algorithms|leetcode|competitive|java\s*dsa|cpp\s*dsa/i.test(s)) {
+      return [
+        {
+          id: 'slice_1',
+          label: 'LeetCode & Algorithmic Problem Solving',
+          percent: 40,
+          color: '#10B981',
+          dailyMins: Math.round(dailyMins * 0.4),
+          weeklyHours: ((hours * 7) * 0.4).toFixed(1),
+          guideline: 'High-frequency patterns: Two Pointers, Sliding Window, Trees, Graphs, and 1D/2D Dynamic Programming.'
+        },
+        {
+          id: 'slice_2',
+          label: 'Hands-on Data Structure Implementations & Labs',
+          percent: 25,
+          color: '#06B6D4',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Building Singly/Doubly Linked Lists, Binary Search Trees, Heaps, and Graph adjacency lists from scratch.'
+        },
+        {
+          id: 'slice_3',
+          label: 'Core Language Internals & Big-O Asymptotic Proofs',
+          percent: 25,
+          color: '#3B82F6',
+          dailyMins: Math.round(dailyMins * 0.25),
+          weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+          guideline: 'Memory layout (Stack vs Heap), Garbage Collection, recurrence relations, and asymptotic space bounds.'
+        },
+        {
+          id: 'slice_4',
+          label: 'Weekly Timed Mock Contests & Buffer Retros',
+          percent: 10,
+          color: '#8B5CF6',
+          dailyMins: Math.round(dailyMins * 0.1),
+          weeklyHours: ((hours * 7) * 0.1).toFixed(1),
+          guideline: '45-minute timed interview challenge every Saturday, GitHub commit polishing, and upcoming sprint planning.'
+        }
+      ];
+    }
+
+    // 5. DEFAULT / CUSTOM SKILL DOMAIN
+    return [
+      {
+        id: 'slice_1',
+        label: 'Hands-on Implementation & Module Building',
+        percent: 40,
+        color: '#10B981',
+        dailyMins: Math.round(dailyMins * 0.4),
+        weeklyHours: ((hours * 7) * 0.4).toFixed(1),
+        guideline: `Deliberate hands-on practice implementing practical modules and projects in ${skill || 'this skill'}.`
+      },
+      {
+        id: 'slice_2',
+        label: 'System Design & Applied Engineering Patterns',
+        percent: 25,
+        color: '#06B6D4',
+        dailyMins: Math.round(dailyMins * 0.25),
+        weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+        guideline: 'Designing robust data flows, state architectures, error recovery, and production workflows.'
+      },
+      {
+        id: 'slice_3',
+        label: 'Underlying Core Principles & In-depth Theory',
+        percent: 25,
+        color: '#3B82F6',
+        dailyMins: Math.round(dailyMins * 0.25),
+        weeklyHours: ((hours * 7) * 0.25).toFixed(1),
+        guideline: 'Mastering execution models, configuration standards, memory patterns, and official documentation.'
+      },
+      {
+        id: 'slice_4',
+        label: 'Testing, Polishing, Documentation & Retros',
+        percent: 10,
+        color: '#8B5CF6',
+        dailyMins: Math.round(dailyMins * 0.1),
+        weeklyHours: ((hours * 7) * 0.1).toFixed(1),
+        guideline: 'Weekly reviews, unit test coverage, GitHub documentation, and roadmap calibration.'
+      }
+    ];
+  };
+
+  const chartData = getDomainTimeDistribution(
+    activeRoadmap?.skill_name || skillName,
+    activeRoadmap?.daily_hours || dailyHours
+  );
 
   const getRecommendedPlaylists = (skill) => {
     const s = (skill || '').toLowerCase();
@@ -946,64 +1126,64 @@ export default function RoadmapPage() {
                     opacity="0.4"
                   />
 
-                  {/* Circle 1: LeetCode (40%) */}
+                  {/* Circle 1: Primary Build (40%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#10B981"
-                    strokeWidth={hoveredSlice === 'dsa' ? '15' : '10'}
+                    strokeWidth={hoveredSlice === 'slice_1' ? '15' : '10'}
                     strokeDasharray="40 60"
                     strokeDashoffset="0"
-                    filter={hoveredSlice === 'dsa' ? 'url(#glow-dsa)' : undefined}
+                    filter={hoveredSlice === 'slice_1' ? 'url(#glow-dsa)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
-                    onMouseEnter={() => setHoveredSlice('dsa')}
+                    onMouseEnter={() => setHoveredSlice('slice_1')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
-                  {/* Circle 2: Projects (25%) */}
+                  {/* Circle 2: Architecture & Schemas (25%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#06B6D4"
-                    strokeWidth={hoveredSlice === 'project' ? '15' : '10'}
+                    strokeWidth={hoveredSlice === 'slice_2' ? '15' : '10'}
                     strokeDasharray="25 75"
                     strokeDashoffset="-40"
-                    filter={hoveredSlice === 'project' ? 'url(#glow-proj)' : undefined}
+                    filter={hoveredSlice === 'slice_2' ? 'url(#glow-proj)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
-                    onMouseEnter={() => setHoveredSlice('project')}
+                    onMouseEnter={() => setHoveredSlice('slice_2')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
-                  {/* Circle 3: Theory (25%) */}
+                  {/* Circle 3: Core Foundations & Theory (25%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#3B82F6"
-                    strokeWidth={hoveredSlice === 'theory' ? '15' : '10'}
+                    strokeWidth={hoveredSlice === 'slice_3' ? '15' : '10'}
                     strokeDasharray="25 75"
                     strokeDashoffset="-65"
-                    filter={hoveredSlice === 'theory' ? 'url(#glow-theory)' : undefined}
+                    filter={hoveredSlice === 'slice_3' ? 'url(#glow-theory)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
-                    onMouseEnter={() => setHoveredSlice('theory')}
+                    onMouseEnter={() => setHoveredSlice('slice_3')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
-                  {/* Circle 4: Revision (10%) */}
+                  {/* Circle 4: Testing & Retros (10%) */}
                   <circle
                     cx="50"
                     cy="50"
                     r="38"
                     fill="transparent"
                     stroke="#8B5CF6"
-                    strokeWidth={hoveredSlice === 'revision' ? '15' : '10'}
+                    strokeWidth={hoveredSlice === 'slice_4' ? '15' : '10'}
                     strokeDasharray="10 90"
                     strokeDashoffset="-90"
-                    filter={hoveredSlice === 'revision' ? 'url(#glow-rev)' : undefined}
+                    filter={hoveredSlice === 'slice_4' ? 'url(#glow-rev)' : undefined}
                     className="transition-all duration-300 hover:opacity-100 opacity-90"
-                    onMouseEnter={() => setHoveredSlice('revision')}
+                    onMouseEnter={() => setHoveredSlice('slice_4')}
                     onMouseLeave={() => setHoveredSlice(null)}
                   />
                 </svg>
