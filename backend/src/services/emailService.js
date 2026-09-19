@@ -74,6 +74,35 @@ export async function sendEmailReminder({ toEmail, subject, textContent, htmlCon
     }
   }
 
+  // 2. Check Brevo / Sendinblue API (Free 300 emails/day tier)
+  if (process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY) {
+    try {
+      const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'CareerPilot AI Mentor', email: process.env.EMAIL_FROM_ADDRESS || 'mentor@careermentor-ai.com' },
+          to: [{ email: toEmail }],
+          subject: subject,
+          textContent: textContent,
+          htmlContent: htmlContent || `<p>${textContent}</p>`
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        console.log('✅ Email successfully sent via Brevo:', data);
+        return { success: true, provider: 'brevo', data };
+      }
+    } catch (err) {
+      console.warn('⚠️ Brevo email dispatch failed:', err.message);
+    }
+  }
+
   // 2. Check Custom / Gmail SMTP Transporter
   if (transporter) {
     try {

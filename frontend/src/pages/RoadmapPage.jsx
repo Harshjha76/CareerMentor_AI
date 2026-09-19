@@ -24,9 +24,15 @@ import {
   Flame,
   Layers,
   ArrowRight,
-  Play
+  Play,
+  Trophy,
+  AlertTriangle,
+  ShieldCheck,
+  Mail,
+  Smartphone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import EmailGuardianCard from '../components/EmailGuardianCard';
 
 const YOUTUBE_PLAYLIST_RECOMMENDATIONS = {
   dsa_java: [
@@ -143,10 +149,27 @@ export default function RoadmapPage() {
   const [hoveredSlice, setHoveredSlice] = useState(null);
   const [syncingPlanner, setSyncingPlanner] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [streakData, setStreakData] = useState(null);
+  const [loadingStreak, setLoadingStreak] = useState(true);
+  const [sendingStreakAlert, setSendingStreakAlert] = useState(false);
+  const [streakAlertResult, setStreakAlertResult] = useState(null);
 
   useEffect(() => {
     loadRoadmaps();
+    loadStreakData();
   }, []);
+
+  const loadStreakData = async () => {
+    setLoadingStreak(true);
+    try {
+      const res = await api.roadmap.getStreak();
+      setStreakData(res);
+    } catch (err) {
+      console.error('Failed to load roadmap streak data:', err);
+    } finally {
+      setLoadingStreak(false);
+    }
+  };
 
   const loadRoadmaps = async () => {
     try {
@@ -157,6 +180,20 @@ export default function RoadmapPage() {
       }
     } catch (err) {
       console.error('Failed to load roadmaps:', err);
+    }
+  };
+
+  const handleSendStreakAlert = async () => {
+    setSendingStreakAlert(true);
+    setStreakAlertResult(null);
+    try {
+      const res = await api.roadmap.sendStreakAlert();
+      setStreakAlertResult(res);
+      setTimeout(() => setStreakAlertResult(null), 8000);
+    } catch (err) {
+      alert('Failed to send streak alert email: ' + err.message);
+    } finally {
+      setSendingStreakAlert(false);
     }
   };
 
@@ -172,6 +209,7 @@ export default function RoadmapPage() {
         daily_hours: dailyHours
       });
       await loadRoadmaps();
+      await loadStreakData();
     } catch (err) {
       alert('Error generating roadmap: ' + err.message);
     } finally {
@@ -182,6 +220,7 @@ export default function RoadmapPage() {
   const toggleTask = async (taskId, currentStatus) => {
     try {
       await api.roadmap.toggleTask(taskId, !currentStatus);
+      await loadStreakData();
       if (activeRoadmap) {
         const updatedWeeks = activeRoadmap.weeks.map(w => ({
           ...w,
@@ -557,6 +596,149 @@ export default function RoadmapPage() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* 1. ROADMAP STUDY STREAK & DAILY CONSISTENCY HUB */}
+      <div className="bg-gradient-to-r from-[#111C30] via-[#16233B] to-[#111C30] border border-[#1E293B] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          {/* Left: Flame Streak & Domain Context */}
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider">
+              <Flame className="w-4 h-4 text-amber-400 animate-pulse" />
+              <span>Roadmap Study Streak & Consistency Tracker</span>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                <Flame className="w-7 h-7 text-white animate-bounce" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    {streakData?.currentStreak || 0} Day Study Streak
+                  </h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    streakData?.isMaintainedToday
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
+                  }`}>
+                    {streakData?.isMaintainedToday ? '🟢 Streak Maintained Today' : '⚠️ Action Needed Today'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#94A3B8]">
+                  {streakData?.isMaintainedToday
+                    ? 'Outstanding! You have completed a milestone today and kept your study momentum.'
+                    : 'Your streak is at risk today! Complete 1 roadmap milestone below to preserve your streak.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Quick Streak Actions & Dispatch Alert */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleSendStreakAlert}
+              disabled={sendingStreakAlert}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:opacity-90 text-white font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50"
+              title="Dispatches an automated AI recovery email to your registered inbox to keep your streak alive"
+            >
+              {sendingStreakAlert ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Dispatching Streak Alert...
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4" /> ⚡ Send Streak Recovery Email
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* 7-Day Consistency Heatmap & Milestone Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-4 border-t border-[#1E293B]/80 relative z-10">
+          {/* 7-Day Activity Pills */}
+          <div className="md:col-span-8 bg-[#0B1220]/70 border border-[#1E293B] rounded-2xl p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs text-[#94A3B8]">
+              <span className="font-semibold text-[#F8FAFC]">Last 7 Days Milestone Activity</span>
+              <span>{streakData?.totalActiveDays || 0} Total Active Days</span>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-2 pt-1">
+              {(streakData?.last7Days || []).map((day, idx) => (
+                <div
+                  key={idx}
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                    day.completed
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-xs'
+                      : day.isToday
+                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                        : 'bg-[#172033]/60 border-[#1E293B] text-[#64748B]'
+                  }`}
+                >
+                  <span className="text-[10px] font-mono font-bold uppercase">{day.dayName}</span>
+                  <div className="mt-1">
+                    {day.completed ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-slate-700 block" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Stats: Best Streak & Total Completed */}
+          <div className="md:col-span-4 grid grid-cols-2 gap-3">
+            <div className="bg-[#0B1220]/70 border border-[#1E293B] rounded-2xl p-3.5 flex flex-col justify-center">
+              <span className="text-[11px] text-[#94A3B8] flex items-center gap-1">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" /> Best Streak
+              </span>
+              <div className="text-xl font-black text-[#F8FAFC] mt-0.5">
+                {streakData?.bestStreak || 1} Days
+              </div>
+            </div>
+
+            <div className="bg-[#0B1220]/70 border border-[#1E293B] rounded-2xl p-3.5 flex flex-col justify-center">
+              <span className="text-[11px] text-[#94A3B8] flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Milestones Done
+              </span>
+              <div className="text-xl font-black text-[#F8FAFC] mt-0.5">
+                {streakData?.totalCompletedTasks || 0} Tasks
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Streak Alert Result Confirmation */}
+        {streakAlertResult && (
+          <div className="bg-[#0B1220] border border-emerald-500/40 rounded-2xl p-4 flex items-center justify-between gap-4 animate-fadeIn">
+            <div className="flex items-center gap-2.5 text-xs text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                Streak recovery notification sent to <strong>{streakAlertResult.recipient}</strong> with task: "{streakAlertResult.pendingTask}"
+              </span>
+            </div>
+            {streakAlertResult.emailRes?.previewUrl && (
+              <a
+                href={streakAlertResult.emailRes.previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shrink-0 transition-colors"
+              >
+                <span>View Email</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Compact Email Permission Guardian Switch */}
+        <EmailGuardianCard compact={true} onEmailSent={() => loadStreakData()} />
       </div>
 
       {/* Active Roadmap View */}

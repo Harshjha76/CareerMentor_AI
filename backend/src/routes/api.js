@@ -20,7 +20,9 @@ import {
   createRoadmap,
   getUserRoadmaps,
   toggleTaskComplete,
-  updateTask
+  updateTask,
+  getRoadmapStreak,
+  sendRoadmapStreakAlert
 } from '../controllers/roadmapController.js';
 
 import {
@@ -86,6 +88,8 @@ router.get('/resume/latest', authenticateToken, getLatestResume);
 // 3. Smart Roadmap
 router.post('/roadmap/generate', authenticateToken, createRoadmap);
 router.get('/roadmap', authenticateToken, getUserRoadmaps);
+router.get('/roadmap/streak', authenticateToken, getRoadmapStreak);
+router.post('/roadmap/streak-alert', authenticateToken, sendRoadmapStreakAlert);
 router.put('/roadmap/tasks/:taskId/toggle', authenticateToken, toggleTaskComplete);
 router.put('/roadmap/tasks/:taskId', authenticateToken, updateTask);
 

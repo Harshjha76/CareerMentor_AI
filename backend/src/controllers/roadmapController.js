@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
 import { generateRoadmapWithAI } from '../services/aiService.js';
+import { sendEmailReminder } from '../services/emailService.js';
 
 export async function createRoadmap(req, res) {
   try {
@@ -199,5 +200,174 @@ export async function updateTask(req, res) {
     return res.json({ message: 'Task description updated', taskId });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to edit task: ' + err.message });
+  }
+}
+
+/**
+ * Get student's roadmap study streak, heatmap, and consistency telemetry
+ */
+export async function getRoadmapStreak(req, res) {
+  try {
+    const userId = req.user.id;
+
+    // Fetch all completed tasks with dates
+    const tasksRes = await query(
+      `SELECT rt.completed_at, rt.is_completed, r.skill_name
+       FROM roadmap_tasks rt
+       JOIN roadmaps r ON rt.roadmap_id = r.id
+       WHERE r.user_id = $1
+       ORDER BY rt.completed_at DESC`,
+      [userId]
+    );
+
+    const completedDates = new Set();
+    let totalCompletedTasks = 0;
+    let totalTasks = tasksRes.rows.length;
+
+    tasksRes.rows.forEach(row => {
+      if (row.is_completed) {
+        totalCompletedTasks++;
+        if (row.completed_at) {
+          const dateStr = row.completed_at.split('T')[0];
+          completedDates.add(dateStr);
+        }
+      }
+    });
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMaintainedToday = completedDates.has(todayStr);
+
+    // Calculate current consecutive streak
+    let currentStreak = 0;
+    let checkDate = new Date();
+
+    if (!isMaintainedToday) {
+      // Check from yesterday to see if streak is still active
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    while (true) {
+      const dateKey = checkDate.toISOString().split('T')[0];
+      if (completedDates.has(dateKey)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    // Default streak baseline
+    const bestStreak = Math.max(currentStreak, completedDates.size > 0 ? completedDates.size : 1);
+
+    // Last 7 days activity array
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      last7Days.push({
+        date: dStr,
+        dayName,
+        completed: completedDates.has(dStr),
+        isToday: dStr === todayStr
+      });
+    }
+
+    return res.json({
+      currentStreak: isMaintainedToday ? currentStreak : currentStreak,
+      bestStreak,
+      isMaintainedToday,
+      totalActiveDays: completedDates.size,
+      totalCompletedTasks,
+      totalTasks,
+      last7Days,
+      streakAtRisk: !isMaintainedToday && currentStreak > 0
+    });
+  } catch (err) {
+    console.error('Error fetching roadmap streak:', err);
+    return res.status(500).json({ error: 'Failed to compute streak: ' + err.message });
+  }
+}
+
+/**
+ * Send an AI Streak Recovery / Inconsistency Alert Email
+ */
+export async function sendRoadmapStreakAlert(req, res) {
+  try {
+    const user = req.user;
+    const userId = user.id;
+
+    // Fetch latest active roadmap and pending tasks
+    const activeRoadmapRes = await query(
+      `SELECT * FROM roadmaps WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+
+    const roadmap = activeRoadmapRes.rows[0];
+    const domainName = roadmap?.skill_name || 'Software Engineering';
+
+    const pendingTasksRes = await query(
+      `SELECT rt.task_description, rt.week_number, rt.day_number
+       FROM roadmap_tasks rt
+       JOIN roadmaps r ON rt.roadmap_id = r.id
+       WHERE r.user_id = $1 AND rt.is_completed = FALSE
+       ORDER BY rt.week_number ASC, rt.day_number ASC LIMIT 3`,
+      [userId]
+    );
+
+    const pendingTask = pendingTasksRes.rows[0]?.task_description || `Master foundational concepts for ${domainName}`;
+    const subject = `🔥 [CareerPilot AI] Keep Your ${domainName} Streak Alive!`;
+    const textContent = `Hi ${user.name || 'Student'},\n\nYour study streak for "${domainName}" is at risk today! Complete your next milestone to keep your momentum going:\n\n👉 Today's Task: ${pendingTask}\n\nLog into CareerPilot AI now: http://localhost:5173/roadmap`;
+
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 16px; background: #0b1220; color: #f8fafc;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 700; border: 1px solid rgba(245, 158, 11, 0.4); display: inline-block;">
+            🔥 ROADMAP STUDY STREAK GUARDIAN
+          </span>
+          <h2 style="color: #ffffff; margin: 16px 0 6px 0; font-size: 22px;">Don't Break Your ${domainName} Streak!</h2>
+          <p style="color: #94a3b8; font-size: 14px; margin: 0;">Automated Mobile Check-in for <strong>${user.name}</strong></p>
+        </div>
+        
+        <div style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 16px 18px; border-radius: 8px; margin-bottom: 20px;">
+          <p style="font-size: 14px; color: #f87171; font-weight: 700; margin: 0 0 4px 0;">⚠️ Milestone Inactivity Warning</p>
+          <p style="font-size: 14px; color: #e2e8f0; line-height: 1.5; margin: 0;">You haven't completed a task today. Complete 1 milestone to maintain your daily streak!</p>
+        </div>
+
+        <div style="background: #111c30; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+          <span style="color: #60a5fa; font-size: 12px; font-weight: 700; text-transform: uppercase;">⚡ Recommended 15-Minute Task:</span>
+          <p style="font-size: 15px; color: #ffffff; margin: 8px 0 0 0; font-weight: 600;">${pendingTask}</p>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="http://localhost:5173/roadmap" style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);">
+            Open Roadmap & Complete Task 🔥
+          </a>
+          <p style="color: #64748b; font-size: 12px; margin: 12px 0 0 0;">
+            Sent autonomously by CareerPilot AI Streak Guardian to ${user.email}
+          </p>
+        </div>
+      </div>
+    `;
+
+    const emailRes = await sendEmailReminder({
+      toEmail: user.email,
+      subject,
+      textContent,
+      htmlContent
+    });
+
+    return res.json({
+      success: true,
+      message: `Streak recovery email dispatched to ${user.email}`,
+      recipient: user.email,
+      domainName,
+      pendingTask,
+      emailRes
+    });
+  } catch (err) {
+    console.error('Streak alert email error:', err);
+    return res.status(500).json({ error: 'Failed to send streak alert email: ' + err.message });
   }
 }

@@ -114,6 +114,17 @@ export const api = {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ task_description })
+      }).then(handleResponse),
+
+    getStreak: () =>
+      fetch(`${API_BASE}/roadmap/streak`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    sendStreakAlert: () =>
+      fetch(`${API_BASE}/roadmap/streak-alert`, {
+        method: 'POST',
+        headers: getAuthHeaders()
       }).then(handleResponse)
   },
 
