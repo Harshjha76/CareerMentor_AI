@@ -34,7 +34,7 @@ export default function Navbar() {
     { to: '/resume', label: t('nav.resume'), icon: FileText },
     { to: '/roadmap', label: t('nav.roadmap'), icon: Map },
     { to: '/planner', label: t('nav.planner'), icon: Calendar },
-    { to: '/internships', label: 'Internships & Prep 🎯', icon: Briefcase },
+    { to: '/internships', label: 'AI Agent 🤖', icon: Sparkles },
     { to: '/chat', label: t('nav.chat'), icon: MessageSquare },
     { to: '/goals', label: t('nav.goals'), icon: Target },
     { to: '/admin', label: t('nav.admin'), icon: BarChart2 },

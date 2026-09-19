@@ -153,13 +153,13 @@ export default function InternshipsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" /> Resume-Tailored SDE Matcher & Question Tackle
+                <Sparkles className="w-3.5 h-3.5" /> CareerPilot Autonomous AI Agent
               </div>
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-white">
-                Internship Matching & Interview Prep
+                AI Agent: Smart Internship Matcher & Interview Prep
               </h1>
               <p className="text-sm md:text-base text-slate-400 max-w-2xl">
-                Automatically matches tier-1 & high-growth startup internships tailored to your uploaded resume, provides instant AI grading for internship interview questions, and keeps you accountable with AI email nudges.
+                Autonomous AI agent that extracts verified skills from your resume, ranks high-yield tech internships, provides Claude-level interview tackle coaching, and maintains your daily consistency with automated email check-ins.
               </p>
             </div>
 
