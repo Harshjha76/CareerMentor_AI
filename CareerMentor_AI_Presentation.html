@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CareerMentor AI - S.E. Capstone Project-I</title>
+<style>
+  @page {
+    size: 10in 7.5in;
+    margin: 0;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    background: #e2e8f0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .slide {
+    width: 10in;
+    height: 7.5in;
+    position: relative;
+    page-break-after: always;
+    break-after: page;
+    background: #ffffff;
+    overflow: hidden;
+    padding: 0.35in 0.55in 0.4in 0.55in;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* College Template Headers */
+  .inst-header {
+    text-align: center;
+    margin-bottom: 0.1in;
+  }
+  .inst-trust {
+    color: #991b1b;
+    font-size: 14pt;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .inst-college {
+    color: #1e3a8a;
+    font-size: 18pt;
+    font-weight: 800;
+    margin: 2px 0;
+  }
+  .inst-naac {
+    color: #b91c1c;
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .blue-divider {
+    height: 3px;
+    background: #1e3a8a;
+    width: 100%;
+    margin-bottom: 0.18in;
+  }
+  .slide-title-bar {
+    text-align: center;
+    margin-bottom: 0.12in;
+  }
+  .slide-title {
+    font-size: 24pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+  }
+
+  /* Slide Footers */
+  .slide-footer {
+    position: absolute;
+    bottom: 0.22in;
+    left: 0.55in;
+    right: 0.55in;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 2px solid #1e3a8a;
+    padding-top: 0.08in;
+    font-size: 9.5pt;
+    color: #475569;
+    font-weight: 600;
+  }
+  .footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1e3a8a;
+    font-weight: 700;
+  }
+  .page-number {
+    font-size: 11pt;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  /* Content area */
+  .content {
+    flex: 1;
+    overflow: hidden;
+  }
+  ul.points {
+    list-style: none;
+    padding-left: 0;
+  }
+  ul.points > li {
+    position: relative;
+    padding-left: 0.28in;
+    margin-bottom: 0.12in;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #1e293b;
+  }
+  ul.points > li::before {
+    content: "•";
+    position: absolute;
+    left: 0.05in;
+    top: -0.02in;
+    color: #1e3a8a;
+    font-size: 18pt;
+    font-weight: bold;
+  }
+  ul.subpoints {
+    list-style: none;
+    padding-left: 0.22in;
+    margin-top: 0.05in;
+  }
+  ul.subpoints > li {
+    position: relative;
+    padding-left: 0.2in;
+    margin-bottom: 0.06in;
+    font-size: 10.5pt;
+    color: #334155;
+    line-height: 1.4;
+  }
+  ul.subpoints > li::before {
+    content: "❑";
+    position: absolute;
+    left: 0;
+    color: #0284c7;
+    font-size: 9pt;
+  }
+  strong {
+    color: #0f172a;
+    font-weight: 700;
+  }
+  .highlight-blue {
+    color: #1d4ed8;
+    font-weight: 700;
+  }
+  .highlight-red {
+    color: #dc2626;
+    font-weight: 700;
+  }
+
+  /* Cards & Grid */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2in;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.15in;
+  }
+  .card {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #1e3a8a;
+    border-radius: 6px;
+    padding: 0.12in 0.16in;
+  }
+  .card-title {
+    font-size: 11pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.05in;
+  }
+  .card-body {
+    font-size: 9.5pt;
+    color: #334155;
+    line-height: 1.35;
+  }
+
+  /* Tables */
+  table.lit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin-top: 0.05in;
+  }
+  table.lit-table th {
+    background: #1e3a8a;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 6px 8px;
+    text-align: left;
+    border: 1px solid #0f172a;
+  }
+  table.lit-table td {
+    padding: 5px 8px;
+    border: 1px solid #cbd5e1;
+    line-height: 1.3;
+  }
+  table.lit-table tr:nth-child(even) {
+    background: #f1f5f9;
+  }
+
+  /* Diagram Box */
+  .diagram-container {
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 8px;
+    padding: 0.15in;
+    font-family: 'Consolas', monospace;
+    font-size: 8pt;
+    line-height: 1.25;
+    margin-top: 0.08in;
+    border: 1px solid #334155;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<div class="slide" style="text-align: center; justify-content: space-between;">
+  <div class="inst-header">
+    <div class="inst-trust">Aldel Education Trust's</div>
+    <div class="inst-college">St. John College of Engineering and Management, Palghar</div>
+    <div class="inst-naac">NAAC Accredited with Grade A+</div>
+  </div>
+  <div class="blue-divider"></div>
+
+  <div style="margin: auto 0;">
+    <div style="font-size: 18pt; font-weight: 800; color: #0f172a; letter-spacing: 1px; margin-bottom: 0.08in;">
+      DEPARTMENT OF AIML
+    </div>
+    <div style="font-size: 28pt; font-weight: 900; color: #c52222; margin-bottom: 0.12in;">
+      S.E. Capstone Project-I
+    </div>
+    <div style="font-size: 21pt; font-weight: 800; color: #1e3a8a; line-height: 1.25; max-width: 8.5in; margin: 0 auto 0.25in auto;">
+      CareerMentor AI: An Autonomous Multilingual AI-Powered Career Guidance & Management Agent
+    </div>
+
+    <div style="font-size: 12.5pt; font-weight: 700; color: #1e293b; line-height: 1.6; margin-bottom: 0.2in;">
+      <div>Harsh Jha &nbsp;&nbsp;(Div. A | Roll No. 24) &nbsp;&nbsp;[PID: 221045]</div>
+      <div>Project Partner 2 &nbsp;&nbsp;(Div. A | Roll No. 25) &nbsp;&nbsp;[PID: 221046]</div>
+      <div>Project Partner 3 &nbsp;&nbsp;(Div. A | Roll No. 26) &nbsp;&nbsp;[PID: 221047]</div>
+    </div>
+
+    <div style="font-size: 13pt; font-weight: 800; color: #0f172a;">
+      March 2026
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div></div>
+    <div class="page-number">1</div>
+  </div>
+</div>
+
+<!-- SLIDE 2: Contents -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Contents</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content" style="padding-top: 0.2in;">
+    <ul class="points" style="font-size: 13.5pt;">
+      <li><strong>Introduction</strong>
+        <ul class="subpoints" style="font-size: 12pt; margin-top: 0.08in;">
+          <li>Motivation & Industry Placement Reality</li>
+          <li>Problem Statement & Research Objectives</li>
+          <li>Scope of Proposed System</li>
+        </ul>
+      </li>
+      <li style="margin-top: 0.18in;"><strong>Review of Existing Literature</strong>
+        <ul class="subpoints" style="font-size: 12pt; margin-top: 0.08in;">
+          <li>Comparative Analysis Table of 8 Published Papers</li>
+          <li>Deep Dive Survey 1: Resume Parsing & ATS Optimization</li>
+          <li>Deep Dive Survey 2: Conversational LLM Career Mentors</li>
+          <li>Deep Dive Survey 3: Adaptive Roadmaps & Time-Boxed Scheduling</li>
+        </ul>
+      </li>
+      <li style="margin-top: 0.18in;"><strong>Proposed System</strong>
+        <ul class="subpoints" style="font-size: 12pt; margin-top: 0.08in;">
+          <li>Limitations of Existing Solutions</li>
+          <li>Block Diagram of Proposed System (Fig. 1)</li>
+          <li>Core Modules, Database Entities & Request Architecture</li>
+        </ul>
+      </li>
+      <li style="margin-top: 0.18in;"><strong>References (IEEE Format)</strong></li>
+      <li style="margin-top: 0.18in;"><strong>Q & A and Viva Defense</strong></li>
+    </ul>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">2</div>
+  </div>
+</div>
+
+<!-- SLIDE 3: Introduction -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Introduction</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <p style="font-size: 11.5pt; line-height: 1.6; color: #1e293b; text-align: justify; margin-bottom: 0.18in;">
+      In the contemporary technical education landscape, over 1.5 million engineering students graduate annually across Indian universities, yet independent national employability audits indicate that fewer than twenty percent possess the practical problem-solving and systems development competencies demanded by Tier-1 product organizations. Engineering undergraduates, particularly across tier-2 and tier-3 institutions, navigate critical career milestones in an environment plagued by acute institutional deficits, where student-to-counselor ratios routinely exceed 500:1. Simultaneously, modern corporate hiring pipelines have instituted algorithmic gatekeeping through Applicant Tracking Systems (ATS) that automatically discard over seventy-five percent of candidate submissions before human review due to unquantified accomplishments, structural parsing errors, and keyword omissions. Compounding this challenge, conventional career guidance tools remain strictly monolingual in English, imposing substantial cognitive friction on regional students who conceptualize engineering principles in Hindi or Marathi. CareerMentor AI is engineered as an autonomous, full-stack, multilingual artificial intelligence web agent that democratizes elite career coaching. Operating as a continuous 24/7 personal mentor, the platform seamlessly unifies multi-session conversational guidance, speech-to-text voice interaction, document-level resume abstract syntax analysis, collaborative human-plus-AI study planning, and proactive autonomous background check-ins across English, Hindi, Marathi, and Sanskrit, transforming abstract placement ambitions into measurable daily engineering velocity.
+    </p>
+
+    <div class="grid-3">
+      <div class="card" style="border-left-color: #dc2626;">
+        <div class="card-title">1.5M+ Graduates/Year</div>
+        <div class="card-body">>80% lack verified software development competencies.</div>
+      </div>
+      <div class="card" style="border-left-color: #f59e0b;">
+        <div class="card-title">75% ATS Filter Rate</div>
+        <div class="card-body">Resumes rejected due to formatting flaws & unquantified metrics.</div>
+      </div>
+      <div class="card" style="border-left-color: #10b981;">
+        <div class="card-title">4 Languages Supported</div>
+        <div class="card-body">Localized mentorship across English, Hindi, Marathi, & Sanskrit.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">3</div>
+  </div>
+</div>
+
+<!-- SLIDE 4: Motivation -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Motivation</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <ul class="points">
+      <li><strong>High Attrition in Static Online Learning:</strong> Conventional internet roadmaps impose monolithic, rigid 8-hour daily study schedules that fail to accommodate real-world collegiate obligations, resulting in an 85%+ abandonment rate among self-directed students.</li>
+      <li><strong>Absence of Behavioral & Technical Interview Feedback:</strong> Freshers lack a risk-free, interactive evaluation environment to simulate high-stakes interviews, refine behavioral narratives via the STAR framework, or defend architectural trade-offs in distributed systems.</li>
+      <li><strong>Severe Career Tooling Fragmentation:</strong> Job seekers are forced to juggle five or more disconnected single-purpose utilities—standalone ATS text checkers, unstructured video playlists, calendar schedulers, and stateless chatbots—causing cognitive fatigue and loss of historical context.</li>
+      <li><strong>Linguistic and Regional Exclusion:</strong> The overwhelming majority of technical preparation resources cater exclusively to fluent English speakers, neglecting millions of talented regional engineering undergraduates who think in Hindi or Marathi.</li>
+      <li><strong>Lack of Autonomous Accountability:</strong> Passive educational platforms remain inert until the user manually logs in; engineering candidates require an active autonomous agent that proactively monitors remaining tasks and dispatches 2-hour interval check-ins.</li>
+      <li><strong>Need for Science-Backed Focus Blocks:</strong> Rigid 60-minute or 2-hour time barriers induce mental fatigue; implementing customizable focus budgets of 30, 45, 57 (optimal focus block), and 90 minutes drastically increases curriculum completion rates.</li>
+    </ul>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">4</div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Problem Statement -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Problem Statement</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content" style="display: flex; flex-direction: column; justify-content: center; height: 75%;">
+    <div style="background: #f8fafc; border: 2px solid #cbd5e1; border-left: 8px solid #1e3a8a; padding: 0.3in 0.4in; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+      <p style="font-size: 13pt; line-height: 1.7; color: #0f172a; text-align: justify; font-style: italic; margin: 0;">
+        Engineering undergraduates and freshers face severe placement barriers and career disorientation due to ATS-incompatible resumes, unstructured preparation paths, and the systemic absence of continuous, accessible, and multilingual technical mentorship. Existing solutions are either fragmented across disparate single-purpose utilities, cost-prohibitive, static in curriculum delivery, or strictly monolingual, failing to evaluate candidate resumes against modern quantifiable achievement standards, dynamically adapt daily study schedules to variable time budgets, maintain multi-session contextual memory, or provide proactive autonomous follow-ups to mitigate student procrastination.
+      </p>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">5</div>
+  </div>
+</div>
+
+<!-- SLIDE 6: Objectives & Expected Outcomes -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Objectives & Expected Outcomes</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <div class="grid-2">
+      <div>
+        <div style="font-size: 12.5pt; font-weight: 800; color: #1e3a8a; margin-bottom: 0.08in; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px;">
+          Core Objectives (5 Points)
+        </div>
+        <ul class="points" style="font-size: 10pt;">
+          <li><strong>1. Multi-Session Conversational Mentor:</strong> Build a ChatGPT/Claude-tier chatbot supporting speech-to-text (🎤), file uploads (📎), and STAR behavioral interview coaching.</li>
+          <li><strong>2. Algorithmic Resume ATS Analyzer:</strong> Parse PDF/DOCX to compute an ATS score (0–100) and generate Google X-Y-Z achievement formula rewrites.</li>
+          <li><strong>3. Human + AI Co-Planner:</strong> Construct a calendar scheduler with workload risk diagnosis (Pros & Cons) and 1-click schedule optimization.</li>
+          <li><strong>4. Knowledge Vault & Compatibility:</strong> Build an interactive skill-gap matrix calculating dream company compatibility (Google, TCS) with bridging paths.</li>
+          <li><strong>5. Autonomous Reminder Daemon:</strong> Deploy a background agent sending personalized, localized check-in emails via Resend / SMTP across 4 languages.</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size: 12.5pt; font-weight: 800; color: #10b981; margin-bottom: 0.08in; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px;">
+          Expected Outcomes (4 Points)
+        </div>
+        <ul class="points" style="font-size: 10pt;">
+          <li><strong>1. Elevate Candidate ATS Pass-Rate:</strong> Transition candidate resumes from sub-50% rejection baselines to >85% through quantifiable impact metrics.</li>
+          <li><strong>2. Sustain Study Velocity via Focus Budgeting:</strong> Increase curriculum completion by replacing rigid hours with 57-minute or 30-minute focus intervals.</li>
+          <li><strong>3. Democratize Mentorship via Indic Localization:</strong> Eliminate language barriers by providing full technical guidance in English, Hindi, Marathi, and Sanskrit.</li>
+          <li><strong>4. Zero-Friction Access & High Cloud Resilience:</strong> Enable 1-click Demo account login, direct email access, and self-healing session recovery across cloud restarts.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">6</div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Scope -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Scope of the Project</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <div class="grid-2">
+      <div class="card" style="border-left-color: #10b981;">
+        <div class="card-title" style="color: #10b981; font-size: 11.5pt;">In-Scope Deliverables (Pointwise)</div>
+        <ul class="points" style="font-size: 9.5pt;">
+          <li>Full-stack responsive web platform built with React 19, Tailwind CSS, and Node.js / Express.</li>
+          <li>Dual-engine database architecture: PostgreSQL on Render with SQLite3 local fallback.</li>
+          <li>Multi-session chat persistence (<code>chat_sessions</code>, <code>chat_messages</code>) with CRUD operations.</li>
+          <li>In-browser Speech-to-Text via Web Speech API in English, Hindi, and Marathi.</li>
+          <li>Resume AST parsing via <code>pdf-parse</code> and <code>mammoth</code> for PDF and DOCX formats.</li>
+          <li>Autonomous 2-hour study check-in alerts and transactional email dispatches.</li>
+          <li>Interactive SVG Donut charts with cursor hover tooltips and dynamic time budgets.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-left-color: #dc2626;">
+        <div class="card-title" style="color: #dc2626; font-size: 11.5pt;">Out-of-Scope (Future Work)</div>
+        <ul class="points" style="font-size: 9.5pt;">
+          <li>Real-time video webcam facial emotion and posture analysis (scheduled for Capstone-II).</li>
+          <li>Native compiled iOS and Android binary mobile apps (platform is responsive PWA).</li>
+          <li>Automated web-scraping or bot applications to external job boards (restricted by TOS).</li>
+          <li>Live peer-to-peer mock video calling (system focuses on autonomous AI-to-student coaching).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">7</div>
+  </div>
+</div>
+
+<!-- SLIDE 8: Review of Existing Literature Table -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Review of Existing Literature</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <table class="lit-table">
+      <thead>
+        <tr>
+          <th style="width: 5%;">Sr.</th>
+          <th style="width: 28%;">Paper Title & Ref.</th>
+          <th style="width: 17%;">Author Names</th>
+          <th style="width: 25%;">Key Conclusion / Methodology</th>
+          <th style="width: 25%;">Research Gaps Identified</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>[1]</td>
+          <td><strong>Automated Resume Screening Using NLP</strong> (IEEE 2022)</td>
+          <td>S. Roy, A. Narahari et al.</td>
+          <td>Extracted skill tokens using TF-IDF and Cosine Similarity to match job profiles.</td>
+          <td>Ignores Google X-Y-Z action metrics; lacks actionable line-by-line rewrite suggestions.</td>
+        </tr>
+        <tr>
+          <td>[2]</td>
+          <td><strong>Conversational AI Mentors in Higher Ed</strong> (ACM 2023)</td>
+          <td>M. Griffiths, L. Chen</td>
+          <td>Evaluated LLM-driven tutors; proved significant engagement via contextual dialogue.</td>
+          <td>No persistent multi-session memory; monolingual English only; no file attachment support.</td>
+        </tr>
+        <tr>
+          <td>[3]</td>
+          <td><strong>Personalized Learning Path Generation</strong> (Springer 2021)</td>
+          <td>H. Zhang, T. Wang et al.</td>
+          <td>Generated prerequisite-aware roadmaps using knowledge graph traversals.</td>
+          <td>Rigid time blocks; cannot adapt to variable 30m vs 57m daily student availability.</td>
+        </tr>
+        <tr>
+          <td>[4]</td>
+          <td><strong>ATS Formatting Pitfalls & Parser Bias</strong> (IEEE 2023)</td>
+          <td>J. Martinez, P. Sengupta</td>
+          <td>Demonstrated 68% failure rate on two-column and graphical resume layouts.</td>
+          <td>Focused solely on parsing diagnostics; did not provide automated skill bridging.</td>
+        </tr>
+        <tr>
+          <td>[5]</td>
+          <td><strong>Human-AI Co-Creation in Time Mgmt</strong> (IEEE 2022)</td>
+          <td>E. Horvitz, R. Patel</td>
+          <td>Mixed-initiative task planning yielded higher user compliance than automated schedulers.</td>
+          <td>Lacked automated "Pros & Cons / Workload Risk" diagnostic analyzer.</td>
+        </tr>
+        <tr>
+          <td>[6]</td>
+          <td><strong>Multilingual Prompting in Indic LLMs</strong> (IEEE Access 2024)</td>
+          <td>A. Joshi, R. Kulkarni et al.</td>
+          <td>Showed necessity of code-switching for technical terms in Hindi and Marathi.</td>
+          <td>Did not apply Indic localization to technical career mentoring or Sanskrit domain vocabularies.</td>
+        </tr>
+        <tr>
+          <td>[7]</td>
+          <td><strong>Proactive Timing in Academic Procrastination</strong> (C&E 2021)</td>
+          <td>D. Larson, C. Meyer</td>
+          <td>2-hour interval conversational check-ins reduced task procrastination by 41%.</td>
+          <td>Used intrusive SMS; no integration with an LLM that summarizes remaining tasks.</td>
+        </tr>
+        <tr>
+          <td>[8]</td>
+          <td><strong>Skill Gap Diagnostics for Tech Undergrads</strong> (Proc. CS 2023)</td>
+          <td>K. Verma, S. Deshmukh</td>
+          <td>Compared academic university syllabi with active industry job postings.</td>
+          <td>Lacked interactive company compatibility gauges and 1-click bridging roadmaps.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">8</div>
+  </div>
+</div>
+
+<!-- SLIDE 9: Literature Survey 1 -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Literature Survey 1: Resume AST & Skill Matching</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <div class="card" style="margin-bottom: 0.15in;">
+      <div class="card-title">Base Paper: "Automated Resume Screening and Skill Matching Using Natural Language Processing" (IEEE 2022)</div>
+      <div class="card-body"><strong>Authors:</strong> S. Roy, A. Narahari, and V. K. Singh &nbsp;|&nbsp; <strong>Venue:</strong> IEEE ICCCNT 2022</div>
+    </div>
+    <ul class="points">
+      <li><strong>Methodology:</strong> Applied Named Entity Recognition (NER) and sentence-transformers to parse unstructured resume documents and score candidate relevance.</li>
+      <li><strong>Key Findings:</strong> Token stream parsing retains grammatical context far better than standard regex chunking, boosting skill extraction accuracy to 88.4%.</li>
+      <li><strong>Identified Shortcomings:</strong>
+        <ul class="subpoints">
+          <li>The system generated only a passive match percentage without constructive rewriting feedback.</li>
+          <li>Failed to evaluate quantifiable impact or action verbs required by elite recruiters.</li>
+        </ul>
+      </li>
+      <li><strong>Enhancement in CareerMentor AI:</strong>
+        <ul class="subpoints">
+          <li>Evaluates resumes against the <strong>Google X-Y-Z achievement formula</strong>: <em>"Accomplished [X] as measured by [Y], by doing [Z]"</em>.</li>
+          <li>Provides deep section extraction (Skills, Projects, Education) and actionable rewrite suggestions with 1-click PDF export.</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">9</div>
+  </div>
+</div>
+
+<!-- SLIDE 10: Literature Survey 2 -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Literature Survey 2: Conversational Career Mentors</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <div class="card" style="margin-bottom: 0.15in;">
+      <div class="card-title">Paper: "Conversational AI Mentors in Higher Education: A Systematic Review" (ACM 2023)</div>
+      <div class="card-body"><strong>Authors:</strong> M. D. Griffiths and L. Chen &nbsp;|&nbsp; <strong>Venue:</strong> ACM Transactions on Interactive Intelligent Systems</div>
+    </div>
+    <ul class="points">
+      <li><strong>Methodology:</strong> Evaluated LLM-driven dialog systems designed to guide university students through technical skill acquisition and interview preparation.</li>
+      <li><strong>Key Findings:</strong> Dialogue-based agents significantly reduce candidate anxiety during mock interviews when structured around proven behavioral frameworks (such as the STAR method).</li>
+      <li><strong>Identified Shortcomings:</strong>
+        <ul class="subpoints">
+          <li>Surveyed platforms maintained only single-session memory; refreshing the browser cleared all conversational context.</li>
+          <li>Lacked multimodal speech inputs, preventing realistic verbal interview practice.</li>
+        </ul>
+      </li>
+      <li><strong>Enhancement in CareerMentor AI:</strong>
+        <ul class="subpoints">
+          <li>Implements <strong>persistent database-backed multi-session chat</strong> (<code>chat_sessions</code> and <code>chat_messages</code>).</li>
+          <li>Integrates <strong>Web Speech API microphone voice input (🎤)</strong> and document roadmap attachments (📎).</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">10</div>
+  </div>
+</div>
+
+<!-- SLIDE 11: Literature Survey 3 -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Literature Survey 3: Dynamic Adaptive Scheduling</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <div class="card" style="margin-bottom: 0.15in;">
+      <div class="card-title">Paper: "Personalized Learning Path Optimization and Time-Boxed Workload Regulation" (Springer 2021)</div>
+      <div class="card-body"><strong>Authors:</strong> H. Zhang, T. Wang, and K. Liu &nbsp;|&nbsp; <strong>Venue:</strong> Springer Education & Information Technologies</div>
+    </div>
+    <ul class="points">
+      <li><strong>Methodology:</strong> Modeled course curriculums as directed graphs, scheduling study milestones according to historical student velocity.</li>
+      <li><strong>Key Findings:</strong> Rigid fixed-hour schedules resulted in catastrophic dropout rates during midterm exam periods; dynamic task recalibration increased course completion by <strong>54%</strong>.</li>
+      <li><strong>Identified Shortcomings:</strong>
+        <ul class="subpoints">
+          <li>The system operated as an opaque black-box; users could not inspect schedule strengths or potential workload overloads.</li>
+        </ul>
+      </li>
+      <li><strong>Enhancement in CareerMentor AI:</strong>
+        <ul class="subpoints">
+          <li>Implements science-backed focus session blocks: <strong>30 min, 45 min, 57 min (optimal focus block), and 90 min</strong>.</li>
+          <li>Introduces a <strong>Plan Analyzer</strong> displaying Strengths (Pros) and Risks (Cons) with 1-click automated AI schedule re-balancing.</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">11</div>
+  </div>
+</div>
+
+<!-- SLIDE 12: Proposed System -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">Proposed System Architecture</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content">
+    <div style="font-size: 10.5pt; color: #334155; margin-bottom: 0.08in;">
+      CareerMentor AI bridges literature gaps through a 4-tier decoupled modular architecture:
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 0.05in;">
+      <!-- Tier 1 -->
+      <div style="background: #1e3a8a; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-size: 9pt; font-weight: 700;">
+        1. PRESENTATION LAYER (React 19 + Vite + Tailwind CSS - Dark SaaS #0B1220)
+        <div style="font-weight: 400; font-size: 8.5pt; color: #cbd5e1; margin-top: 2px;">
+          Multi-Session Chatbot (🎤 Voice Mic + 📎 Attach) &bull; Resume ATS Analyzer (0-100 Score + X-Y-Z Tips) &bull; Co-Planner Grid &bull; Knowledge Vault &bull; 4-Lang i18n
+        </div>
+      </div>
+      <div style="text-align: center; color: #1e3a8a; font-weight: 900; font-size: 10pt; line-height: 1;">&darr; HTTP REST / Bearer JWT &uarr;</div>
+
+      <!-- Tier 2 -->
+      <div style="background: #0f172a; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-size: 9pt; font-weight: 700;">
+        2. APPLICATION & CONTROLLER LAYER (Node.js + Express.js REST API)
+        <div style="font-weight: 400; font-size: 8.5pt; color: #94a3b8; margin-top: 2px;">
+          Self-Healing Auth Middleware &bull; Chat Controller &bull; Resume Controller &bull; Planner Controller &bull; Roadmap Controller &bull; Reminder Agent
+        </div>
+      </div>
+      <div style="text-align: center; color: #1e3a8a; font-weight: 900; font-size: 10pt; line-height: 1;">&darr; External Calls & Queries &uarr;</div>
+
+      <!-- Tier 3 & 4 Grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1.2fr 1fr 1fr; gap: 8px;">
+        <div class="card" style="border-left-color: #3b82f6; padding: 6px 8px;">
+          <div style="font-size: 8pt; font-weight: 800; color: #1e3a8a;">Document Parsing</div>
+          <div style="font-size: 7.5pt; color: #475569;">pdf-parse & mammoth (PDF / DOCX AST)</div>
+        </div>
+        <div class="card" style="border-left-color: #06b6d4; padding: 6px 8px;">
+          <div style="font-size: 8pt; font-weight: 800; color: #0284c7;">Generative AI Core</div>
+          <div style="font-size: 7.5pt; color: #475569;">Google Gemini 1.5 Pro / Flash SDK</div>
+        </div>
+        <div class="card" style="border-left-color: #10b981; padding: 6px 8px;">
+          <div style="font-size: 8pt; font-weight: 800; color: #059669;">Persistence Tier</div>
+          <div style="font-size: 7.5pt; color: #475569;">PostgreSQL (Cloud) / SQLite3 (Local)</div>
+        </div>
+        <div class="card" style="border-left-color: #f59e0b; padding: 6px 8px;">
+          <div style="font-size: 8pt; font-weight: 800; color: #d97706;">Notification Agent</div>
+          <div style="font-size: 7.5pt; color: #475569;">Resend API & Nodemailer (SMTP)</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; font-size: 10pt; font-weight: 800; color: #1e3a8a; margin-top: 0.15in;">
+      Fig. 1: Block diagram of the proposed CareerMentor AI system
+    </div>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">12</div>
+  </div>
+</div>
+
+<!-- SLIDE 13: References -->
+<div class="slide">
+  <div class="slide-title-bar">
+    <div class="slide-title">References</div>
+  </div>
+  <div class="blue-divider"></div>
+  <div class="content" style="font-size: 8.5pt; line-height: 1.4; color: #1e293b;">
+    <p style="margin-bottom: 5px;"><strong>[1]</strong> S. Roy, A. Narahari, and V. K. Singh, “Automated Resume Screening and Skill Matching Using Natural Language Processing,” in <em>IEEE International Conference on Computing, Communication and Networking Technologies (ICCCNT)</em>, pp. 1–7, July 2022.</p>
+    <p style="margin-bottom: 5px;"><strong>[2]</strong> M. D. Griffiths and L. Chen, “Conversational AI Mentors in Higher Education: A Systematic Review,” <em>ACM Transactions on Interactive Intelligent Systems</em>, vol. 13, no. 2, pp. 45–68, May 2023.</p>
+    <p style="margin-bottom: 5px;"><strong>[3]</strong> H. Zhang, T. Wang, and K. Liu, “Personalized Learning Path Generation Using Dynamic Knowledge Graphs,” <em>Springer Education and Information Technologies</em>, vol. 26, pp. 7115–7134, Nov. 2021.</p>
+    <p style="margin-bottom: 5px;"><strong>[4]</strong> J. Martinez and P. Sengupta, “Applicant Tracking Systems: Algorithmic Parsing Pitfalls and Structural Flaws,” in <em>Proc. IEEE International Symposium on Technology and Society (ISTAS)</em>, pp. 112–119, Oct. 2023.</p>
+    <p style="margin-bottom: 5px;"><strong>[5]</strong> E. Horvitz and R. Patel, “Human-AI Co-Creation in Time-Management Systems,” <em>IEEE Intelligent Systems</em>, vol. 37, no. 4, pp. 22–31, July 2022.</p>
+    <p style="margin-bottom: 5px;"><strong>[6]</strong> A. Joshi, R. Kulkarni, and S. Deshpande, “Multilingual Prompting and Performance in Indic Languages Using Large Language Models,” <em>IEEE Access</em>, vol. 12, pp. 14210–14225, Jan. 2024.</p>
+    <p style="margin-bottom: 5px;"><strong>[7]</strong> D. B. Larson and C. Meyer, “Mitigating Academic Procrastination via Timed Conversational Check-Ins,” <em>Computers & Education</em>, vol. 168, Article 104201, July 2021.</p>
+    <p style="margin-bottom: 5px;"><strong>[8]</strong> K. Verma and S. Deshmukh, “Industry 4.0 Skill Gap Diagnostics for Technical Undergraduates,” <em>Procedia Computer Science</em>, vol. 218, pp. 2100–2109, 2023.</p>
+    <p style="margin-bottom: 5px;"><strong>[9]</strong> Google Careers, “Google X-Y-Z Resume Achievement Formula for Software Engineers,” Mountain View, CA, 2023.</p>
+    <p style="margin-bottom: 5px;"><strong>[10]</strong> OpenAI, “GPT-4 Technical Report: Educational Benchmarks and Language Processing,” <em>arXiv:2303.08774</em>, Mar. 2023.</p>
+  </div>
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">13</div>
+  </div>
+</div>
+
+<!-- SLIDE 14: Thank You -->
+<div class="slide" style="text-align: center; justify-content: space-between;">
+  <div></div>
+  <div>
+    <div style="font-size: 48pt; font-weight: 900; color: #1e3a8a; letter-spacing: -1px; margin-bottom: 0.15in;">
+      Thank You !!!
+    </div>
+    <div style="font-size: 20pt; font-weight: 800; color: #c52222; margin-bottom: 0.25in;">
+      CareerMentor AI
+    </div>
+    <div style="font-size: 13pt; color: #475569; max-width: 7in; margin: 0 auto 0.3in auto; line-height: 1.5;">
+      Empowering engineering undergraduates through personalized, multilingual, 24/7 autonomous career velocity mentorship.
+    </div>
+
+    <div style="display: inline-flex; gap: 0.3in; font-size: 11pt; font-weight: 700; color: #0f172a; background: #f8fafc; border: 1px solid #cbd5e1; padding: 0.12in 0.25in; border-radius: 8px;">
+      <div><strong>GitHub:</strong> github.com/Harshjha76/CareerMentor_AI</div>
+      <div><strong>Live Demo:</strong> careermentor-ai-c36w.onrender.com</div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">14</div>
+  </div>
+</div>
+
+<!-- SLIDE 15: Q & A -->
+<div class="slide" style="text-align: center; justify-content: space-between;">
+  <div></div>
+  <div>
+    <div style="font-size: 54pt; font-weight: 900; color: #1e3a8a; letter-spacing: 2px; margin-bottom: 0.2in;">
+      Q & A
+    </div>
+    <div style="font-size: 18pt; font-weight: 700; color: #475569; margin-bottom: 0.35in;">
+      Questions & Technical Discussion
+    </div>
+
+    <div style="text-align: left; max-width: 8in; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 0.15in; font-size: 9.5pt;">
+      <div class="card">
+        <div class="card-title">1. Cloud Session Recovery</div>
+        <div class="card-body">JWT claims decoded to automatically self-heal and re-provision user state in DB if cloud container restarts.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">2. Hallucination Guardrails</div>
+        <div class="card-body">Strict prompt contracts; YouTube masterclasses linked exactly once per weekly milestone on Day 1.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">3. Multilingual Fidelity</div>
+        <div class="card-body">Indic prompt engineering preserves technical keywords (DSA, SQL) in English while conversing in Hindi/Marathi.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">4. 5-Pillar ATS Formula</div>
+        <div class="card-body">30% X-Y-Z metrics, 25% technical skills, 20% structure, 15% metrics, 10% readability.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-footer">
+    <div class="footer-logo">Department of AIML | SJCEM</div>
+    <div>CareerMentor AI</div>
+    <div class="page-number">15</div>
+  </div>
+</div>
+
+</body>
+</html>

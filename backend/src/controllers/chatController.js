@@ -51,7 +51,7 @@ export async function getSessions(req, res) {
         [defaultId, userId, title, now, now]
       );
 
-      const initialGreeting = `Hello **${req.user.name || 'there'}**! 🌟 I am your 24/7 **CareerPilot AI Mentor**.\n\nI am calibrated for your target role (**${req.user.target_role || 'Software Engineer'}**) and dream companies (**${req.user.dream_companies || 'Google, Microsoft'}**).\n\nYou can ask me questions like:\n- 🚀 *"What skills should I learn for Java backend development?"*\n- 📈 *"Analyze my career progress."*\n- 📅 *"Create a study plan for me."*\n- 📄 *"What should I improve in my resume?"*`;
+      const initialGreeting = `Hello ${req.user.name || 'there'}! 🌟 I am your 24/7 CareerPilot AI Mentor.\n\nI am calibrated for your target role (${req.user.target_role || 'Software Engineer'}) and dream companies (${req.user.dream_companies || 'Google, Microsoft'}).\n\nYou can ask me questions like:\n- 🚀 "What skills should I learn for Java backend development?"\n- 📈 "Analyze my career progress."\n- 📅 "Create a study plan for me."\n- 📄 "What should I improve in my resume?"`;
 
       const msgId = uuidv4();
       await query(
@@ -94,7 +94,7 @@ export async function createSession(req, res) {
     );
 
     const greetingMsgId = uuidv4();
-    const welcome = `Hello **${req.user.name || 'there'}**! 🎯 New session started. How can I accelerate your career growth today?`;
+    const welcome = `Hello ${req.user.name || 'there'}! 🎯 New session started. How can I accelerate your career growth today?`;
     await query(
       `INSERT INTO chat_messages (id, session_id, user_id, sender, text, created_at)
        VALUES ($1, $2, $3, $4, $5, $6)`,

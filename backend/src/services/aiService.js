@@ -714,43 +714,136 @@ ${attachment.content?.slice(0, 4500) || 'No text extracted'}
 Please analyze this uploaded document thoroughly and weave your critique into the response.`;
   }
 
+  const conversationHistory = messages.slice(-10).map(m => `${m.sender === 'user' ? 'Student' : 'CareerPilot'}: ${m.text}`).join('\n\n');
+  const latestMessage = messages.length > 0 ? messages[messages.length - 1].text : (attachment ? `Uploaded document: ${attachment.name}` : 'Hello!');
+
+  // 1. Off-topic check before calling API or fallback
+  if (isOffTopicQuery(latestMessage)) {
+    return getOffTopicMessage(language);
+  }
+
   const systemPrompt = `You are "CareerPilot AI", an exceptionally brilliant, conversational, pedagogical, and pragmatic 24/7 senior tech & career mentor (matching the clarity, warmth, and depth of Claude 3.5 Sonnet and ChatGPT-4o).
 
 ${profileContext}
 
 CRITICAL PEDAGOGICAL & CONVERSATIONAL RULES:
-1. ALWAYS DIRECTLY ANSWER WHAT THE USER ACTUALLY ASKS.
-   - Listen to their specific question, problem, or prompt and interpret their exact need.
-   - For concept explanations or architecture/hardware/algorithms, follow this high-yield pedagogical structure:
-     * **Concept Title**: e.g., "4. 8259 – Programmable Interrupt Controller (PIC)"
-     * **Problem**: Intuitive scenario explaining WHY this concept exists (e.g., "Suppose CPU is running and the doorbell rings...").
-     * **Core Analogy / Metaphor**: Concrete intuitive picture (e.g., "8259 is like a receptionist that manages incoming calls...").
-     * **Real-life example**: A relatable real-world comparison that cements intuition.
-     * **Key Mechanics / Internals**: Clean bullet points with bold sub-terms and concise definitions.
-   - If the user asks for code or algorithms, provide clean code with Big-O time and space complexity.
-   - If the user asks a general career question (salary, switches, preparation, study balance), provide pragmatic, empowering, and verified advice.
-2. CONCISE, ELEGANT & VERIFIED:
-   - Eliminate filler fluff. Every sentence must deliver high cognitive value.
-   - Verify factual and technical accuracy.
-3. STRICT LANGUAGE DIRECTIVE:
-   - Reply ONLY in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.`;
+1. OFF-TOPIC GUARDRAIL:
+   - If the user's question is completely unrelated to tech, computer science, software engineering, coding, hardware/microprocessors, system design, IT career, placement, resume, interviews, or study planning (e.g. food recipes, movies, celebrity gossip, casual unrelated trivia), reply ONLY with:
+     "Oops! I don't know about that. You are free to ask any career, coding, system design, resume, or engineering problem!"
+     (or the translated equivalent if language is Hindi/Marathi/Sanskrit).
 
-  const conversationHistory = messages.slice(-10).map(m => `${m.sender === 'user' ? 'Student' : 'CareerPilot'}: ${m.text}`).join('\n\n');
-  const latestMessage = messages.length > 0 ? messages[messages.length - 1].text : (attachment ? `Uploaded document: ${attachment.name}` : 'Hello!');
+2. ZERO RAW ASTERISKS:
+   - NEVER wrap words in double asterisks **like this** or single asterisks *like this*.
+   - Use clean Markdown headers (###, ####), bullet points (- or numbers 1, 2, 3), and code blocks for formatting.
+
+3. HIGH-YIELD PEDAGOGICAL STRUCTURE (Claude-Level Teaching):
+   - For technical concept explanations (DSA, hardware, 8259 PIC, microprocessors, OS, DBMS, Networks, System Design), follow this structure:
+     * Concept Title: e.g. "### 8259 - Programmable Interrupt Controller (PIC)"
+     * Problem: Clear explanation of WHY this concept was invented and what problem it solves.
+     * Core Analogy: An intuitive, vivid mental metaphor (e.g. "Like a receptionist triaging incoming phone calls").
+     * Real-life Example: Concrete real-world comparison.
+     * Key Mechanics: Clean bullet points detailing internal registers, signals, and operations.
+   - For coding/algorithmic queries: provide clean code with Big-O time and space complexity ($O(N)$, $O(\\log N)$).
+   - For career/interview queries: provide pragmatic, verified advice with actionable next steps.
+
+4. STRICT LANGUAGE DIRECTIVE:
+   - Reply ONLY in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.`;
 
   const fullUserPrompt = `Previous Conversation:\n${conversationHistory}\n${attachmentContext}\n\nStudent's Inquiry: ${latestMessage}`;
 
   const aiText = await callGemini(systemPrompt, fullUserPrompt, language);
 
   if (aiText) {
-    return aiText;
+    return stripAsterisks(aiText);
   }
 
   // Responsive, conversational fallback engine
-  return getAdvancedChatResponse(latestMessage, userProfile, language, attachment);
+  return stripAsterisks(getAdvancedChatResponse(latestMessage, userProfile, language, attachment));
+}
+
+export function stripAsterisks(text = '') {
+  if (!text) return '';
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  const cleanedParts = parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return part; // preserve code blocks
+    }
+    return part
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/\*\*/g, '')
+      .replace(/^\s*\*\s+/gm, '- ');
+  });
+  return cleanedParts.join('');
+}
+
+export function isOffTopicQuery(message = '') {
+  const text = message.toLowerCase().trim();
+  if (!text || text.length < 3) return false;
+
+  if (/^(hello|hi|hey|greetings|namaste|pranam|namaskar|good\s+(morning|afternoon|evening)|how are you|who are you)/i.test(text)) {
+    return false;
+  }
+
+  const relevantKeywords = [
+    'career', 'job', 'internship', 'resume', 'cv', 'interview', 'salary', 'roadmap', 'study', 'plan',
+    'coding', 'code', 'program', 'software', 'engineer', 'developer', 'dsa', 'algorithm', 'data structure',
+    'leetcode', 'hackerrank', 'system design', 'architecture', 'database', 'sql', 'nosql', 'mongodb', 'postgres',
+    'redis', 'java', 'python', 'javascript', 'typescript', 'c++', 'c#', 'golang', 'rust', 'html', 'css', 'react',
+    'angular', 'vue', 'node', 'express', 'spring', 'django', 'flask', 'fastapi', 'docker', 'kubernetes', 'aws',
+    'azure', 'gcp', 'cloud', 'devops', 'git', 'github', 'operating system', 'os', 'linux', 'unix', 'process',
+    'thread', 'deadlock', 'semaphore', 'mutex', 'paging', 'virtual memory', 'computer network', 'cn', 'tcp', 'udp',
+    'ip', 'osi', 'http', 'https', 'dns', 'microprocessor', 'controller', '8086', '8085', '8259', 'pic', 'dma',
+    '8237', '8255', 'ppi', 'interrupt', 'register', 'assembly', 'gate', 'exam', 'placement', 'college', 'university',
+    'gpa', 'cgpa', 'degree', 'btech', 'mtech', 'bca', 'mca', 'freshman', 'sophomore', 'junior', 'senior', 'faang',
+    'google', 'microsoft', 'amazon', 'meta', 'apple', 'netflix', 'frontend', 'backend', 'fullstack', 'full stack',
+    'ai', 'ml', 'machine learning', 'deep learning', 'nlp', 'llm', 'transformer', 'neural', 'project', 'portfolio',
+    'star method', 'behavioral', 'hiring', 'hr', 'recruiter', 'ats', 'mock', 'skills', 'learn', 'course', 'tutorial',
+    'binary search', 'sliding window', 'two pointers', 'graph', 'tree', 'linked list', 'stack', 'queue', 'heap', 'dp',
+    'dynamic programming', 'recursion', 'sorting', 'bubble sort', 'quick sort', 'merge sort', 'time complexity', 'space complexity',
+    'big o', 'o(n)', 'o(1)', 'o(log n)', 'cache', 'caching', 'sharding', 'load balancer', 'microservices', 'monolith',
+    'api', 'rest', 'graphql', 'grpc', 'websocket', 'jwt', 'oauth', 'security', 'encryption', 'hash', 'test', 'testing',
+    'jest', 'junit', 'pytest', 'clean code', 'solid', 'design pattern', 'singleton', 'factory', 'observer', 'strategy'
+  ];
+
+  const hasRelevant = relevantKeywords.some(kw => text.includes(kw));
+  if (hasRelevant) return false;
+
+  const offTopicPatterns = [
+    /\b(recipe|cook|cooking|bake|baking|ingredient|food|dish|restaurant|chicken|curry|paneer|biryani|pizza|burger|cake)\b/i,
+    /\b(movie|film|cinema|actor|actress|bollywood|hollywood|oscar|box office|trailer|director|drama series)\b/i,
+    /\b(song|music|singer|lyrics|album|dance|concert|guitar chords)\b/i,
+    /\b(politics|president|prime minister|election|parliament|democrat|republican|political party)\b/i,
+    /\b(weather|temperature|forecast|rain today|sunny)\b/i,
+    /\b(horoscope|zodiac|astrology|tarot|future telling)\b/i,
+    /\b(cricket match|football match|fifa|ipl score|tennis|nba|messi|ronaldo|virat kohli)\b/i,
+    /\b(joke|prank|meme|funny story)\b/i,
+    /\b(fashion|makeup|clothing brand|skincare|lipstick|haircut)\b/i,
+    /\b(dating|girlfriend|boyfriend|love advice|relationship tips|crush|tinder|bumble)\b/i
+  ];
+
+  return offTopicPatterns.some(p => p.test(text));
+}
+
+export function getOffTopicMessage(language = 'en') {
+  if (language === 'hi') {
+    return 'Oops! मुझे इसके बारे में जानकारी नहीं है। आप करियर, कोडिंग, सिस्टम डिज़ाइन, रिज़्यूमे या इंजीनियरिंग से संबंधित कोई भी प्रश्न पूछने के लिए स्वतंत्र हैं!';
+  }
+  if (language === 'mr') {
+    return 'Oops! मला याबद्दल माहिती नाही. तुम्ही करिअर, कोडिंग, सिस्टम डिझाइन, रेझ्युमे किंवा इंजिनिअरिंग संदर्भातील कोणताही प्रश्न विचारू शकता!';
+  }
+  if (language === 'sa') {
+    return 'Oops! अहं एतद्विषये न जानामि। भवान् वृत्ति, कोडिंग्, तन्त्राभिकल्पनम्, रेझ्युमे अथवा अभियान्त्रिकी सम्बद्धान् प्रश्नान् प्रष्टुं शक्नोति!';
+  }
+  return "Oops! I don't know about that. You are free to ask any career, coding, system design, resume, or engineering problem!";
 }
 
 function getAdvancedChatResponse(message = '', profile = {}, language = 'en', attachment = null) {
+  // Check off topic first
+  if (isOffTopicQuery(message)) {
+    return getOffTopicMessage(language);
+  }
+
   // Extract user name if mentioned in the message or profile
   const nameRegex = /(?:my name is|i am|i'm|call me|name's)\s+([a-zA-Z\u0900-\u097F]+)/i;
   const nameMatch = message.match(nameRegex);
@@ -764,42 +857,117 @@ function getAdvancedChatResponse(message = '', profile = {}, language = 'en', at
 
   const lowerMsg = message.toLowerCase().trim();
 
-  // 1. Attachment / Uploaded Roadmap Review
+  // 1. Hardware / Microprocessors / 8259 PIC / 8086 / DMA / Interrupts
+  if (lowerMsg.includes('8259') || lowerMsg.includes('pic') || lowerMsg.includes('interrupt controller') || lowerMsg.includes('8086') || lowerMsg.includes('8237') || lowerMsg.includes('dma') || lowerMsg.includes('8255') || lowerMsg.includes('microprocessor')) {
+    if (lowerMsg.includes('8259') || lowerMsg.includes('pic') || lowerMsg.includes('interrupt')) {
+      return `### 8259 – Programmable Interrupt Controller (PIC)
+
+#### 1. Problem it Solves
+Suppose the CPU is executing critical instructions, but multiple peripheral devices (keyboard, hard drive, network interface, timer) request attention simultaneously. The 8086 microprocessor only has 2 hardware interrupt pins (INTR and NMI). Without a controller, the CPU would have to constantly poll every single device, wasting massive amounts of clock cycles.
+
+#### 2. Core Analogy
+The 8259 acts as an Executive Receptionist in front of a Busy CEO (the CPU):
+- 8 callers (devices IR0 to IR7) ring the receptionist at the same time.
+- The receptionist immediately checks who is calling, evaluates who has the highest priority, puts lower-priority callers on hold, and alerts the CEO with a single interrupt line.
+
+#### 3. Real-Life Example
+Emergency Room Triage Nurse: A critical patient with cardiac arrest (IR0 - highest priority) immediately bypasses a patient with a minor sprain (IR7 - lower priority).
+
+#### 4. Key Mechanics & Internal Registers
+- IRR (Interrupt Request Register): Stores all interrupt levels requesting service (latches pins IR0 to IR7).
+- ISR (In-Service Register): Stores the specific interrupt currently being serviced by the CPU.
+- IMR (Interrupt Mask Register): Allows the programmer to mask (disable) specific interrupt lines via software bits.
+- Priority Resolver (PR): Determines which of the active bits in IRR has the highest priority and signals the INT pin.
+- Cascading Ability: Up to 8 slave 8259s can be connected to 1 master 8259, expanding capacity to handle up to 64 prioritized hardware interrupts!
+
+---
+💡 Next Step: Would you like to explore how Initialization Command Words (ICW1-ICW4) configure the 8259 during system boot?`;
+    }
+  }
+
+  // 2. Operating Systems: Deadlocks, Concurrency, Virtual Memory, Paging
+  if (lowerMsg.includes('deadlock') || lowerMsg.includes('operating system') || lowerMsg.includes('paging') || lowerMsg.includes('virtual memory') || lowerMsg.includes('semaphore') || lowerMsg.includes('mutex') || lowerMsg.includes('thread') || lowerMsg.includes('process')) {
+    if (lowerMsg.includes('deadlock')) {
+      return `### Operating Systems: Deadlock Fundamentals
+
+#### 1. Problem it Solves
+In multi-threaded and distributed systems, multiple processes compete for finite resources (printers, database locks, memory buffers). If process A holds Resource 1 and waits for Resource 2, while process B holds Resource 2 and waits for Resource 1, execution stalls indefinitely.
+
+#### 2. Core Analogy
+A 4-way traffic gridlock where each vehicle enters the intersection and blocks the road for the car to its left. No car can move forward without another car reversing.
+
+#### 3. The 4 Coffman Conditions (All must hold simultaneously for a deadlock):
+1. Mutual Exclusion: At least one resource must be non-shareable.
+2. Hold and Wait: A process holds at least one resource while waiting to acquire others.
+3. No Preemption: Resources cannot be forcibly confiscated from a process holding them.
+4. Circular Wait: A closed chain of processes exists where each waits for a resource held by the next.
+
+#### 4. Prevention & Recovery Strategies
+- Resource Ordering: Enforce a global numerical acquisition hierarchy to eliminate Circular Wait.
+- Banker's Algorithm: Simulates resource allocation to verify safe vs unsafe states before granting requests.
+- Detection & Recovery: Periodic cycle detection via Wait-For Graphs (WFG) and terminating offending processes.
+
+---
+💡 Next Step: Would you like to analyze a Banker's Algorithm allocation table or review thread synchronization with Mutexes and Semaphores?`;
+    }
+  }
+
+  // 3. Computer Networks: TCP 3-Way Handshake, OSI Model, DNS
+  if (lowerMsg.includes('computer network') || lowerMsg.includes('tcp') || lowerMsg.includes('osi') || lowerMsg.includes('udp') || lowerMsg.includes('dns') || lowerMsg.includes('http') || lowerMsg.includes('handshake')) {
+    return `### Computer Networks: TCP 3-Way Handshake & Connection Mechanics
+
+#### 1. Problem it Solves
+When two machines communicate over an unreliable physical medium (the Internet), packets can be lost, duplicated, or reordered. TCP establishes a reliable, bidirectional, in-order byte stream before any application payload is sent.
+
+#### 2. Core Analogy
+A verified radio communication protocol:
+- Station A: "Can you hear me?" (SYN)
+- Station B: "I hear you loud and clear! Can you hear me?" (SYN-ACK)
+- Station A: "Roger, I hear you too! Ready for transmission." (ACK)
+
+#### 3. Key Handshake Steps
+1. SYN (Synchronize): Client selects an initial sequence number (ISN = X) and sends a SYN packet to the server.
+2. SYN-ACK: Server receives SYN, allocates socket buffers, selects its own ISN = Y, and sends back SYN-ACK with ACK = X + 1.
+3. ACK (Acknowledge): Client sends ACK = Y + 1. The connection transitions to the ESTABLISHED state.
+
+#### 4. Critical Engineering Nuances
+- SYN Flood Mitigation: SYN Cookies allow servers to defer socket buffer allocation until the final ACK arrives.
+- TCP vs UDP: TCP guarantees ordered delivery via ACK numbers and sliding window flow control; UDP delivers zero-handshake low latency for gaming and video streaming.
+
+---
+💡 Next Step: Would you like to review DNS recursive resolution or the OSI 7-layer encapsulation model?`;
+    }
+
+  // 4. Attachment / Uploaded Roadmap Review
   if (attachment || lowerMsg.includes('roadmap') || lowerMsg.includes('curriculum') || lowerMsg.includes('attached')) {
     const fileName = attachment?.name || 'Personal Study Roadmap';
     if (language === 'hi') {
-      return `नमस्ते **${name}**! 📑\n\nमैंने आपके द्वारा अपलोड किए गए रोडमैप (**${fileName}**) का संपूर्ण विश्लेषण किया है:\n\n### 1. पाठ्यक्रम की मजबूती\n- आपके लक्षित पद **${role}** के लिए मुख्य विषयों का क्रम सुव्यवस्थित है।\n- बुनियादी अवधारणाओं से लेकर व्यावहारिक कोडिंग तक का प्रवाह उचित है।\n\n### 2. समय-विभाजन (${studyMins} मिनट/दिन के अनुसार)\n- प्रतिदिन **${Math.round(studyMins * 0.5)} मिनट** समस्या समाधान (DSA) को दें।\n- प्रतिदिन **${Math.round(studyMins * 0.3)} मिनट** प्रोजेक्ट और हैंड्स-ऑन कोडिंग को दें।\n- प्रतिदिन **${Math.round(studyMins * 0.2)} मिनट** मुख्य सिद्धांतों (DBMS/OS) को दें।\n\n### 3. सुझाई गई सुधार सूची\n1. **सिस्टम डिज़ाइन घटक**: सप्ताह 3 में कैशिंग (Redis) और API सुरक्षा (JWT) जोड़ें।\n2. **मॉक टेस्ट**: सप्ताहांत पर 45 मिनट की टाइम-बाउंड कोडिंग परीक्षा रखें।\n\n---\n💡 **अगला कदम**: क्या आप चाहेंगे कि मैं इस रोडमैप को आपके **AI Study Planner** में स्वचालित रूप से जोड़ दूँ?`;
+      return `नमस्ते ${name}! 📑\n\nमैंने आपके द्वारा अपलोड किए गए रोडमैप (${fileName}) का संपूर्ण विश्लेषण किया है:\n\n### 1. पाठ्यक्रम की मजबूती\n- आपके लक्षित पद ${role} के लिए मुख्य विषयों का क्रम सुव्यवस्थित है।\n- बुनियादी अवधारणाओं से लेकर व्यावहारिक कोडिंग तक का प्रवाह उचित है।\n\n### 2. समय-विभाजन (${studyMins} मिनट/दिन के अनुसार)\n- प्रतिदिन ${Math.round(studyMins * 0.5)} मिनट समस्या समाधान (DSA) को दें।\n- प्रतिदिन ${Math.round(studyMins * 0.3)} मिनट प्रोजेक्ट और हैंड्स-ऑन कोडिंग को दें।\n- प्रतिदिन ${Math.round(studyMins * 0.2)} मिनट मुख्य सिद्धांतों (DBMS/OS) को दें।\n\n### 3. सुझाई गई सुधार सूची\n1. सिस्टम डिज़ाइन घटक: सप्ताह 3 में कैशिंग (Redis) और API सुरक्षा (JWT) जोड़ें।\n2. मॉक टेस्ट: सप्ताहांत पर 45 मिनट की टाइम-बाउंड कोडिंग परीक्षा रखें।\n\n---\n💡 अगला कदम: क्या आप चाहेंगे कि मैं इस रोडमैप को आपके AI Study Planner में स्वचालित रूप से जोड़ दूँ?`;
     }
     if (language === 'mr') {
-      return `नमस्कार **${name}**! 📑\n\nमी तुम्ही अपलोड केलेल्या रोडमॅपचे (**${fileName}**) सविस्तर विश्लेषण केले आहे:\n\n### १. अभ्यासक्रमाची जमेची बाजू\n- तुमच्या **${role}** या ध्येयासाठी आवश्यक मूलभूत संकल्पना योग्य क्रमाने मांडल्या आहेत.\n\n### २. वेळेचे नियोजन (दररोज ${studyMins} मिनिटे)\n- **${Math.round(studyMins * 0.5)} मिनिटे**: समस्या सोडवणे (DSA).\n- **${Math.round(studyMins * 0.3)} मिनिटे**: थेट प्रकल्प व कोडिंग.\n- **${Math.round(studyMins * 0.2)} मिनिटे**: कोअर सीएस व रिव्हिजन.\n\n### ३. महत्त्वाचे बदल\n- डेटाबेस इंडेक्सिंग आणि API स्केलिंगचे प्रत्यक्ष प्रात्यक्षिक समाविष्ट करा.\n\n---\n💡 **पुढील दिशा**: हा अभ्यासक्रम थेट तुमच्या **AI Planner** मध्ये समाविष्ट करूया का?`;
+      return `नमस्कार ${name}! 📑\n\nमी तुम्ही अपलोड केलेल्या रोडमॅपचे (${fileName}) सविस्तर विश्लेषण केले आहे:\n\n### १. अभ्यासक्रमाची जमेची बाजू\n- तुमच्या ${role} या ध्येयासाठी आवश्यक मूलभूत संकल्पना योग्य क्रमाने मांडल्या आहेत।\n\n### २. वेळेचे नियोजन (दररोज ${studyMins} मिनिटे)\n- ${Math.round(studyMins * 0.5)} मिनिटे: समस्या सोडवणे (DSA)।\n- ${Math.round(studyMins * 0.3)} मिनिटे: थेट प्रकल्प व कोडिंग।\n- ${Math.round(studyMins * 0.2)} मिनिटे: कोअर सीएस व रिव्हिजन।\n\n### ३. महत्त्वाचे बदल\n- डेटाबेस इंडेक्सिंग आणि API स्केलिंगचे प्रत्यक्ष प्रात्यक्षिक समाविष्ट करा।\n\n---\n💡 पुढील दिशा: हा अभ्यासक्रम थेट तुमच्या AI Planner मध्ये समाविष्ट करूया का?`;
     }
-    if (language === 'sa') {
-      return `नमस्ते **${name}**! 📑\n\nभवता प्रेषितायाः अध्ययनसारिण्याः (**${fileName}**) विश्लेषणं कृतम्:\n\n### १. योजनायाः सामर्थ्यम्\n- **${role}** पदस्य सज्जतायै मूलविषयाणां चयनम् उचितं वर्तते।\n- प्रतिदिनं ${studyMins} निमेषाणां विभाजनम् अनुसरणीयम्।\n\n### २. कालविभागः\n- **${Math.round(studyMins * 0.5)} निमेषाः**: समस्या-समाधानम् (DSA)।\n- **${Math.round(studyMins * 0.3)} निमेषाः**: व्यावहारिक-प्रकल्पनिर्माणम्।\n- **${Math.round(studyMins * 0.2)} निमेषाः**: मूलसिद्धान्ताः।\n\n---\n💡 **अग्रिमं पदम्**: किम् एषा योजना तव **AI Planner** मध्ये संयोजनीया?`;
-    }
-    return `Hello **${name}**! 📑\n\nI have thoroughly analyzed your uploaded document (**${fileName}**):\n\n### 1. Curriculum Viability for ${role}\n- **Foundations**: The sequencing from core syntax to intermediate topics is logically structured.\n- **Company Alignment**: Covers key requirements sought by ${companies}.\n\n### 2. Paced Daily Allocation (${studyMins} minutes/day)\n- **${Math.round(studyMins * 0.5)} mins — Algorithmic Mastery (DSA)**: Focus on high-frequency patterns (Two Pointers, HashMaps, Sliding Window).\n- **${Math.round(studyMins * 0.3)} mins — Production Projects**: Feature engineering with database schema design.\n- **${Math.round(studyMins * 0.2)} mins — Core Fundamentals & Revision**: Operating Systems concurrency & SQL indexing.\n\n### 3. High-Impact Enhancements\n1. **Add Mock Simulations**: Schedule a 45-minute timed test every Saturday.\n2. **System Design Checkpoint**: Integrate Redis caching and load balancing concepts in Week 3.\n\n---\n💡 **Recommended Next Step**: Would you like me to automatically sync this analyzed roadmap into your **Human + AI Study Planner**?`;
+    return `Hello ${name}! 📑\n\nI have thoroughly analyzed your uploaded document (${fileName}):\n\n### 1. Curriculum Viability for ${role}\n- Foundations: The sequencing from core syntax to intermediate topics is logically structured.\n- Company Alignment: Covers key requirements sought by ${companies}.\n\n### 2. Paced Daily Allocation (${studyMins} minutes/day)\n- ${Math.round(studyMins * 0.5)} mins — Algorithmic Mastery (DSA): Focus on high-frequency patterns (Two Pointers, HashMaps, Sliding Window).\n- ${Math.round(studyMins * 0.3)} mins — Production Projects: Feature engineering with database schema design.\n- ${Math.round(studyMins * 0.2)} mins — Core Fundamentals & Revision: Operating Systems concurrency & SQL indexing.\n\n### 3. High-Impact Enhancements\n1. Add Mock Simulations: Schedule a 45-minute timed test every Saturday.\n2. System Design Checkpoint: Integrate Redis caching and load balancing concepts in Week 3.\n\n---\n💡 Recommended Next Step: Would you like me to automatically sync this analyzed roadmap into your Human + AI Study Planner?`;
   }
 
-  // 2. Greetings & Introductions ("hello", "hi", "my name is harsh", etc.)
+  // 5. Greetings & Introductions
   const isGreeting = /^(hello|hi|hey|greetings|namaste|pranam|namaskar|good\s+(morning|afternoon|evening))/i.test(lowerMsg) ||
                      /(?:my name is|i am|i'm|call me)/i.test(lowerMsg) ||
                      (lowerMsg.length < 35 && (lowerMsg.includes('harsh') || lowerMsg.includes('student')));
 
   if (isGreeting) {
     if (language === 'hi') {
-      return `नमस्ते **${name}**! 👋 CareerPilot AI में आपका हार्दिक स्वागत है।\n\nमैं आपका 24/7 एआई करियर मेंटर हूँ। आपकी पृष्ठभूमि (**${branch}, ${university}**) और आपके लक्ष्य (**${role}**, लक्षित कंपनियां: **${companies}**) को ध्यान में रखते हुए मैं आपकी सहायता के लिए तैयार हूँ।\n\nआज हम किस विषय पर चर्चा करें?\n- 🧩 **DSA एवं कोडिंग अभ्यास**: LeetCode पैटर्न्स, कोड व Big-O जटिलता विश्लेषण।\n- 🏛️ **सिस्टम डिज़ाइन व आर्किटेक्चर**: स्केलेबिलिटी, कैशिंग और डेटाबेस डिज़ाइन।\n- 🎙️ **मॉक इंटरव्यू (STAR पद्धति)**: तकनीकी व बिहेवियरल साक्षात्कार की तैयारी।\n- 🗺️ **व्यक्तिगत रोडमैप समीक्षा**: अपने दैनिक ${studyMins} मिनट के अध्ययन का सर्वोत्तम उपयोग।\n\nआप नीचे दिए गए विकल्पों में से चुन सकते हैं या अपना कोई भी प्रश्न पूछ सकते हैं!`;
+      return `नमस्ते ${name}! 👋 CareerPilot AI में आपका हार्दिक स्वागत है।\n\nमैं आपका 24/7 एआई करियर मेंटर हूँ। आपकी पृष्ठभूमि (${branch}, ${university}) और आपके लक्ष्य (${role}, लक्षित कंपनियां: ${companies}) को ध्यान में रखते हुए मैं आपकी सहायता के लिए तैयार हूँ।\n\nआज हम किस विषय पर चर्चा करें?\n- 🧩 DSA एवं कोडिंग अभ्यास: LeetCode पैटर्न्स, कोड व Big-O जटिलता विश्लेषण।\n- 🏛️ सिस्टम डिज़ाइन व आर्किटेक्चर: स्केलेबिलिटी, कैशिंग और डेटाबेस डिज़ाइन।\n- 🎙️ मॉक इंटरव्यू (STAR पद्धति): तकनीकी व बिहेवियरल साक्षात्कार की तैयारी।\n- 🗺️ व्यक्तिगत रोडमैप समीक्षा: अपने दैनिक ${studyMins} मिनट के अध्ययन का सर्वोत्तम उपयोग।\n\nआप नीचे दिए गए विकल्पों में से चुन सकते हैं या अपना कोई भी प्रश्न पूछ सकते हैं!`;
     }
     if (language === 'mr') {
-      return `नमस्कार **${name}**! 👋 CareerPilot AI मध्ये आपले मनःपूर्वक स्वागत आहे.\n\nमी तुमचा २४/७ वैयक्तिक करिअर मार्गदर्शक आहे. तुमच्या **${branch}** शाखेचा आणि **${role}** या ध्येयाचा विचार करून आपण आज पुढील विषयांवर काम करू शकतो:\n- 🧩 **DSA आणि कोडिंग**: समस्या सोडवण्याच्या पद्धती आणि Big-O विश्लेषण.\n- 🏛️ **सिस्टम डिझाईन**: हाय-लेव्हल आर्किटेक्चर आणि स्केलिंग.\n- 🎙️ **मॉक मुलाखत (STAR पद्धत)**: मुलाखतीची परिपूर्ण तयारी.\n- 🗺️ **अभ्यास नियोजन**: तुमच्या रोजच्या ${studyMins} मिनिटांचे अचूक विभाजन.\n\nआज आपण कुठून सुरुवात करूया?`;
+      return `नमस्कार ${name}! 👋 CareerPilot AI मध्ये आपले मनःपूर्वक स्वागत आहे.\n\nमी तुमचा २४/७ वैयक्तिक करिअर मार्गदर्शक आहे. तुमच्या ${branch} शाखेचा आणि ${role} या ध्येयाचा विचार करून आपण आज पुढील विषयांवर काम करू शकतो:\n- 🧩 DSA आणि कोडिंग: समस्या सोडवण्याच्या पद्धती आणि Big-O विश्लेषण।\n- 🏛️ सिस्टम डिझाईन: हाय-लेव्हल आर्किटेक्चर आणि स्केलिंग।\n- 🎙️ मॉक मुलाखत (STAR पद्धत): मुलाखतीची परिपूर्ण तयारी।\n- 🗺️ अभ्यास नियोजन: तुमच्या रोजच्या ${studyMins} मिनिटांचे अचूक विभाजन।\n\nआज आपण कुठून सुरुवात करूया?`;
     }
-    if (language === 'sa') {
-      return `नमस्ते **${name}**! 👋 CareerPilot AI वृत्तिमार्गदर्शके तव हार्दिकं स्वागतम्।\n\nअहं तव २४/७ एआई-मार्गदर्शकः अस्मि। तव लक्ष्यस्य **${role}** कृते (अभीष्टसंस्थाः: **${companies}**):\n- 🧩 **DSA कलनविधि-अभ्यासः** (Big-O विश्लेषणम्)\n- 🏛️ **तन्त्र-अभिकल्पनम्** (System Design)\n- 🎙️ **साक्षात्कार-सज्जता** (STAR-पद्धतिः)\n- 🗺️ **दैनिक-अध्ययनसारिणी** (${studyMins} निमेषाः)\n\nअद्य आवां किम् अधिकृत्य चर्चां कुर्याव?`;
-    }
-    return `Hello **${name}**! 👋 It is fantastic to connect with you.\n\nI am your 24/7 personal **CareerPilot AI Mentor**. I am fully calibrated for your profile (**${branch}, ${university}**), aiming for **${role}** at companies like **${companies}**.\n\nHere is how we can accelerate your preparation right now:\n- 🧩 **DSA & Algorithmic Problem Solving**: Deep dives into LeetCode patterns with complete code and Big-O complexity.\n- 🏛️ **System Design & Architecture**: Designing scalable APIs, caching with Redis, and database indexing.\n- 🎙️ **Mock Interviews & Behavioral Prep**: Polishing responses using the battle-tested **STAR method**.\n- 🗺️ **Roadmap & Study Pacing**: Optimizing your daily **${studyMins} minutes** commitment for maximum retention.\n\nFeel free to speak via the **Microphone (🎤)**, upload notes or a roadmap (**📎**), or type any question you have! What would you like to tackle first?`;
+    return `Hello ${name}! 👋 It is fantastic to connect with you.\n\nI am your 24/7 personal CareerPilot AI Mentor. I am fully calibrated for your profile (${branch}, ${university}), aiming for ${role} at companies like ${companies}.\n\nHere is how we can accelerate your preparation right now:\n- 🧩 DSA & Algorithmic Problem Solving: Deep dives into LeetCode patterns with complete code and Big-O complexity.\n- 🏛️ System Design & Architecture: Designing scalable APIs, caching with Redis, and database indexing.\n- 🎙️ Mock Interviews & Behavioral Prep: Polishing responses using the battle-tested STAR method.\n- 🗺️ Roadmap & Study Pacing: Optimizing your daily ${studyMins} minutes commitment for maximum retention.\n\nFeel free to speak via the Microphone (🎤), upload notes or a roadmap (📎), or type any question you have! What would you like to tackle first?`;
   }
 
-  // 3. Coding / DSA Query
+  // 6. Coding / DSA Query
   if (lowerMsg.includes('binary search') || lowerMsg.includes('sliding window') || lowerMsg.includes('dsa') || lowerMsg.includes('algorithm') || lowerMsg.includes('leetcode') || lowerMsg.includes('dynamic programming') || lowerMsg.includes('tree') || lowerMsg.includes('graph')) {
-    return `### 🧩 Algorithmic Mastery: Strategic Solution for ${name}
+    return `### Algorithmic Mastery: Strategic Solution for ${name}
 
 Here is a structured, production-grade breakdown for this pattern:
 
@@ -818,23 +986,23 @@ def search_pattern(arr, target):
     return -1  # Target not found
 \`\`\`
 
-#### ⏱️ Complexity Analysis
-- **Time Complexity**: $O(\\log N)$ — Slices search space in half each iteration.
-- **Space Complexity**: $O(1)$ — Uses constant auxiliary variables.
+#### Complexity Analysis
+- Time Complexity: $O(\\log N)$ — Slices search space in half each iteration.
+- Space Complexity: $O(1)$ — Uses constant auxiliary variables.
 
-#### 🎯 Key Interview Nuances
-1. **Integer Overflow Guard**: Always write \`mid = left + (right - left) // 2\` instead of \`(left + right) // 2\`.
-2. **Boundary Conditions**: Ensure \`while left <= right\` vs \`while left < right\` matches search termination criteria.
+#### Key Interview Nuances
+1. Integer Overflow Guard: Always write mid = left + (right - left) // 2 instead of (left + right) // 2.
+2. Boundary Conditions: Ensure while left <= right vs while left < right matches search termination criteria.
 
 ---
-💡 **Next Steps**: Would you like to solve a live variation of this question, or trace through an edge-case example?`;
+💡 Next Steps: Would you like to solve a live variation of this question, or trace through an edge-case example?`;
   }
 
-  // 4. System Design Query
+  // 7. System Design Query
   if (lowerMsg.includes('system design') || lowerMsg.includes('caching') || lowerMsg.includes('redis') || lowerMsg.includes('microservice') || lowerMsg.includes('sharding') || lowerMsg.includes('database')) {
-    return `### 🏛️ System Design Architecture Blueprint
+    return `### System Design Architecture Blueprint
 
-For high-scale systems evaluated at companies like **${companies}**:
+For high-scale systems evaluated at companies like ${companies}:
 
 #### 1. High-Level Architectural Flow
 \`\`\`
@@ -844,164 +1012,164 @@ For high-scale systems evaluated at companies like **${companies}**:
                                          |                                                              |
                                [Auth Microservice]                                            [Core API Service]
                                          |                                                              |
-                              [Redis Cache (In-Memory)]                                  [PostgreSQL Primary / Replica]
+                               [Redis Cache (In-Memory)]                                  [PostgreSQL Primary / Replica]
 \`\`\`
 
 #### 2. Critical Scalability Principles
-- **Cache-Aside Pattern**: Check Redis first ($O(1)$ latency). On cache miss, read from PostgreSQL and backfill Redis with TTL.
-- **Database Scaling**: Read replicas for read-heavy workloads (90/10 rule) and horizontal sharding by user ID hash.
-- **Resilience**: Circuit breakers and exponential backoff on third-party service calls.
+- Cache-Aside Pattern: Check Redis first ($O(1)$ latency). On cache miss, read from PostgreSQL and backfill Redis with TTL.
+- Database Scaling: Read replicas for read-heavy workloads (90/10 rule) and horizontal sharding by user ID hash.
+- Resilience: Circuit breakers and exponential backoff on third-party service calls.
 
 ---
-💡 **Next Steps**: Would you like to deep-dive into database schema optimization, or explore cache invalidation strategies?`;
+💡 Next Steps: Would you like to deep-dive into database schema optimization, or explore cache invalidation strategies?`;
   }
 
-  // 5. Java Backend Development Roadmap & Skills
+  // 8. Java Backend Development Roadmap & Skills
   if (lowerMsg.includes('java') && (lowerMsg.includes('backend') || lowerMsg.includes('skill') || lowerMsg.includes('learn') || lowerMsg.includes('spring'))) {
-    return `### ☕ Java Backend Engineering Mastery Roadmap for ${name}
+    return `### Java Backend Engineering Mastery Roadmap for ${name}
 
-Targeting **${role}** roles at tier-1 companies like **${companies}**:
+Targeting ${role} roles at tier-1 companies like ${companies}:
 
 #### 1. Core Language & JVM Fundamentals (Weeks 1-2)
-- **Java 17 / 21 LTS Features**: Records, Pattern Matching, Virtual Threads (Project Loom), Sealed Classes.
-- **Advanced Concurrency**: \`CompletableFuture\`, \`ExecutorService\`, Thread pools, and memory barriers (\`volatile\`, CAS).
-- **Collections & Generics**: Internal implementation of \`HashMap\` (buckets, red-black tree threshold), \`ConcurrentHashMap\`.
+- Java 17 / 21 LTS Features: Records, Pattern Matching, Virtual Threads (Project Loom), Sealed Classes.
+- Advanced Concurrency: CompletableFuture, ExecutorService, Thread pools, and memory barriers (volatile, CAS).
+- Collections & Generics: Internal implementation of HashMap (buckets, red-black tree threshold), ConcurrentHashMap.
 
 #### 2. Enterprise Frameworks & Data Persistence (Weeks 3-4)
-- **Spring Boot 3.x**: IoC, Dependency Injection, Spring Security with Stateless JWT & OAuth2.
-- **Data Layer**: Spring Data JPA / Hibernate, N+1 query problem resolution with \`JOIN FETCH\`, Level-2 caching.
-- **Databases**: PostgreSQL schema normalization, B-Tree and GIN indexes, transaction isolation levels (ACID).
+- Spring Boot 3.x: IoC, Dependency Injection, Spring Security with Stateless JWT & OAuth2.
+- Data Layer: Spring Data JPA / Hibernate, N+1 query problem resolution with JOIN FETCH, Level-2 caching.
+- Databases: PostgreSQL schema normalization, B-Tree and GIN indexes, transaction isolation levels (ACID).
 
 #### 3. Distributed Architecture & Cloud Deployment (Weeks 5-6)
-- **Microservices Communication**: RESTful APIs with OpenAPI/Swagger, gRPC for inter-service RPC.
-- **Event-Driven Streaming**: Apache Kafka (Producers, Consumer Groups, Partitions, Idempotence).
-- **Caching & DevOps**: Redis Cache-Aside, Docker multi-stage builds, and Kubernetes basics.
+- Microservices Communication: RESTful APIs with OpenAPI/Swagger, gRPC for inter-service RPC.
+- Event-Driven Streaming: Apache Kafka (Producers, Consumer Groups, Partitions, Idempotence).
+- Caching & DevOps: Redis Cache-Aside, Docker multi-stage builds, and Kubernetes basics.
 
 #### 4. Testing & Code Quality
-- **Unit & Integration Testing**: JUnit 5, Mockito, and Testcontainers for ephemeral database testing.
+- Unit & Integration Testing: JUnit 5, Mockito, and Testcontainers for ephemeral database testing.
 
 ---
-💡 **Next Step**: Would you like me to generate a 4-week structured learning roadmap for this in your **Smart Roadmap** module?`;
+💡 Next Step: Would you like me to generate a 4-week structured learning roadmap for this in your Smart Roadmap module?`;
   }
 
-  // 6. Career Progress & Readiness Analysis
+  // 9. Career Progress & Readiness Analysis
   if (lowerMsg.includes('career progress') || lowerMsg.includes('analyze my career') || lowerMsg.includes('my progress') || lowerMsg.includes('evaluate my progress')) {
-    return `### 📈 Comprehensive Career Velocity Analysis for ${name}
+    return `### Comprehensive Career Velocity Analysis for ${name}
 
 Based on your active profile:
-- **Academic Foundation**: ${branch} at ${university}
-- **Target Destination**: ${role} at ${companies}
-- **Daily Focus Budget**: ${studyMins} minutes/session (${Math.round((studyMins / 60) * 10) / 10} hours/day)
-- **Current Core Competencies**: ${profile.current_skills || 'Full-Stack Foundations'}
+- Academic Foundation: ${branch} at ${university}
+- Target Destination: ${role} at ${companies}
+- Daily Focus Budget: ${studyMins} minutes/session (${Math.round((studyMins / 60) * 10) / 10} hours/day)
+- Current Core Competencies: ${profile.current_skills || 'Full-Stack Foundations'}
 
-#### 🎯 Strategic Velocity Assessment
-1. **Curriculum Pacing (Top 15% Consistency)**:
-   - Your daily availability of **${studyMins} minutes** is optimal for high-retention focused deep work blocks.
-   - Dedicating 5 days a week equals **~${Math.round(studyMins * 5 / 60)} hours/week** of focused deliberate practice.
+#### Strategic Velocity Assessment
+1. Curriculum Pacing (Top 15% Consistency):
+   - Your daily availability of ${studyMins} minutes is optimal for high-retention focused deep work blocks.
+   - Dedicating 5 days a week equals ~${Math.round(studyMins * 5 / 60)} hours/week of focused deliberate practice.
 
-2. **Skill Readiness vs Target Companies**:
-   - **DSA & Problem Solving**: Solid progress. Recommend pushing through High-Frequency Blind 75 / NeetCode 150 patterns.
-   - **Full Stack / Backend Depth**: Ready for production microservices and scalable cloud deployments.
-   - **System Design & Concurrency**: Recommended next tier for senior placement rounds at **${companies}**.
+2. Skill Readiness vs Target Companies:
+   - DSA & Problem Solving: Solid progress. Recommend pushing through High-Frequency Blind 75 / NeetCode 150 patterns.
+   - Full Stack / Backend Depth: Ready for production microservices and scalable cloud deployments.
+   - System Design & Concurrency: Recommended next tier for senior placement rounds at ${companies}.
 
-3. **High-Impact Next Milestones**:
+3. High-Impact Next Milestones:
    - Complete 1 End-to-End full-stack capstone project with Docker & CI/CD deployment.
    - Run ATS Resume Scan to verify keyword coverage >85% for ${role}.
    - Schedule 2 weekly mock interview practice rounds.
 
 ---
-💡 **Next Action**: Would you like to review your current tasks in the **AI Planner** or run an instant resume ATS audit?`;
+💡 Next Action: Would you like to review your current tasks in the AI Planner or run an instant resume ATS audit?`;
   }
 
-  // 7. Study Plan Generation Query
+  // 10. Study Plan Generation Query
   if (lowerMsg.includes('study plan') || lowerMsg.includes('create a study plan') || lowerMsg.includes('study schedule') || lowerMsg.includes('schedule for me')) {
     const dsaMins = Math.round(studyMins * 0.5);
     const devMins = Math.round(studyMins * 0.35);
     const revMins = studyMins - dsaMins - devMins;
 
-    return `### 📅 Custom ${studyMins}-Minute Daily Study Architecture for ${name}
+    return `### Custom ${studyMins}-Minute Daily Study Architecture for ${name}
 
-Engineered specifically for your target role (**${role}**) and schedule:
+Engineered specifically for your target role (${role}) and schedule:
 
-#### 🕒 Daily Time Allocation (${studyMins} min session):
+#### Daily Time Allocation (${studyMins} min session):
 | Block | Duration | Focus Area | High-Yield Activity |
 |---|---|---|---|
-| **Block 1: Deep Problem Solving** | **${dsaMins} mins** | Algorithms & DSA | Solve 1-2 pattern problems (Two Pointers, DP, Trees). Analyze $O(N)$ Big-O. |
-| **Block 2: Applied Engineering** | **${devMins} mins** | Core Dev & Projects | Build production features, API endpoints, or database schemas. |
-| **Block 3: Consolidation & Review** | **${revMins} mins** | CS Fundamentals | Review OS concurrency, SQL indexing, or mock interview questions. |
+| Block 1: Deep Problem Solving | ${dsaMins} mins | Algorithms & DSA | Solve 1-2 pattern problems (Two Pointers, DP, Trees). Analyze O(N) Big-O. |
+| Block 2: Applied Engineering | ${devMins} mins | Core Dev & Projects | Build production features, API endpoints, or database schemas. |
+| Block 3: Consolidation & Review | ${revMins} mins | CS Fundamentals | Review OS concurrency, SQL indexing, or mock interview questions. |
 
-#### 🗓️ Weekly Cadence:
-- **Mon - Thu**: Core Curriculum & Problem Solving sprints.
-- **Friday**: Integration testing, GitHub pushes, and code refactoring.
-- **Saturday**: 1 Timed Mock Coding Contest (45-60 min).
-- **Sunday**: Strategic rest & planning for the upcoming week.
+#### Weekly Cadence:
+- Mon - Thu: Core Curriculum & Problem Solving sprints.
+- Friday: Integration testing, GitHub pushes, and code refactoring.
+- Saturday: 1 Timed Mock Coding Contest (45-60 min).
+- Sunday: Strategic rest & planning for the upcoming week.
 
 ---
-💡 **Instant Sync**: I can push this schedule directly into your **Human + AI Planner** module! Would you like me to sync it?`;
+💡 Instant Sync: I can push this schedule directly into your Human + AI Planner module! Would you like me to sync it?`;
   }
 
-  // 8. Resume Review & Improvement Query
+  // 11. Resume Review & Improvement Query
   if (lowerMsg.includes('resume') || lowerMsg.includes('improve my resume') || lowerMsg.includes('cv') || lowerMsg.includes('ats score')) {
-    return `### 📄 Resume Optimization & ATS Strategy for ${name}
+    return `### Resume Optimization & ATS Strategy for ${name}
 
-Tailored for **${role}** applications at **${companies}**:
+Tailored for ${role} applications at ${companies}:
 
 #### 1. The Google X-Y-Z Impact Formula
 Transform passive duty bullets into quantified impact bullets:
-- ❌ *Weak*: "Developed REST APIs for a web application using Node.js."
-- ✅ *Strong*: "Engineered 14 RESTful endpoints using **Node.js, TypeScript, & PostgreSQL**, improving average query latency by **38%** and supporting **10,000+** monthly active requests."
+- Weak: "Developed REST APIs for a web application using Node.js."
+- Strong: "Engineered 14 RESTful endpoints using Node.js, TypeScript, & PostgreSQL, improving average query latency by 38% and supporting 10,000+ monthly active requests."
 
 #### 2. Essential Technical Keywords to Include
-- **Languages**: Java, Python, TypeScript, SQL, Go.
-- **Frameworks & Libs**: Spring Boot, React, Node.js, Express, Docker.
-- **Data & Architecture**: Redis, PostgreSQL, MongoDB, Kafka, Microservices, RESTful APIs.
-- **Cloud & DevOps**: AWS (S3, EC2), GitHub Actions, Docker, Linux, CI/CD.
+- Languages: Java, Python, TypeScript, SQL, Go.
+- Frameworks & Libs: Spring Boot, React, Node.js, Express, Docker.
+- Data & Architecture: Redis, PostgreSQL, MongoDB, Kafka, Microservices, RESTful APIs.
+- Cloud & DevOps: AWS (S3, EC2), GitHub Actions, Docker, Linux, CI/CD.
 
 #### 3. Section Architecture (ATS Friendly):
-1. **Header**: Name, LinkedIn, GitHub, Email, Phone (clean single-column).
-2. **Technical Skills**: Categorized (Languages, Frameworks, Databases, Tools).
-3. **Projects (Top Priority for College / Recent Grads)**: 2-3 standout applications with live URLs and GitHub source links.
-4. **Education**: ${university} — ${branch} (include GPA if >8.0).
-5. **Certifications & Achievements**: LeetCode rating, hackathons, cloud certifications.
+1. Header: Name, LinkedIn, GitHub, Email, Phone (clean single-column).
+2. Technical Skills: Categorized (Languages, Frameworks, Databases, Tools).
+3. Projects (Top Priority for College / Recent Grads): 2-3 standout applications with live URLs and GitHub source links.
+4. Education: ${university} — ${branch} (include GPA if >8.0).
+5. Certifications & Achievements: LeetCode rating, hackathons, cloud certifications.
 
 ---
-💡 **Next Step**: You can upload your PDF/DOCX resume in the **Resume Analyzer** page for an instant 0-100 ATS compatibility breakdown!`;
+💡 Next Step: You can upload your PDF/DOCX resume in the Resume Analyzer page for an instant 0-100 ATS compatibility breakdown!`;
   }
 
-  // 9. Behavioral & STAR Method Query
+  // 12. Behavioral & STAR Method Query
   if (lowerMsg.includes('star') || lowerMsg.includes('interview') || lowerMsg.includes('behavioral') || lowerMsg.includes('tell me about') || lowerMsg.includes('salary')) {
-    return `### 🎙️ The STAR Framework for Behavioral Interviews
+    return `### The STAR Framework for Behavioral Interviews
 
 Top tech interviewers evaluate structure and quantifiable business impact:
 
-1. **Situation (S)**: Set the context in 2 sentences. *"During my capstone project at ${university}, we faced high API response latency under concurrent traffic."*
-2. **Task (T)**: State your specific responsibility. *"I was tasked with identifying the bottleneck and ensuring query latency stayed below 150ms."*
-3. **Action (A)**: Explain the technical steps you took. *"I profiled SQL query logs, implemented database compound indexing, and added Redis caching for read-heavy endpoints."*
-4. **Result (R)**: Quantify the outcome. *"Reduced average latency by 45% and comfortably handled 2,500 requests/second with zero downtime."*
+1. Situation (S): Set the context in 2 sentences. "During my capstone project at ${university}, we faced high API response latency under concurrent traffic."
+2. Task (T): State your specific responsibility. "I was tasked with identifying the bottleneck and ensuring query latency stayed below 150ms."
+3. Action (A): Explain the technical steps you took. "I profiled SQL query logs, implemented database compound indexing, and added Redis caching for read-heavy endpoints."
+4. Result (R): Quantify the outcome. "Reduced average latency by 45% and comfortably handled 2,500 requests/second with zero downtime."
 
 ---
-💡 **Next Steps**: Would you like to practice your response to: *"Tell me about a time you resolved a difficult technical disagreement"*?`;
+💡 Next Steps: Would you like to practice your response to: "Tell me about a time you resolved a difficult technical disagreement"?`;
   }
 
-  // 10. Generic intelligent response
-  return `### 💡 Career Guidance & Strategy for ${name}
+  // 13. Generic intelligent response
+  return `### Career Guidance & Strategy for ${name}
 
-Regarding your inquiry: *"**${message.slice(0, 100)}**"*
+Regarding your inquiry: "${message.slice(0, 100)}"
 
-1. **Context & Analysis**:
-   - Aligned with your target role as a **${role}** at **${companies}**.
-   - With your current commitment of **${studyMins} minutes/day**, deliberate consistency is your greatest competitive advantage.
+1. Context & Analysis:
+   - Aligned with your target role as a ${role} at ${companies}.
+   - With your current commitment of ${studyMins} minutes/day, deliberate consistency is your greatest competitive advantage.
 
-2. **Actionable Recommendations**:
-   - **Focus on Core Fundamentals**: Master the underlying concepts rather than memorizing surface-level syntax.
-   - **Quantify Impact**: Document every feature with concrete benchmarks (latency, users, throughput).
-   - **Daily Pacing**: Dedicate ${Math.round(studyMins * 0.4)} minutes to theory and ${Math.round(studyMins * 0.6)} minutes to active hands-on coding.
+2. Actionable Recommendations:
+   - Focus on Core Fundamentals: Master the underlying concepts rather than memorizing surface-level syntax.
+   - Quantify Impact: Document every feature with concrete benchmarks (latency, users, throughput).
+   - Daily Pacing: Dedicate ${Math.round(studyMins * 0.4)} minutes to theory and ${Math.round(studyMins * 0.6)} minutes to active hands-on coding.
 
 ---
-💡 **Next Steps**:
+💡 Next Steps:
 - Would you like a targeted code walkthrough or algorithmic explanation?
 - Would you like to run a mock interview question?
-- Or should we review your **Study Planner** tasks for today?`;
+- Or should we review your Study Planner tasks for today?`;
 }
 
 /**

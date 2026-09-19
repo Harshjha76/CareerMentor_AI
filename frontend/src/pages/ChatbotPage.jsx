@@ -22,7 +22,9 @@ import {
   FileText,
   Clock,
   ChevronRight,
-  Search
+  Search,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 export default function ChatbotPage() {
@@ -42,6 +44,7 @@ export default function ChatbotPage() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [speakingId, setSpeakingId] = useState(null);
 
   // Voice & File attachments
   const [isListening, setIsListening] = useState(false);
@@ -256,8 +259,8 @@ export default function ChatbotPage() {
       console.error('Send message error:', err);
       const isAuthIssue = err.message?.toLowerCase().includes('session') || err.message?.toLowerCase().includes('token') || err.message?.toLowerCase().includes('database');
       const guidance = isAuthIssue
-        ? `⚠️ **Session Notice**: ${err.message}. Please refresh the page or sign in with your email to continue your career session.`
-        : `⚠️ **Connection notice**: ${err.message}. Please verify your network and try again.`;
+        ? `⚠️ Session Notice: ${err.message}. Please refresh the page or sign in with your email to continue your career session.`
+        : `⚠️ Connection notice: ${err.message}. Please verify your network and try again.`;
       
       setMessages(prev => [
         ...prev,
@@ -273,6 +276,51 @@ export default function ChatbotPage() {
       setSending(false);
     }
   };
+
+  // Text-To-Speech (TTS) Speaker for AI messages
+  const toggleSpeakMessage = (text, id) => {
+    if (!('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in this browser.');
+      return;
+    }
+
+    if (speakingId === id) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    // Clean text of markdown, code blocks, URLs, and formatting characters for natural speech
+    const cleanSpeechText = text
+      .replace(/```[\s\S]*?```/g, ' Code snippet omitted. ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/https?:\/\/\S+/g, ' link ')
+      .replace(/[#*_~>\-–—|]/g, ' ')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
+    utterance.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : language === 'sa' ? 'hi-IN' : 'en-US';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+
+    setSpeakingId(id);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -528,22 +576,46 @@ export default function ChatbotPage() {
                       </span>
 
                       {!isUser && (
-                        <button
-                          onClick={() => copyToClipboard(m.text, m.id)}
-                          className="hover:text-[#F8FAFC] flex items-center gap-1 p-1 transition-colors"
-                        >
-                          {copiedId === m.id ? (
-                            <>
-                              <Check className="w-3 h-3 text-[#10B981]" />
-                              <span className="text-[#10B981] font-bold">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleSpeakMessage(m.text, m.id)}
+                            className={`flex items-center gap-1 p-1 rounded-md transition-colors ${
+                              speakingId === m.id
+                                ? 'text-[#06B6D4] bg-[#06B6D4]/15 font-bold animate-pulse'
+                                : 'hover:text-[#F8FAFC]'
+                            }`}
+                            title={speakingId === m.id ? 'Stop audio' : 'Listen to response'}
+                          >
+                            {speakingId === m.id ? (
+                              <>
+                                <VolumeX className="w-3.5 h-3.5 text-[#06B6D4]" />
+                                <span className="text-[#06B6D4]">Stop</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="w-3.5 h-3.5" />
+                                <span>Speak</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => copyToClipboard(m.text, m.id)}
+                            className="hover:text-[#F8FAFC] flex items-center gap-1 p-1 transition-colors"
+                          >
+                            {copiedId === m.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-[#10B981]" />
+                                <span className="text-[#10B981] font-bold">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
