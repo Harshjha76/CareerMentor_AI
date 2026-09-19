@@ -29,7 +29,13 @@ import {
   AlertTriangle,
   ShieldCheck,
   Mail,
-  Smartphone
+  Smartphone,
+  Briefcase,
+  Building2,
+  MapPin,
+  DollarSign,
+  TrendingUp,
+  Brain
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmailGuardianCard from '../components/EmailGuardianCard';
@@ -115,6 +121,15 @@ const YOUTUBE_PLAYLIST_RECOMMENDATIONS = {
   ],
   python_ai: [
     {
+      title: 'Neural Networks: Zero to Hero',
+      channel: 'Andrej Karpathy (ex-OpenAI / Tesla AI Director)',
+      videos: '7 Legendary Deep Dives',
+      rating: '5.0 ★ (Gold Standard)',
+      url: 'https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ',
+      description: 'Build micrograd, backpropagation, MLP, and GPT language models from scratch in pure Python and PyTorch.',
+      tag: '⭐ Deep Learning & LLM Core'
+    },
+    {
       title: 'Complete Data Science & Generative AI Masterclass',
       channel: 'Krish Naik',
       videos: '70+ Videos',
@@ -122,6 +137,66 @@ const YOUTUBE_PLAYLIST_RECOMMENDATIONS = {
       url: 'https://www.youtube.com/playlist?list=PLZoTAELRMXVN7mGZtXn3tEevnZ_VlXm4J',
       description: 'Python for AI, Pandas/NumPy, LangChain, HuggingFace Transformers, OpenAI API, Vector Databases (Chroma/Pinecone), and LLMOps.',
       tag: '🤖 Generative AI & Deep Learning'
+    },
+    {
+      title: 'Machine Learning & Statistics Fundamentals',
+      channel: 'StatQuest with Josh Starmer',
+      videos: '90+ Bite-sized Masterclasses',
+      rating: '5.0 ★',
+      url: 'https://www.youtube.com/c/joshstarmer/playlists',
+      description: 'Crystal-clear visual explanations of PCA, Decision Trees, Random Forests, Gradient Boost, and Neural Networks.',
+      tag: '📊 Intuitive ML Statistics'
+    }
+  ],
+  devops_cloud: [
+    {
+      title: 'Complete DevOps Bootcamp (Docker, K8s, CI/CD, Terraform)',
+      channel: 'TechWorld with Nana',
+      videos: '50+ High-Yield Videos',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/c/TechWorldwithNana/playlists',
+      description: 'Docker multi-stage builds, Kubernetes pod orchestration, Helm charts, Terraform infrastructure as code, and Prometheus monitoring.',
+      tag: '⭐ Complete Cloud & DevOps Track'
+    },
+    {
+      title: 'DevOps & Cloud Native Masterclass',
+      channel: 'Kunal Kushwaha',
+      videos: '40+ In-depth Lectures',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/playlist?list=PL9gnSGHSqcnoqBXdMw1GJ36HqcJEcn-v0',
+      description: 'Linux systems administration, GitOps, Docker networking, Kubernetes architecture, and AWS cloud deployment pipelines.',
+      tag: '🚀 Open Source & Cloud Native'
+    }
+  ],
+  golang_backend: [
+    {
+      title: 'Go (Golang) Microservices & Backend Architecture',
+      channel: 'Anthony GG',
+      videos: '45+ Hands-on Videos',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/c/anthonygg/playlists',
+      description: 'Idiomatic Go, Goroutines, Channels, gRPC, Protocol Buffers, Docker, and distributed microservice architectures.',
+      tag: '⚡ High-Throughput Go Systems'
+    },
+    {
+      title: 'Backend Master Class (Golang + Postgres + Kubernetes)',
+      channel: 'Tech School',
+      videos: '50+ Episodes',
+      rating: '5.0 ★',
+      url: 'https://www.youtube.com/playlist?list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE',
+      description: 'Complete production backend engineering with Golang, PostgreSQL ACID transactions, Redis caching, and AWS EKS deployment.',
+      tag: '🏛️ Production Bank Engine'
+    }
+  ],
+  cybersecurity: [
+    {
+      title: 'Practical Ethical Hacking & Cybersecurity Roadmap',
+      channel: 'NetworkChuck',
+      videos: '35+ Interactive Labs',
+      rating: '4.9 ★',
+      url: 'https://www.youtube.com/c/NetworkChuck/playlists',
+      description: 'Networking fundamentals, Wireshark packet capture, Linux security hardening, Python scripting for hackers, and penetration testing.',
+      tag: '🛡️ Cyber Defense & Penetration Testing'
     }
   ]
 };
@@ -131,8 +206,10 @@ const SUGGESTED_SKILLS = [
   'Full Stack Node.js & React System Architecture',
   'Data Structures & Algorithms in C++',
   'Python for AI & Data Engineering',
-  'System Design & Distributed Microservices',
-  'DevOps, Kubernetes & Cloud Architecture'
+  'Golang Backend, Microservices & Distributed Systems',
+  'DevOps, Docker, Kubernetes & Cloud Architecture',
+  'System Design & Microservices Scaling',
+  'Cybersecurity & Network Defense'
 ];
 
 export default function RoadmapPage() {
@@ -153,11 +230,28 @@ export default function RoadmapPage() {
   const [loadingStreak, setLoadingStreak] = useState(true);
   const [sendingStreakAlert, setSendingStreakAlert] = useState(false);
   const [streakAlertResult, setStreakAlertResult] = useState(null);
+  const [matchedInternships, setMatchedInternships] = useState([]);
+  const [loadingInternships, setLoadingInternships] = useState(false);
 
   useEffect(() => {
     loadRoadmaps();
     loadStreakData();
+    loadMatchedInternships();
   }, []);
+
+  const loadMatchedInternships = async () => {
+    setLoadingInternships(true);
+    try {
+      const res = await api.internships.getRecommendations();
+      if (res && res.internships) {
+        setMatchedInternships(res.internships);
+      }
+    } catch (err) {
+      console.error('Failed to load roadmap matched internships:', err);
+    } finally {
+      setLoadingInternships(false);
+    }
+  };
 
   const loadStreakData = async () => {
     setLoadingStreak(true);
@@ -473,16 +567,48 @@ export default function RoadmapPage() {
 
   const getRecommendedPlaylists = (skill) => {
     const s = (skill || '').toLowerCase();
-    if (s.includes('java') || s.includes('dsa') || s.includes('algorithm') || s.includes('c++')) {
+    if (s.includes('java') || s.includes('dsa') || s.includes('algorithm') || s.includes('c++') || s.includes('leet')) {
       return YOUTUBE_PLAYLIST_RECOMMENDATIONS.dsa_java;
     }
-    if (s.includes('system design') || s.includes('microservice') || s.includes('architecture')) {
+    if (s.includes('system design') || s.includes('microservice') || s.includes('architecture') || s.includes('distributed')) {
       return YOUTUBE_PLAYLIST_RECOMMENDATIONS.system_design;
     }
-    if (s.includes('python') || s.includes('ai') || s.includes('data')) {
+    if (s.includes('python') || s.includes('ai') || s.includes('machine learning') || s.includes('ml') || s.includes('data science') || s.includes('langchain') || s.includes('llm') || s.includes('data')) {
       return YOUTUBE_PLAYLIST_RECOMMENDATIONS.python_ai;
     }
-    return YOUTUBE_PLAYLIST_RECOMMENDATIONS.web_fullstack;
+    if (s.includes('devops') || s.includes('cloud') || s.includes('docker') || s.includes('kubernetes') || s.includes('k8s') || s.includes('aws') || s.includes('terraform') || s.includes('ci/cd') || s.includes('linux')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.devops_cloud;
+    }
+    if (s.includes('go') || s.includes('golang') || s.includes('grpc')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.golang_backend;
+    }
+    if (s.includes('cyber') || s.includes('security') || s.includes('ethical') || s.includes('penetration') || s.includes('network')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.cybersecurity;
+    }
+    if (s.includes('web') || s.includes('react') || s.includes('node') || s.includes('frontend') || s.includes('backend') || s.includes('full stack') || s.includes('javascript') || s.includes('typescript') || s.includes('next')) {
+      return YOUTUBE_PLAYLIST_RECOMMENDATIONS.web_fullstack;
+    }
+    // Dynamic universal fallback for any custom skill
+    return [
+      {
+        title: `${skill || 'Software Engineering'} Complete Masterclass Bootcamp`,
+        channel: 'Top Tech Mentors',
+        videos: 'Curated Full Course Playlist',
+        rating: '4.9 ★ (Industry Standard)',
+        url: `https://www.youtube.com/results?search_query=${encodeURIComponent((skill || 'coding') + ' full course playlist')}`,
+        description: `Comprehensive video tutorial series covering foundational to advanced concepts for ${skill || 'this domain'}.`,
+        tag: '⭐ Curated Goal Masterclass'
+      },
+      {
+        title: `${skill || 'Software Engineering'} Hands-on Real-World Projects`,
+        channel: 'Production Engineers',
+        videos: 'End-to-End Build Walkthroughs',
+        rating: '4.9 ★',
+        url: `https://www.youtube.com/results?search_query=${encodeURIComponent((skill || 'coding') + ' project tutorial step by step')}`,
+        description: `Build end-to-end production projects and practical portfolio applications using ${skill || 'this technology'}.`,
+        tag: '🚀 Project Building Guide'
+      }
+    ];
   };
 
   return (
@@ -1001,6 +1127,139 @@ export default function RoadmapPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* DIRECTLY MATCHED INTERNSHIPS FOR THIS ROADMAP & GOAL */}
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1E293B] pb-4">
+              <div>
+                <h3 className="text-base font-bold text-[#F8FAFC] flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-[#3B82F6]" />
+                  Directly Matched Internships for this Roadmap & Goal
+                </h3>
+                <p className="text-xs text-[#94A3B8] mt-0.5">
+                  Real hiring openings with competitive stipends matched directly to <strong className="text-[#F8FAFC]">{activeRoadmap.skill_name}</strong>.
+                </p>
+              </div>
+              <Link
+                to="/internships"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#3B82F6]/10 hover:bg-[#3B82F6]/20 border border-[#3B82F6]/30 text-[#3B82F6] text-xs font-bold transition-all self-start sm:self-auto"
+              >
+                <span>Explore Full Matcher & Practice Hub</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {loadingInternships ? (
+              <div className="flex items-center justify-center py-8 text-[#94A3B8] gap-2 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-[#3B82F6]" />
+                <span>Finding top real internship openings matching this curriculum...</span>
+              </div>
+            ) : matchedInternships.length === 0 ? (
+              <div className="text-center py-6 text-xs text-[#94A3B8]">
+                No specific internships loaded yet. Visit the Internship Matcher to view available openings.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {matchedInternships.slice(0, 4).map((intern) => (
+                  <div
+                    key={intern.id}
+                    className="p-5 rounded-2xl border border-[#1E293B] bg-[#0B1220] hover:border-[#3B82F6]/40 transition-all flex flex-col justify-between space-y-4 group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/30">
+                          {intern.company_tier || 'Verified Tech Opening'}
+                        </span>
+                        <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                          {intern.match_score || 88}% Match
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-bold text-[#F8FAFC] group-hover:text-[#3B82F6] transition-colors">
+                          {intern.role}
+                        </h4>
+                        <p className="text-xs font-semibold text-[#94A3B8] mt-0.5 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-[#3B82F6]" />
+                          <span>{intern.company}</span>
+                          <span>•</span>
+                          <MapPin className="w-3 h-3 text-[#94A3B8]" />
+                          <span>{intern.location}</span>
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 font-bold border border-emerald-500/20">
+                          💰 {intern.stipend}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#172033] text-[#94A3B8] font-medium border border-[#1E293B]">
+                          ⏳ {intern.duration}
+                        </span>
+                      </div>
+
+                      {/* Matching Skills */}
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[11px] font-bold text-[#94A3B8] block">Required Skills in Roadmap:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(intern.required_skills || []).slice(0, 5).map((sk, ski) => (
+                            <span
+                              key={ski}
+                              className="px-2 py-0.5 rounded-md bg-[#172033] text-[#CBD5E1] text-[10px] font-semibold border border-[#1E293B]"
+                            >
+                              {sk}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#1E293B] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {intern.apply_urls?.careers && (
+                          <a
+                            href={intern.apply_urls.careers}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-[#3B82F6]/15 hover:bg-[#3B82F6]/25 text-[#3B82F6] text-[11px] font-bold border border-[#3B82F6]/30 flex items-center gap-1 transition-colors"
+                          >
+                            Careers <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        {intern.apply_urls?.linkedin && (
+                          <a
+                            href={intern.apply_urls.linkedin}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-[#0077B5]/15 hover:bg-[#0077B5]/25 text-[#38BDF8] text-[11px] font-bold border border-[#0077B5]/30 flex items-center gap-1 transition-colors"
+                          >
+                            LinkedIn <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        {intern.apply_urls?.internshala && (
+                          <a
+                            href={intern.apply_urls.internshala}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 text-[11px] font-bold border border-cyan-500/30 flex items-center gap-1 transition-colors"
+                          >
+                            Internshala <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+
+                      <Link
+                        to="/internships"
+                        className="inline-flex items-center justify-center gap-1 px-3 py-1 rounded-lg bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white text-[11px] font-bold shadow transition-all hover:opacity-95"
+                      >
+                        <Brain className="w-3 h-3 text-white" />
+                        Practice Interview
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Sync success toast */}

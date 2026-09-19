@@ -1742,14 +1742,393 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
         'Mock Technical Interview 2: Timed 45-min System Design & STAR Behavioral Defense',
         'Milestone Lab: Deploy Capstone Application with automated GitHub Actions CI/CD and README docs'
       ],
-      leetcode: 'https://leetcode.com/explore/interview/card/top-interview-questions-medium/'
-    }
-  ];
+function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
+  const weeks = [];
+  const totalWeeks = Math.min(Math.max(durationWeeks, 2), 52);
+  const lowerSkill = (skill || '').toLowerCase();
 
+  // Domain detection
+  let domainCatalog = null;
+  let defaultDocs = 'https://developer.mozilla.org/en-US/';
+  let defaultPractice = 'https://leetcode.com/problemset/all/';
+
+  // 1. FULL STACK WEB DEVELOPMENT
+  if (/full\s*stack|mern|mean|react|frontend|next\.?js|web\s*dev|node/i.test(lowerSkill)) {
+    defaultDocs = 'https://developer.mozilla.org/en-US/docs/Web';
+    defaultPractice = 'https://github.com/tastejs/todomvc';
+    domainCatalog = [
+      {
+        title: 'Modern HTML5, Semantic DOM & Advanced CSS Grid/Flexbox',
+        milestone: 'Master modern semantic layouts, CSS Flexbox/Grid, and responsive mobile-first UI patterns',
+        project: {
+          title: 'Responsive Developer Portfolio & Component Library',
+          description: 'Pixel-perfect, accessible responsive portfolio featuring custom CSS grid layouts, dark mode theme toggle, and semantic markup.',
+          tech_stack: ['HTML5', 'CSS3 Flexbox/Grid', 'Tailwind CSS', 'Vite'],
+          deliverables: ['Semantic accessibility (a11y)', 'Lighthouse 95+ performance score', 'Responsive mobile drawer navigation']
+        },
+        days: [
+          'HTML5 Semantic Structure (header, main, section, article, nav, aside) & SEO meta tags',
+          'CSS Box Model in-depth: margin collapse, border-box, z-index stacking contexts & specificity calculation',
+          'CSS Flexbox Mastery: justify-content, align-items, flex-grow, flex-shrink & flex-wrap patterns',
+          'CSS Grid Architecture: grid-template-columns, minmax, auto-fit/auto-fill & responsive layout without media queries',
+          'CSS Custom Properties (Variables), clamp() fluid typography & Dark Mode prefers-color-scheme',
+          'Milestone Lab: Build and deploy Responsive Developer Portfolio to Vercel/Netlify'
+        ],
+        leetcode: 'https://github.com/bradtraversy/50projects50days'
+      },
+      {
+        title: 'Modern JavaScript (ES6+), DOM APIs & Event-Driven Architecture',
+        milestone: 'Master closures, prototypal inheritance, async/await, and event propagation',
+        project: {
+          title: 'Interactive Kanban Project Board with Drag-and-Drop',
+          description: 'Vanilla JavaScript task management application with column dragging, local storage persistence, and undo/redo history.',
+          tech_stack: ['Modern JavaScript (ES2024)', 'HTML5 Drag and Drop API', 'Web Storage API'],
+          deliverables: ['Custom event emitter pattern', 'Local storage synchronization', 'Zero-dependency drag and drop physics']
+        },
+        days: [
+          'JavaScript Execution Context: Call Stack, Memory Heap, Hoisting, Scope Chain & Closures',
+          'Prototypes & Classes: Prototypal inheritance, constructor functions, Symbol, and Map/Set data structures',
+          'DOM Manipulation & Event Loop: Event bubbling vs capturing, event delegation & passive listeners',
+          'Asynchronous JS: Event Loop, Microtasks (Promises) vs Macrotasks (setTimeout), async/await & Promise.allSettled',
+          'Modern ES6+ Modules, Fetch API, AbortController, Error Handling & Debounce/Throttle implementations',
+          'Milestone Lab: Build Interactive Kanban Task Board with local storage persistence and drag-and-drop'
+        ],
+        leetcode: 'https://leetcode.com/problemset/all/?topicSlugs=javascript'
+      },
+      {
+        title: 'React Fundamentals, State Management & Custom Hooks',
+        milestone: 'Master component lifecycle, reconciliation (Virtual DOM), and robust custom hook abstractions',
+        project: {
+          title: 'Cryptocurrency & Stock Market Real-Time Dashboard',
+          description: 'Interactive React application rendering live asset tickers, sparkline charts, debounced search filtering, and watchlists.',
+          tech_stack: ['React 18', 'Tailwind CSS', 'Custom Hooks', 'Recharts / Chart.js'],
+          deliverables: ['Debounced search hook (useDebounce)', 'Optimistic UI state updates', 'Real-time WebSocket/polling live updates']
+        },
+        days: [
+          'React Architecture: Virtual DOM, Fiber Reconciliation algorithm, JSX compilation & Component purity',
+          'State & Props: useState, useEffect dependency arrays, cleanup functions & race condition guards',
+          'Advanced Hooks: useRef (DOM & mutable ref), useMemo, useCallback & memoization profiling',
+          'Complex State: useReducer pattern, Context API architecture & preventing unnecessary context re-renders',
+          'Custom Hooks: Building reusable useFetch, useLocalStorage, useDebounce & useMediaQuery hooks',
+          'Milestone Lab: Build Crypto Dashboard with real-time price charts and custom filter hooks'
+        ],
+        leetcode: 'https://react.dev/learn'
+      },
+      {
+        title: 'Backend Engineering with Node.js, Express & RESTful APIs',
+        milestone: 'Build scalable RESTful microservices with middleware, input validation, and JWT security',
+        project: {
+          title: 'Multi-Tenant E-Commerce REST API Gateway',
+          description: 'Production-ready Node.js/Express API with JWT authentication, role-based access control (RBAC), rate-limiting, and error handling.',
+          tech_stack: ['Node.js', 'Express.js', 'JSON Web Tokens', 'Zod / Joi Validation'],
+          deliverables: ['Stateless JWT authentication & refresh rotation', 'Global error-handling middleware', 'Rate limiting & input sanitization']
+        },
+        days: [
+          'Node.js Runtime: V8 Engine, libuv, Event Loop phases (timers, poll, check), and non-blocking I/O',
+          'Express.js Core: Routing architecture, middleware pipeline execution order & next() lifecycle',
+          'REST API Design: HTTP verbs (Idempotency), status codes, pagination, filtering & versioning contracts',
+          'Authentication & Security: bcrypt password hashing, JWT stateless access tokens & CORS protection',
+          'Validation & Logging: Schema validation with Zod, request logging with Morgan/Winston & global error handlers',
+          'Milestone Lab: Build and test E-Commerce REST API with automated Postman integration tests'
+        ],
+        leetcode: 'https://github.com/goldbergyoni/nodebestpractices'
+      },
+      {
+        title: 'Database Architecture: PostgreSQL, Prisma ORM & MongoDB',
+        milestone: 'Design normalized relational schemas, write optimized SQL queries, and manage database migrations',
+        project: {
+          title: 'Collaborative Workspace & Project Database Engine',
+          description: 'Relational data model supporting organizations, users, projects, tasks, comments, and audit logs with complex joins and transactions.',
+          tech_stack: ['PostgreSQL', 'Prisma ORM', 'MongoDB', 'Docker Compose'],
+          deliverables: ['ACID transaction guarantees', 'N+1 query resolution with eager loading', 'Database migration workflows']
+        },
+        days: [
+          'Relational DB Principles: 1NF, 2NF, 3NF normalization, foreign keys & primary key indexing',
+          'Complex SQL: INNER/LEFT/FULL OUTER JOINs, Aggregations (GROUP BY, HAVING), Subqueries & Window Functions',
+          'Transactions & ACID: Isolation levels (Read Committed vs Serializable), locking & optimistic concurrency',
+          'ORM Modeling with Prisma: Schema definitions, relations (1-to-1, 1-to-N, M-to-N) & migration scripts',
+          'NoSQL Alternative with MongoDB: Document schemas, aggregation pipelines & when to choose SQL vs NoSQL',
+          'Milestone Lab: Setup Dockerized PostgreSQL with Prisma schema, seed data & write benchmarked queries'
+        ],
+        leetcode: 'https://leetcode.com/problemset/database/'
+      },
+      {
+        title: 'Full Stack Integration, Next.js App Router & Server Components',
+        milestone: 'Master Server-Side Rendering (SSR), React Server Components (RSC), and full stack Next.js apps',
+        project: {
+          title: 'SaaS Subscription Platform with Stripe Payments',
+          description: 'Full stack Next.js application with Server Actions, authenticated protected routes, database persistence, and Stripe webhooks.',
+          tech_stack: ['Next.js 14/15', 'React Server Components', 'Tailwind CSS', 'Stripe API'],
+          deliverables: ['Server-Side Rendering (SSR) & Static Site Generation (SSG)', 'Next.js Server Actions for zero-API form handling', 'Webhook validation & subscription state management']
+        },
+        days: [
+          'Next.js App Router: File-system routing, layout hierarchies, loading/error boundaries & route groups',
+          'Server Components (RSC) vs Client Components ("use client"): Streaming, Suspense & bundle optimization',
+          'Server Actions & Data Mutations: Forms, revalidatePath, revalidateTag & optimistic UI updates',
+          'Full-Stack Auth: NextAuth.js / Auth.js with OAuth (Google/GitHub) and session persistence',
+          'Third-Party Integrations: Payment gateways (Stripe Checkout & Webhooks) & transactional email dispatches',
+          'Milestone Lab: Build and deploy SaaS Platform with Next.js App Router and PostgreSQL database'
+        ],
+        leetcode: 'https://nextjs.org/docs'
+      }
+    ];
+  }
+
+  // 2. PYTHON, AI, MACHINE LEARNING & DATA SCIENCE
+  else if (/python|ai|machine\s*learning|data\s*science|deep\s*learning|pytorch|tensorflow|nlp|llm/i.test(lowerSkill)) {
+    defaultDocs = 'https://docs.python.org/3/';
+    defaultPractice = 'https://www.kaggle.com/datasets';
+    domainCatalog = [
+      {
+        title: 'Python Mastery, Functional Idioms & Data Engineering Math',
+        milestone: 'Master Pythonic data structures, generators, list comprehensions, and Linear Algebra basics',
+        project: {
+          title: 'High-Performance Numerical Vector & Matrix Calculation Library',
+          description: 'Pure Python and NumPy mathematical engine computing matrix transformations, dot products, eigenvalues, and gradient descents.',
+          tech_stack: ['Python 3.12', 'NumPy', 'Math / Linear Algebra', 'PyTest'],
+          deliverables: ['Vectorized operations without Python loops', 'Linear transformation visualizer', 'Unit-tested mathematical operations']
+        },
+        days: [
+          'Python Internals: Memory model, references vs mutability, GIL (Global Interpreter Lock) & dunder methods',
+          'Functional Programming: List/Dict/Set comprehensions, map/filter/reduce, lambda expressions & generators (yield)',
+          'Decorators & Context Managers: Function and class decorators, functools.wraps & __enter__ / __exit__ protocols',
+          'NumPy Array Computing: Broadcasting rules, multidimensional indexing, matrix multiplications & vectorized operations',
+          'Essential Math for ML: Vectors, matrices, dot products, eigenvalues, partial derivatives & gradient descent intuition',
+          'Milestone Lab: Build Vector Math Library with NumPy vectorization and automated PyTest test suite'
+        ],
+        leetcode: 'https://leetcode.com/problemset/all/?topicSlugs=math'
+      },
+      {
+        title: 'Exploratory Data Analysis (EDA) & Feature Engineering with Pandas',
+        milestone: 'Clean messy real-world datasets, impute missing values, and engineer predictive feature sets',
+        project: {
+          title: 'Predictive Real Estate Housing Market & Pricing Analyzer',
+          description: 'Comprehensive data analysis pipeline cleaning 50,000+ housing records, handling outliers, and building interactive charts.',
+          tech_stack: ['Pandas', 'Matplotlib', 'Seaborn', 'Scipy'],
+          deliverables: ['Automated data cleaning & imputation pipeline', 'Correlation heatmaps & distribution plots', 'Categorical encoding (One-Hot, Target Encoding)']
+        },
+        days: [
+          'Pandas Core: Series, DataFrames, multi-indexing, indexing with .loc/.iloc & memory optimization',
+          'Data Cleaning: Handling nulls (imputation vs drop), duplicate detection & regex text normalization',
+          'Data Transformations: groupby, pivot_table, melt, merge, concatenate & apply lambda pipelines',
+          'Statistical Visualization: Matplotlib subplots, Seaborn distribution plots, pairplots & correlation heatmaps',
+          'Feature Engineering: Log transformations, outlier detection (IQR, Z-Score), One-Hot vs Label Encoding & Scaling (StandardScaler/MinMax)',
+          'Milestone Lab: Perform complete EDA on Kaggle dataset and generate comprehensive analytical report'
+        ],
+        leetcode: 'https://www.kaggle.com/learn/pandas'
+      },
+      {
+        title: 'Supervised & Unsupervised Machine Learning with Scikit-Learn',
+        milestone: 'Train regression, classification, and clustering models with rigorous cross-validation and hyperparameter tuning',
+        project: {
+          title: 'Customer Churn & Default Risk Prediction System',
+          description: 'End-to-end ML model classifying loan defaults using Random Forests, XGBoost, and hyperparameter optimization via GridSearchCV.',
+          tech_stack: ['Scikit-Learn', 'XGBoost', 'LightGBM', 'Imbalanced-Learn'],
+          deliverables: ['Stratified K-Fold cross validation pipeline', 'ROC-AUC, Precision-Recall & Confusion Matrix evaluation', 'Model serialization with Joblib']
+        },
+        days: [
+          'Classical ML Algorithms: Linear Regression, Logistic Regression (Odds ratio & Sigmoid), Decision Trees & Overfitting',
+          'Ensemble Methods: Random Forests (Bagging), Gradient Boosting (XGBoost, LightGBM) & feature importance analysis',
+          'Evaluation Metrics: Precision, Recall, F1-Score, ROC-AUC curve & handling imbalanced datasets (SMOTE)',
+          'Hyperparameter Optimization: GridSearchCV vs RandomizedSearchCV, pipeline creation & data leakage prevention',
+          'Unsupervised Learning: K-Means clustering, Elbow method, Silhouette score & PCA dimensionality reduction',
+          'Milestone Lab: Train and evaluate Credit Default Prediction Model with exported Scikit-Learn pipeline'
+        ],
+        leetcode: 'https://www.kaggle.com/learn/intro-to-machine-learning'
+      },
+      {
+        title: 'Deep Learning Foundations with PyTorch & Neural Networks',
+        milestone: 'Construct multi-layer perceptrons from scratch and train deep models using backpropagation in PyTorch',
+        project: {
+          title: 'Computer Vision Image Classification Pipeline (CIFAR-10)',
+          description: 'Convolutional Neural Network (CNN) trained in PyTorch with data augmentation, learning rate scheduling, and GPU acceleration.',
+          tech_stack: ['PyTorch', 'Torchvision', 'CUDA / GPU', 'TensorBoard'],
+          deliverables: ['Custom PyTorch Dataset and DataLoader', 'CNN architecture (Conv2D, BatchNorm, MaxPool, Dropout)', 'Training loop with loss/accuracy logging']
+        },
+        days: [
+          'Neural Network Foundations: Neurons, weights, biases, activation functions (ReLU, GELU, Softmax) & loss functions',
+          'PyTorch Tensors: Autograd (automatic differentiation), computational graphs & tensor GPU memory transfers',
+          'Building Custom Models: torch.nn.Module, forward pass, optimizers (AdamW, SGD with momentum) & learning rate schedulers',
+          'Convolutional Neural Networks (CNNs): Kernels, strides, padding, feature map extraction & transfer learning (ResNet)',
+          'Regularization Techniques: Dropout, Batch Normalization, Weight Decay (L2) & Data Augmentation',
+          'Milestone Lab: Train CIFAR-10 image classifier in PyTorch reaching >85% validation accuracy'
+        ],
+        leetcode: 'https://pytorch.org/tutorials/'
+      },
+      {
+        title: 'Natural Language Processing (NLP) & Transformer Architectures',
+        milestone: 'Master word embeddings, self-attention mechanisms, and HuggingFace Transformers',
+        project: {
+          title: 'Financial Sentiment & News Entity Extraction System',
+          description: 'NLP application fine-tuning a BERT transformer model to classify financial earnings sentiment with named entity recognition.',
+          tech_stack: ['HuggingFace Transformers', 'BERT / RoBERTa', 'Tokenizers', 'PyTorch'],
+          deliverables: ['Subword tokenization pipeline', 'Fine-tuned HuggingFace Transformer model', 'Confusion matrix and F1 score evaluation']
+        },
+        days: [
+          'NLP Foundations: Tokenization (WordPiece, BPE), TF-IDF, Word2Vec embeddings & cosine similarity',
+          'Recurrent Architectures vs Transformers: Limitations of RNN/LSTM & the "Attention Is All You Need" revolution',
+          'Self-Attention Mechanism: Query, Key, Value matrix math, Scaled Dot-Product Attention & Multi-Head Attention',
+          'Transformer Architecture: Positional Encoding, Encoder-Decoder stacks, BERT (Masked LM) vs GPT (Autoregressive)',
+          'HuggingFace Ecosystem: AutoTokenizer, AutoModelForSequenceClassification & Trainer API fine-tuning',
+          'Milestone Lab: Fine-tune BERT model for domain sentiment analysis and export model weights'
+        ],
+        leetcode: 'https://huggingface.co/learn'
+      },
+      {
+        title: 'Generative AI, Large Language Models (LLMs) & RAG Systems',
+        milestone: 'Build production Retrieval-Augmented Generation (RAG) applications with Vector Databases and FastAPI',
+        project: {
+          title: 'Enterprise Technical Documentation AI Assistant (RAG Pipeline)',
+          description: 'Full-stack AI assistant that indexes PDF manuals into a Vector Database and generates grounded responses using LangChain and FastAPI.',
+          tech_stack: ['FastAPI', 'LangChain / LlamaIndex', 'ChromaDB / Qdrant', 'OpenAI / Gemini API'],
+          deliverables: ['Chunking & embedding pipeline', 'Vector similarity search with metadata filtering', 'Grounded conversational memory API']
+        },
+        days: [
+          'LLM Fundamentals: Prompt Engineering, few-shot reasoning, temperature & hallucination mitigation strategies',
+          'Vector Databases: Dense embeddings, cosine distance, HNSW indexing & ChromaDB / Pinecone / Qdrant setup',
+          'Retrieval-Augmented Generation (RAG): Document parsing, recursive character chunking & semantic retrieval',
+          'LangChain & LlamaIndex: Chains, prompt templates, conversational memory & agentic tool-use loops',
+          'Production Deployment: Wrapping AI pipelines in FastAPI with streaming responses (Server-Sent Events) & Docker',
+          'Milestone Lab: Build and test end-to-end RAG AI Assistant indexing custom technical documentation'
+        ],
+        leetcode: 'https://python.langchain.com/docs/get_started/introduction'
+      }
+    ];
+  }
+
+  // 3. CLOUD, DEVOPS & KUBERNETES
+  else if (/devops|cloud|kubernetes|docker|aws|terraform|ci\/?cd|linux|sysadmin/i.test(lowerSkill)) {
+    defaultDocs = 'https://docs.aws.amazon.com/';
+    defaultPractice = 'https://github.com/bregman-arie/devops-exercises';
+    domainCatalog = [
+      {
+        title: 'Linux Systems Administration, Shell Scripting & Networking',
+        milestone: 'Master Linux kernel concepts, process management, bash automation, and networking commands',
+        project: {
+          title: 'Automated Linux Server Health & Security Hardening Script',
+          description: 'Bash utility auditing user permissions, monitoring CPU/RAM thresholds, rotating logs, and configuring firewall rules.',
+          tech_stack: ['Bash / Shell Scripting', 'Linux (Ubuntu/Debian)', 'Systemd', 'UFW / Iptables'],
+          deliverables: ['Automated cron backup script', 'Systemd daemon service configuration', 'Firewall and SSH security hardening']
+        },
+        days: [
+          'Linux Architecture: Kernel, Filesystem Hierarchy (FHS), permissions (chmod, chown, SUID/SGID) & environment variables',
+          'Process Management: PID, signals (SIGTERM, SIGKILL), top/htop, ps, systemd unit files & journalctl logging',
+          'Shell Scripting (Bash): Variables, conditional logic, loops, pipes (|), redirects (>, >>), awk, sed & grep regex',
+          'Linux Networking: IP addressing, subnetting, netstat/ss, curl, iptables, DNS resolution (/etc/resolv.conf) & SSH key security',
+          'Automation & Scheduling: Crontab syntax, systemd timers, logrotate configuration & disk space auditing (df, du)',
+          'Milestone Lab: Write complete Server Hardening Bash Script and test on an isolated Linux VM'
+        ],
+        leetcode: 'https://github.com/mikeroyal/Linux-Guide'
+      },
+      {
+        title: 'Containerization with Docker & Multi-Stage Production Builds',
+        milestone: 'Package microservices into minimal, secure Docker container images with Docker Compose',
+        project: {
+          title: 'Multi-Service Containerized Application Architecture',
+          description: 'Production container setup running a React frontend, Node.js API, PostgreSQL database, and Redis cache with health checks.',
+          tech_stack: ['Docker', 'Dockerfile Multi-Stage', 'Docker Compose', 'Alpine Linux'],
+          deliverables: ['Multi-stage Dockerfile (<50MB image size)', 'Docker Compose service orchestration', 'Persistent named volume storage']
+        },
+        days: [
+          'Container Fundamentals: Namespaces (PID, Mount, Net), cgroups & Containers vs Virtual Machines',
+          'Dockerfile Optimization: Layer caching, multi-stage builds, non-root user security & minimizing image size',
+          'Docker Storage & Networking: Bridge networks, host networks, bind mounts vs named volumes',
+          'Docker Compose: Orchestrating multi-container services, environment variable files, depends_on & health checks',
+          'Container Security: Scanning images for vulnerabilities (Trivy), avoiding root execution & secret management',
+          'Milestone Lab: Dockerize a full-stack web application with multi-stage build and Docker Compose orchestration'
+        ],
+        leetcode: 'https://docs.docker.com/get-started/'
+      },
+      {
+        title: 'Cloud Computing Infrastructure on AWS (EC2, S3, RDS, VPC)',
+        milestone: 'Architect secure cloud environments with custom VPCs, compute instances, and managed databases',
+        project: {
+          title: 'High-Availability Multi-AZ Cloud Infrastructure on AWS',
+          description: 'AWS architecture featuring public/private subnets, Application Load Balancer, Auto Scaling EC2 instances, and Multi-AZ RDS.',
+          tech_stack: ['AWS VPC', 'AWS EC2 & ALB', 'AWS RDS PostgreSQL', 'AWS S3 & CloudFront'],
+          deliverables: ['Custom VPC with NAT Gateway and Security Groups', 'Application Load Balancer health checking', 'S3 Static asset hosting with CloudFront CDN']
+        },
+        days: [
+          'AWS Fundamentals: Regions, Availability Zones, IAM policies, roles, and least-privilege access principles',
+          'Networking (VPC): Public & Private Subnets, Internet Gateways, Route Tables, NAT Gateways & Security Groups',
+          'Compute (EC2): Instance families, AMIs, Key Pairs, User Data bootstrap scripts & Auto Scaling Groups',
+          'Storage & CDN (S3 / CloudFront): S3 buckets, lifecycle policies, bucket policies & CloudFront edge caching',
+          'Managed Databases (RDS): Multi-AZ deployments, Read Replicas, automated backups & parameter groups',
+          'Milestone Lab: Deploy high-availability web cluster on AWS with ALB and secure private RDS database'
+        ],
+        leetcode: 'https://aws.amazon.com/getting-started/'
+      },
+      {
+        title: 'Infrastructure as Code (IaC) with Terraform',
+        milestone: 'Provision repeatable cloud infrastructure using Terraform modules and remote state management',
+        project: {
+          title: 'Modular Terraform Infrastructure for AWS Multi-Environment (Dev/Prod)',
+          description: 'Terraform repository declaring VPCs, security groups, and EKS clusters with remote S3 state backend and state locking.',
+          tech_stack: ['Terraform (HCL)', 'AWS Provider', 'Remote State (S3 + DynamoDB)', 'TFLint'],
+          deliverables: ['Reusable Terraform child modules', 'Remote state locking with DynamoDB', 'Automated terraform plan/apply workflow']
+        },
+        days: [
+          'IaC Principles: Declarative vs Imperative, state drift, idempotency & Terraform architecture',
+          'HCL Syntax: Providers, resources, data sources, input variables, output values & local values',
+          'Terraform State: terraform.tfstate, remote backends (S3 + DynamoDB state locking) & state inspection',
+          'Terraform Modules: Writing reusable infrastructure modules with variable validation and outputs',
+          'Terraform Workspaces & Environments: Structuring dev vs staging vs production infrastructure safely',
+          'Milestone Lab: Provision a complete AWS VPC and compute cluster using modular Terraform code'
+        ],
+        leetcode: 'https://developer.hashicorp.com/terraform/tutorials'
+      },
+      {
+        title: 'Kubernetes Container Orchestration (K8s) & Cluster Management',
+        milestone: 'Deploy and manage containerized workloads with Pods, Deployments, Services, and Ingress',
+        project: {
+          title: 'Resilient Microservices Deployment on Kubernetes (EKS/Minikube)',
+          description: 'Kubernetes cluster deployment with Rolling Updates, ConfigMaps, Secrets, Horizontal Pod Autoscaling (HPA), and Ingress.',
+          tech_stack: ['Kubernetes (K8s)', 'kubectl', 'Minikube / Kind', 'Helm Charts'],
+          deliverables: ['Deployment manifests with liveness/readiness probes', 'ClusterIP and Ingress routing rules', 'Horizontal Pod Autoscaler (HPA) CPU-based autoscaling']
+        },
+        days: [
+          'Kubernetes Architecture: Control Plane (API Server, etcd, Scheduler, Controller Manager) vs Worker Nodes (kubelet, kube-proxy)',
+          'Core Workloads: Pods, ReplicaSets, Deployments, Rolling Updates, Rollbacks & Resource Requests/Limits',
+          'Networking & Services: ClusterIP, NodePort, LoadBalancer & Ingress Controllers (Nginx Ingress)',
+          'Configuration & Secrets: ConfigMaps, Secrets, downward API & mounting environment variables into containers',
+          'Autoscaling & Packaging: Horizontal Pod Autoscaler (HPA), Metrics Server & Helm package manager charts',
+          'Milestone Lab: Deploy a containerized microservice on Kubernetes with Ingress routing and HPA scaling'
+        ],
+        leetcode: 'https://kubernetes.io/docs/tutorials/'
+      },
+      {
+        title: 'CI/CD Pipelines, GitOps & Production Observability',
+        milestone: 'Build automated continuous integration pipelines with GitHub Actions and Prometheus/Grafana monitoring',
+        project: {
+          title: 'Zero-Downtime Automated CI/CD Pipeline & Monitoring Suite',
+          description: 'Automated GitHub Actions workflow building, testing, scanning, pushing Docker images, and deploying with Prometheus metrics.',
+          tech_stack: ['GitHub Actions', 'Docker Hub / ECR', 'Prometheus', 'Grafana'],
+          deliverables: ['Automated PR test & lint workflow', 'Automated container build and security scan', 'Prometheus / Grafana latency and error monitoring dashboard']
+        },
+        days: [
+          'CI/CD Foundations: Continuous Integration vs Delivery vs Deployment, Pipeline triggers & runners',
+          'GitHub Actions: Workflows, jobs, steps, action marketplace, secrets management & caching dependencies',
+          'Continuous Deployment: Automated Docker build, image tagging with Git SHA & deployment webhooks',
+          'GitOps with ArgoCD: Declarative cluster synchronization, automated reconciliation & drift detection',
+          'Observability (Prometheus & Grafana): Metrics collection, PromQL queries, alerting rules & Grafana dashboards',
+          'Milestone Lab: Build end-to-end GitHub Actions pipeline deploying to Kubernetes with Grafana monitoring'
+        ],
+        leetcode: 'https://docs.github.com/en/actions'
+      }
+    ];
+  }
+
+  // DEFAULT / DSA / JAVA / SYSTEM PROGRAMMING
+  else {
+    domainCatalog = dsaCurriculumCatalog;
+    defaultDocs = 'https://docs.oracle.com/en/java/';
+    defaultPractice = 'https://leetcode.com/problemset/all/';
+  }
+
+  // Generate week-by-week curriculum
   for (let w = 1; w <= totalWeeks; w++) {
-    // Pick curriculum module from catalog, repeating cyclically or scaling gracefully for multi-month roadmaps
-    const moduleIndex = (w - 1) % dsaCurriculumCatalog.length;
-    const cat = dsaCurriculumCatalog[moduleIndex];
+    const moduleIndex = (w - 1) % domainCatalog.length;
+    const cat = domainCatalog[moduleIndex];
 
     const weekTitle = `Week ${w}: ${cat.title}`;
     const milestone = cat.milestone;
@@ -1780,22 +2159,22 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
       // Days 2 to 6 get NO links to keep daily tasks clean and focused without repetitive clutter.
       let links = [];
       if (d === 1) {
-        const queryTerm = encodeURIComponent(`${skill} ${cat.title} tutorial`);
+        const queryTerm = encodeURIComponent(`${skill} ${cat.title} tutorial playlist`);
         links = [
           {
-            title: `${skill} Video Masterclass (Week ${w})`,
+            title: `${skill} Video Masterclass & Playlist (Week ${w})`,
             type: 'video',
             url: `https://www.youtube.com/results?search_query=${queryTerm}`
           },
           {
             title: `${skill} Official Docs & Architectural Guide`,
             type: 'article',
-            url: `https://www.google.com/search?q=${encodeURIComponent(skill + ' ' + cat.title + ' documentation guide')}`
+            url: defaultDocs || `https://www.google.com/search?q=${encodeURIComponent(skill + ' ' + cat.title + ' documentation guide')}`
           },
           {
-            title: `Curated LeetCode Practice Challenge`,
+            title: `Curated Practice Challenge & Labs`,
             type: 'practice',
-            url: cat.leetcode || 'https://leetcode.com/problemset/all/'
+            url: cat.leetcode || defaultPractice
           }
         ];
       }
@@ -1824,6 +2203,7 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
 
   return weeks;
 }
+
 
 /**
  * 7. AI Subtask Breakdown for Goals
