@@ -17,6 +17,15 @@ function generateToken(user) {
 }
 
 function formatUserResponse(user) {
+  let skillsInventory = [];
+  if (user.skills_inventory) {
+    try {
+      skillsInventory = typeof user.skills_inventory === 'string' ? JSON.parse(user.skills_inventory) : user.skills_inventory;
+    } catch {
+      skillsInventory = [];
+    }
+  }
+
   return {
     id: user.id,
     email: user.email,
@@ -26,11 +35,14 @@ function formatUserResponse(user) {
     target_role: user.target_role || 'Software Engineer',
     dream_companies: user.dream_companies || 'Google, Microsoft',
     current_skills: user.current_skills || '',
+    skills_inventory: skillsInventory,
     daily_study_hours: user.daily_study_hours || 2,
     available_study_minutes: user.available_study_minutes || (user.daily_study_hours ? user.daily_study_hours * 60 : 120),
     university_name: user.university_name || '',
     branch: user.branch || '',
     phone_number: user.phone_number || '',
+    email_notifications_enabled: user.email_notifications_enabled !== false,
+    email_consent_granted_at: user.email_consent_granted_at || null,
     is_onboarded: !!user.is_onboarded
   };
 }
@@ -394,5 +406,76 @@ export async function updateProfile(req, res) {
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update profile: ' + err.message });
+  }
+}
+
+/**
+ * Get User's Real Verified Skills Inventory
+ */
+export async function getUserSkills(req, res) {
+  try {
+    const userId = req.user.id;
+    const result = await query('SELECT current_skills, skills_inventory FROM users WHERE id = $1', [userId]);
+    const row = result.rows[0] || {};
+    
+    let inventory = [];
+    if (row.skills_inventory) {
+      try {
+        inventory = typeof row.skills_inventory === 'string' ? JSON.parse(row.skills_inventory) : row.skills_inventory;
+      } catch {
+        inventory = [];
+      }
+    } else if (row.current_skills) {
+      // Auto-migrate comma-separated skills
+      inventory = row.current_skills.split(',').map((s, idx) => {
+        const trimmed = s.trim();
+        let cat = 'languages';
+        const lower = trimmed.toLowerCase();
+        if (/react|node|express|fastapi|django|flask|spring|tailwind|vue|angular/i.test(lower)) cat = 'frameworks';
+        else if (/postgres|mongo|redis|mysql|sqlite|cassandra/i.test(lower)) cat = 'databases';
+        else if (/docker|aws|git|linux|kubernetes|postman|gcp|azure/i.test(lower)) cat = 'tools';
+        else if (/data structures|algorithms|dsa|system design|os|dbms/i.test(lower)) cat = 'core';
+
+        return {
+          id: `sk-${idx}-${Date.now()}`,
+          name: trimmed,
+          category: cat,
+          level: 'intermediate'
+        };
+      });
+    }
+
+    return res.json({ skills: inventory });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch user skills: ' + err.message });
+  }
+}
+
+/**
+ * Save User's Real Verified Skills Inventory
+ */
+export async function updateUserSkills(req, res) {
+  try {
+    const userId = req.user.id;
+    const { skills } = req.body;
+
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ error: 'Skills must be an array of skill objects' });
+    }
+
+    const commaSkills = skills.map(s => s.name || s).join(', ');
+    const jsonInventory = JSON.stringify(skills);
+
+    await query(
+      `UPDATE users SET current_skills = $1, skills_inventory = $2 WHERE id = $3`,
+      [commaSkills, jsonInventory, userId]
+    );
+
+    return res.json({
+      message: 'Skills updated successfully',
+      skills
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update skills: ' + err.message });
   }
 }

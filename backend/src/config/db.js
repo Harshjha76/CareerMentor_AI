@@ -212,6 +212,30 @@ export async function initDB() {
       target_date DATE,
       progress_percentage INTEGER DEFAULT 0,
       status VARCHAR(50) DEFAULT 'active'
+    );`,
+
+    // 9. Email Logs (Audit & Delivery History)
+    `CREATE TABLE IF NOT EXISTS email_logs (
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL,
+      email_to VARCHAR(255) NOT NULL,
+      email_type VARCHAR(50) NOT NULL,
+      subject TEXT NOT NULL,
+      status VARCHAR(50) DEFAULT 'delivered',
+      provider VARCHAR(50) DEFAULT 'system',
+      preview_url TEXT,
+      sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 10. Email Preferences & Consent
+    `CREATE TABLE IF NOT EXISTS email_preferences (
+      user_id VARCHAR(64) PRIMARY KEY,
+      consent_granted BOOLEAN DEFAULT TRUE,
+      welcome_enabled BOOLEAN DEFAULT TRUE,
+      goal_enabled BOOLEAN DEFAULT TRUE,
+      reminder_enabled BOOLEAN DEFAULT TRUE,
+      progress_enabled BOOLEAN DEFAULT TRUE,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -230,7 +254,8 @@ export async function initDB() {
     'ALTER TABLE users ADD COLUMN phone_number VARCHAR(50);',
     'ALTER TABLE users ADD COLUMN available_study_minutes INTEGER DEFAULT 120;',
     'ALTER TABLE users ADD COLUMN email_notifications_enabled BOOLEAN DEFAULT TRUE;',
-    'ALTER TABLE users ADD COLUMN email_consent_granted_at TIMESTAMP;'
+    'ALTER TABLE users ADD COLUMN email_consent_granted_at TIMESTAMP;',
+    'ALTER TABLE users ADD COLUMN skills_inventory TEXT;'
   ];
   for (const alterSql of alterColumns) {
     try {

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDB } from './config/db.js';
+import { startEmailScheduler } from './services/emailScheduler.js';
 import apiRouter from './routes/api.js';
 
 dotenv.config();
@@ -68,6 +69,9 @@ app.use((err, req, res, next) => {
 // Initialize database and start server
 initDB()
   .then(() => {
+    // Start background autonomous email scheduler
+    startEmailScheduler();
+
     app.listen(PORT, () => {
       console.log(`🚀 CareerPilot AI Server running on port ${PORT}`);
       console.log(`🔗 Healthcheck available at: http://localhost:${PORT}/health`);

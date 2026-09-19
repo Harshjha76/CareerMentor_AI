@@ -60,6 +60,59 @@ export async function createGoal(req, res) {
       [goalId, userId, goal_description, formattedDate, 0, 'active']
     );
 
+    // Asynchronously dispatch personalized AI Goal Kickoff Email to student's email
+    (async () => {
+      try {
+        const { sendAutomatedEmail } = await import('../services/emailService.js');
+        const { generateGoalCreatedEmail } = await import('../services/aiService.js');
+        
+        const goalData = await generateGoalCreatedEmail({
+          userName: req.user.name || 'Candidate',
+          goalDescription: goal_description,
+          targetDate: formattedDate,
+          subtasks: subtaskObjects,
+          targetRole: req.user.target_role || 'Software Engineer',
+          language
+        });
+
+        await sendAutomatedEmail({
+          userId,
+          toEmail: req.user.email,
+          emailType: 'goal',
+          subject: goalData.subject,
+          textContent: goalData.plain_text || goalData.mentor_advice,
+          htmlContent: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 16px; background: #0b1220; color: #f8fafc;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 6px 14px; border-radius: 9999px; font-size: 13px; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.4);">
+                  🎯 NEW CAREER GOAL ACTIVATED
+                </span>
+                <h1 style="color: #ffffff; margin: 16px 0 6px 0; font-size: 20px;">
+                  ${goalData.headline || `Goal Locked In: ${goal_description}`}
+                </h1>
+                <p style="color: #94a3b8; font-size: 13.5px; margin: 0;">Target Completion Date: <strong>${formattedDate}</strong></p>
+              </div>
+              <div style="background: #111c30; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="color: #60a5fa; font-size: 14px; margin: 0 0 8px 0;">💡 Mentor Advice</h3>
+                <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0 0 14px 0;">${goalData.mentor_advice}</p>
+                <h4 style="color: #94a3b8; font-size: 12px; text-transform: uppercase; margin: 0 0 8px 0;">Actionable Subtasks:</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #e2e8f0; font-size: 13px; line-height: 1.7;">
+                  ${(goalData.action_items || subtaskObjects.map(s => s.title)).map(t => `<li>${t}</li>`).join('')}
+                </ul>
+              </div>
+              <div style="text-align: center;">
+                <a href="http://localhost:5173/goals" style="display: inline-block; background: #3b82f6; color: #ffffff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px;">
+                  Open Goal Tracker 🚀
+                </a>
+              </div>
+            </div>
+          `
+        });
+      } catch (e) {
+        console.warn('Notice: Background goal email dispatch skipped:', e.message);
+      }
+    })();
+
     return res.json({
       message: 'Goal created successfully',
       goal: {

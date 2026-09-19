@@ -175,6 +175,43 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
         linkedin: 'https://www.linkedin.com/jobs/search/?keywords=browserstack%20devops%20intern'
       },
       description: 'Scale cloud device farms and maintain automated virtualization infrastructure across global data centers.'
+    },
+    {
+      id: 'intern-09',
+      company: 'Goldman Sachs',
+      company_tier: 'Tier-1 Global Investment Bank',
+      role: 'Java Backend & Enterprise Systems Engineering Intern',
+      domain: 'Java Backend & Distributed Systems',
+      location: 'Bangalore / Hyderabad',
+      work_mode: 'Hybrid',
+      stipend: '₹1,05,000 / month',
+      duration: '2 - 6 Months',
+      experience_level: 'Pre-final / Final Year',
+      required_skills: ['Java', 'Spring Boot', 'Data Structures & Algorithms', 'SQL', 'PostgreSQL', 'Multithreading', 'Git'],
+      apply_urls: {
+        careers: 'https://www.goldmansachs.com/careers/students/programs/india-summer-analyst.html',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=goldman%20sachs%20engineering%20intern',
+        internshala: 'https://internshala.com/internships/java-development-internship'
+      },
+      description: 'Engineer high-throughput transactional order execution and portfolio management microservices with ultra-low latency Java.'
+    },
+    {
+      id: 'intern-10',
+      company: 'Oracle',
+      company_tier: 'Tier-1 Enterprise Cloud Leader',
+      role: 'Java Cloud Infrastructure & Database Intern',
+      domain: 'Java Cloud & Enterprise',
+      location: 'Bangalore / Noida / Hyderabad',
+      work_mode: 'Hybrid',
+      stipend: '₹85,000 / month',
+      duration: '6 Months',
+      experience_level: 'Undergraduate / Postgraduate',
+      required_skills: ['Java', 'SQL', 'PostgreSQL', 'Docker', 'REST APIs', 'Data Structures & Algorithms'],
+      apply_urls: {
+        careers: 'https://www.oracle.com/corporate/careers/students-grads/',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=oracle%20software%20engineer%20intern'
+      },
+      description: 'Develop next-generation Autonomous Database tooling, Java cloud microservices, and distributed clustering components.'
     }
   ];
 

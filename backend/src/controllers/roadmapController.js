@@ -65,6 +65,44 @@ export async function createRoadmap(req, res) {
       }
     }
 
+    // Asynchronously dispatch personalized AI Roadmap Kickoff Email to student's email
+    (async () => {
+      try {
+        const { sendAutomatedEmail } = await import('../services/emailService.js');
+        await sendAutomatedEmail({
+          userId,
+          toEmail: req.user.email,
+          emailType: 'goal',
+          subject: `🗺️ New Study Roadmap Activated: ${skill_name} (${weeks} Weeks)`,
+          textContent: `Hi ${req.user.name},\n\nYour new comprehensive study roadmap for ${skill_name} is active (${weeks} weeks, ${hours}h/day).\n\nStart with Week 1 Day 1 foundational tasks in your roadmap to maintain your streak!\n\n- CareerMentor AI Agent`,
+          htmlContent: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 16px; background: #0b1220; color: #f8fafc;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <span style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 6px 14px; border-radius: 9999px; font-size: 13px; font-weight: 700; border: 1px solid rgba(59, 130, 246, 0.4);">
+                  🗺️ STUDY ROADMAP ACTIVATED
+                </span>
+                <h1 style="color: #ffffff; margin: 16px 0 6px 0; font-size: 20px;">
+                  ${skill_name} Mastery Roadmap
+                </h1>
+                <p style="color: #94a3b8; font-size: 13.5px; margin: 0;">Plan: <strong>${weeks} Weeks</strong> at <strong>${hours} hours/day</strong></p>
+              </div>
+              <div style="background: #111c30; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="color: #60a5fa; font-size: 14px; margin: 0 0 8px 0;">🎯 Week 1 Focus:</h3>
+                <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0;">${curriculum[0]?.title || 'Core Fundamentals & Architecture'}</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="http://localhost:5173/roadmap" style="display: inline-block; background: #3b82f6; color: #ffffff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px;">
+                  View Full Study Roadmap 🚀
+                </a>
+              </div>
+            </div>
+          `
+        });
+      } catch (e) {
+        console.warn('Notice: Background roadmap email kickoff skipped:', e.message);
+      }
+    })();
+
     return res.json({
       message: 'Roadmap generated successfully',
       roadmapId,

@@ -308,6 +308,72 @@ export const api = {
       }).then(handleResponse)
   },
 
+  // Real Verified Skills Inventory
+  skills: {
+    get: () =>
+      fetch(`${API_BASE}/user/skills`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    save: (skills) =>
+      fetch(`${API_BASE}/user/skills`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ skills })
+      }).then(handleResponse)
+  },
+
+  // Complete Autonomous AI Email Automation System
+  email: {
+    getPreferences: () =>
+      fetch(`${API_BASE}/email/preferences`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    updatePreferences: (data) =>
+      fetch(`${API_BASE}/email/preferences`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      }).then(handleResponse),
+
+    grantConsent: () =>
+      fetch(`${API_BASE}/email/grant-consent`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    getHistory: () =>
+      fetch(`${API_BASE}/email/history`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    triggerWelcome: () =>
+      fetch(`${API_BASE}/email/trigger-welcome`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    triggerGoal: (data = {}) =>
+      fetch(`${API_BASE}/email/trigger-goal`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+      }).then(handleResponse),
+
+    triggerInactivity: () =>
+      fetch(`${API_BASE}/email/trigger-inactivity`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    triggerScheduler: () =>
+      fetch(`${API_BASE}/email/trigger-scheduler`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse)
+  },
+
   // Admin Analytics
   admin: {
     getStats: () =>

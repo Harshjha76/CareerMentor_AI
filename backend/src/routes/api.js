@@ -8,7 +8,9 @@ import {
   demoLogin,
   saveOnboarding,
   getMe,
-  updateProfile
+  updateProfile,
+  getUserSkills,
+  updateUserSkills
 } from '../controllers/authController.js';
 
 import {
@@ -58,7 +60,14 @@ import {
   getReminders,
   sendInconsistencyNudge,
   getInconsistencyStatus,
-  updateEmailPermission
+  updateEmailPermission,
+  getEmailPreferences,
+  updateEmailPreferences,
+  grantEmailConsent,
+  getEmailHistory,
+  sendWelcomeEmailManual,
+  sendGoalEmailManual,
+  triggerSchedulerNow
 } from '../controllers/reminderController.js';
 
 import {
@@ -73,13 +82,15 @@ import {
 
 const router = express.Router();
 
-// 1. Authentication
+// 1. Authentication & Profile
 router.post('/auth/email', emailLogin);
 router.post('/auth/google', googleLogin);
 router.post('/auth/demo', demoLogin);
 router.post('/auth/onboarding', authenticateToken, saveOnboarding);
 router.get('/auth/me', authenticateToken, getMe);
 router.put('/user/profile', authenticateToken, updateProfile);
+router.get('/user/skills', authenticateToken, getUserSkills);
+router.put('/user/skills', authenticateToken, updateUserSkills);
 
 // 2. Resume Analyzer & Deep Information Extraction
 router.post('/resume/analyze', authenticateToken, uploadResume.single('resume'), uploadAndAnalyzeResume);
@@ -118,7 +129,17 @@ router.post('/goals', authenticateToken, createGoal);
 router.put('/goals/:goalId', authenticateToken, updateGoalProgress);
 router.delete('/goals/:goalId', authenticateToken, deleteGoal);
 
-// 7. Reminders & Autonomous AI Accountability Inconsistency Guardian
+// 7. Complete AI Email Automation System & Accountability Guardian
+router.get('/email/preferences', authenticateToken, getEmailPreferences);
+router.put('/email/preferences', authenticateToken, updateEmailPreferences);
+router.post('/email/grant-consent', authenticateToken, grantEmailConsent);
+router.get('/email/history', authenticateToken, getEmailHistory);
+router.post('/email/trigger-welcome', authenticateToken, sendWelcomeEmailManual);
+router.post('/email/trigger-goal', authenticateToken, sendGoalEmailManual);
+router.post('/email/trigger-inactivity', authenticateToken, sendInconsistencyNudge);
+router.post('/email/trigger-scheduler', authenticateToken, triggerSchedulerNow);
+
+// Legacy / Compatibility Reminders endpoints
 router.post('/reminders/test', authenticateToken, sendTestReminder);
 router.post('/reminders/checkin-2h', authenticateToken, simulate2HourCheckin);
 router.post('/reminders/inconsistency-nudge', authenticateToken, sendInconsistencyNudge);

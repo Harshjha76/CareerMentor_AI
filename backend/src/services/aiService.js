@@ -2118,3 +2118,101 @@ Return ONLY a valid JSON object without markdown fences, formatted as:
   };
 }
 
+/**
+ * Generate AI Welcome & Onboarding Greeting Email
+ */
+export async function generateWelcomeEmail({ userName, targetRole, dreamCompanies, skills, language = 'en' }) {
+  const systemPrompt = `You are the Lead Career Mentor AI. Write a warm, highly motivating welcome email to a new candidate.
+Rules:
+1. NEVER use raw asterisk (*) characters anywhere in the subject or body.
+2. Tone: Inspiring, professional, senior engineering mentor.
+3. Reference their target role (${targetRole || 'Software Engineer'}) and dream companies (${dreamCompanies || 'Top Tech Companies'}).
+4. Offer 3 clear first steps (Upload Resume for ATS Score, Generate Personalized Roadmap, Set Weekly Study Goal).
+Return ONLY a JSON object:
+{
+  "subject": "Welcome to CareerMentor AI - Your Personal Roadmap to [Role]",
+  "greeting": "Hi [Name],",
+  "intro": "Paragraph...",
+  "next_steps": ["Step 1", "Step 2", "Step 3"],
+  "closing": "Let's build your dream tech career together.",
+  "plain_text": "Full plain text email..."
+}`;
+
+  const userPrompt = `Candidate Name: ${userName}\nTarget Role: ${targetRole}\nDream Companies: ${dreamCompanies}\nKnown Skills: ${Array.isArray(skills) ? skills.join(', ') : skills}`;
+
+  const aiText = await callGemini(systemPrompt, userPrompt, language);
+  if (aiText) {
+    try {
+      const clean = aiText.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      return parsed;
+    } catch {
+      // fallback
+    }
+  }
+
+  return {
+    subject: `Welcome to CareerMentor AI - Let's Land Your ${targetRole || 'Software Engineer'} Role!`,
+    greeting: `Hello ${userName || 'Future Engineer'},`,
+    intro: `Welcome to CareerMentor AI! I am your 24/7 autonomous career mentor, designed to guide you step-by-step from your current skills to top tier engineering roles at companies like ${dreamCompanies || 'Google, Microsoft, and leading tech innovators'}.`,
+    next_steps: [
+      `Complete your Knowledge Inventory in What I Know to benchmark your real skills.`,
+      `Generate your customized study roadmap with high-yield resources.`,
+      `Set your first 30-day milestone in the Goal Tracker.`
+    ],
+    closing: `Consistency is the biggest differentiator in tech hiring. Let's make every study session count.`,
+    plain_text: `Hello ${userName || 'Future Engineer'},\n\nWelcome to CareerMentor AI! I am your 24/7 autonomous career mentor.\n\nHere are your 3 first steps:\n1. Complete your Knowledge Inventory in What I Know.\n2. Generate your customized study roadmap.\n3. Set your first milestone in Goal Tracker.\n\nLet's build your dream tech career together!\n- CareerMentor AI Agent`
+  };
+}
+
+/**
+ * Generate AI Goal Created & Roadmap Kickoff Email
+ */
+export async function generateGoalCreatedEmail({ userName, goalDescription, targetDate, subtasks = [], targetRole, language = 'en' }) {
+  const systemPrompt = `You are a senior tech mentor AI. The candidate has just locked in a new study goal.
+Write a motivating goal kickoff email.
+Rules:
+1. NEVER use raw asterisk (*) characters anywhere.
+2. Congratulate them on taking decisive ownership of their career.
+3. Mention target date (${targetDate}) and break down the mental strategy for executing it.
+Return ONLY a JSON object:
+{
+  "subject": "Goal Activated: [Goal Title] - Execution Strategy",
+  "headline": "Your New Career Milestone is Locked In!",
+  "mentor_advice": "Advice paragraph...",
+  "action_items": ["Action 1", "Action 2"],
+  "plain_text": "Plain text version..."
+}`;
+
+  const userPrompt = `Candidate: ${userName}\nGoal: ${goalDescription}\nTarget Date: ${targetDate}\nSubtasks: ${JSON.stringify(subtasks)}`;
+  const aiText = await callGemini(systemPrompt, userPrompt, language);
+  if (aiText) {
+    try {
+      const clean = aiText.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    } catch {}
+  }
+
+  return {
+    subject: `Goal Activated: ${goalDescription.slice(0, 45)}...`,
+    headline: `Your Study Goal is Officially Active!`,
+    mentor_advice: `Setting a clear, time-bound objective is half the battle won. To hit your target by ${targetDate || 'your scheduled deadline'}, focus on daily incremental execution rather than cramming.`,
+    action_items: subtasks.length > 0 
+      ? subtasks.map(s => typeof s === 'string' ? s : s.title) 
+      : [`Complete Day 1 foundational concepts`, `Commit code daily to GitHub`, `Review edge cases`],
+    plain_text: `Hi ${userName},\n\nYour goal "${goalDescription}" is active with target date ${targetDate}.\n\nMentor Advice: Focus on 15-45 minutes of deliberate practice daily. Check off tasks in your planner to maintain your streak!\n\n- CareerMentor AI`
+  };
+}
+
+/**
+ * Generate AI Milestone & Progress Celebration Email
+ */
+export async function generateMilestoneProgressEmail({ userName, targetRole, milestoneName, language = 'en' }) {
+  return {
+    subject: `🔥 Milestone Achieved: ${milestoneName || 'Key Objective Cleared'}!`,
+    headline: `Outstanding Momentum, ${userName}!`,
+    message: `You just cleared a critical milestone in your ${targetRole || 'Software Engineering'} preparation. Every completed task compounds into interview readiness. Keep this velocity going!`,
+    plain_text: `Hi ${userName},\n\nCongratulations on clearing your milestone: "${milestoneName}"!\n\nKeep your study streak burning and keep pushing forward.\n\n- CareerMentor AI Agent`
+  };
+}
+
