@@ -264,6 +264,13 @@ export const api = {
         headers: getAuthHeaders()
       }).then(handleResponse),
 
+    updateEmailPermission: (enabled) =>
+      fetch(`${API_BASE}/reminders/email-permission`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ enabled })
+      }).then(handleResponse),
+
     getAll: () =>
       fetch(`${API_BASE}/reminders`, {
         headers: getAuthHeaders()

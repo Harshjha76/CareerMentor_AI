@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import EmailGuardianCard from '../components/EmailGuardianCard';
 
 export default function InternshipsPage() {
   const [activeTab, setActiveTab] = useState('matched'); // 'matched' | 'interview' | 'accountability'
@@ -647,41 +648,19 @@ export default function InternshipsPage() {
             {/* TAB 3: AI GOAL INCONSISTENCY EMAIL GUARDIAN */}
             {activeTab === 'accountability' && (
               <div className="space-y-6">
-                {/* Guardian Overview Card */}
-                <div className="bg-[#111C30] border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                        <Zap className="w-3.5 h-3.5" /> Autonomous Accountability Engine
-                      </div>
-                      <h2 className="text-2xl font-bold text-white">
-                        AI Goal Inconsistency Email Guardian
-                      </h2>
-                      <p className="text-sm text-slate-400 max-w-2xl">
-                        When you miss milestones or become inactive on your study roadmap, CareerMentor AI automatically crafts a personalized accountability email to your registered inbox to help you rebuild momentum.
-                      </p>
-                    </div>
+                {/* Full Email Guardian Access & Device Sync Card */}
+                <EmailGuardianCard
+                  onEmailSent={() => {
+                    api.reminders.getInconsistencyStatus().then(setConsistencyStatus);
+                  }}
+                />
 
-                    {/* Trigger Button */}
-                    <button
-                      onClick={handleSendNudge}
-                      disabled={sendingNudge}
-                      className="flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 disabled:opacity-50 transition-all shrink-0"
-                    >
-                      {sendingNudge ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" /> Dispatching AI Email...
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="w-4 h-4" /> Send AI Inconsistency Nudge Email Now
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Consistency Health Metrics */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-800">
+                {/* Consistency Health Metrics */}
+                <div className="bg-[#111C30] border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider text-slate-400">
+                    Live Velocity & Accountability Telemetry
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-1">
                       <span className="text-xs text-slate-400">Consistency Health Score</span>
                       <div className="text-2xl font-bold text-emerald-400">
@@ -711,7 +690,7 @@ export default function InternshipsPage() {
                       <div className="text-2xl font-bold text-purple-400 flex items-center gap-1.5">
                         <ShieldCheck className="w-6 h-6 text-purple-400" /> Active
                       </div>
-                      <p className="text-[11px] text-slate-400">Auto check-in every 2 hours</p>
+                      <p className="text-[11px] text-slate-400">Auto check-in &amp; mobile sync</p>
                     </div>
                   </div>
                 </div>

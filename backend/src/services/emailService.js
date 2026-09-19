@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
 let transporter = null;
+let etherealTransporter = null;
 
 // Initialize Nodemailer if SMTP credentials are provided
 if (process.env.SMTP_HOST && process.env.SMTP_USER) {
@@ -13,17 +14,38 @@ if (process.env.SMTP_HOST && process.env.SMTP_USER) {
       pass: process.env.SMTP_PASS,
     },
   });
-  console.log('📧 SMTP Email Transporter configured');
+  console.log('📧 SMTP Email Transporter configured successfully');
+}
+
+async function getEtherealTransporter() {
+  if (!etherealTransporter) {
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      etherealTransporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      console.log('📧 Provisioned free Ethereal Email Transporter for live web previews');
+    } catch (e) {
+      console.warn('⚠️ Could not initialize Ethereal test account:', e.message);
+    }
+  }
+  return etherealTransporter;
 }
 
 /**
- * Send an email reminder in user's chosen language
+ * Send an email reminder / consistency check-in in user's chosen language
  */
 export async function sendEmailReminder({ toEmail, subject, textContent, htmlContent }) {
   console.log(`📨 [Email Service] Preparing email to ${toEmail}`);
   console.log(`   Subject: ${subject}`);
 
-  // 1. Check Resend API
+  // 1. Check Resend API (Free 3,000 emails/month tier)
   if (process.env.RESEND_API_KEY) {
     try {
       const response = await fetch('https://api.resend.com/emails', {
@@ -41,18 +63,22 @@ export async function sendEmailReminder({ toEmail, subject, textContent, htmlCon
         }),
       });
       const data = await response.json();
-      console.log('✅ Email successfully sent via Resend:', data);
-      return { success: true, provider: 'resend', data };
+      if (response.ok) {
+        console.log('✅ Email successfully sent via Resend:', data);
+        return { success: true, provider: 'resend', data };
+      } else {
+        console.warn('⚠️ Resend returned error status:', data);
+      }
     } catch (err) {
       console.warn('⚠️ Resend email dispatch failed:', err.message);
     }
   }
 
-  // 2. Check SMTP Transporter
+  // 2. Check Custom / Gmail SMTP Transporter
   if (transporter) {
     try {
       const info = await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"CareerPilot AI" <noreply@careerpilot.ai>',
+        from: process.env.EMAIL_FROM || '"CareerPilot AI Mentor" <noreply@careermentor-ai.com>',
         to: toEmail,
         subject,
         text: textContent,
@@ -65,13 +91,38 @@ export async function sendEmailReminder({ toEmail, subject, textContent, htmlCon
     }
   }
 
-  // 3. Fallback / Dev mode preview simulation
+  // 3. Fallback: Free Ethereal Email with Live Web Preview URL
+  try {
+    const eth = await getEtherealTransporter();
+    if (eth) {
+      const info = await eth.sendMail({
+        from: '"CareerPilot AI Mentor" <mentor@careerpilot.ai>',
+        to: toEmail,
+        subject,
+        text: textContent,
+        html: htmlContent || `<p>${textContent}</p>`,
+      });
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      console.log('✅ Email dispatched via Ethereal. Preview URL:', previewUrl);
+      return {
+        success: true,
+        provider: 'ethereal',
+        messageId: info.messageId,
+        previewUrl,
+        message: 'Live test email generated! View preview in browser.'
+      };
+    }
+  } catch (err) {
+    console.warn('⚠️ Ethereal email dispatch notice:', err.message);
+  }
+
+  // 4. Dev mode preview simulation
   console.log('💡 [Email Service Simulation] Logged email notification for preview:');
   console.log(`   To: ${toEmail}`);
   console.log(`   Body: ${textContent}`);
   return {
     success: true,
     simulated: true,
-    message: 'Email logged in simulation mode (set RESEND_API_KEY or SMTP_HOST in .env for external delivery).'
+    message: 'Email logged successfully in simulation mode.'
   };
 }

@@ -228,7 +228,9 @@ export async function initDB() {
     'ALTER TABLE users ADD COLUMN university_name VARCHAR(255);',
     'ALTER TABLE users ADD COLUMN branch VARCHAR(255);',
     'ALTER TABLE users ADD COLUMN phone_number VARCHAR(50);',
-    'ALTER TABLE users ADD COLUMN available_study_minutes INTEGER DEFAULT 120;'
+    'ALTER TABLE users ADD COLUMN available_study_minutes INTEGER DEFAULT 120;',
+    'ALTER TABLE users ADD COLUMN email_notifications_enabled BOOLEAN DEFAULT TRUE;',
+    'ALTER TABLE users ADD COLUMN email_consent_granted_at TIMESTAMP;'
   ];
   for (const alterSql of alterColumns) {
     try {

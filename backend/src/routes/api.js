@@ -55,7 +55,8 @@ import {
   simulate2HourCheckin,
   getReminders,
   sendInconsistencyNudge,
-  getInconsistencyStatus
+  getInconsistencyStatus,
+  updateEmailPermission
 } from '../controllers/reminderController.js';
 
 import {
@@ -118,6 +119,7 @@ router.post('/reminders/test', authenticateToken, sendTestReminder);
 router.post('/reminders/checkin-2h', authenticateToken, simulate2HourCheckin);
 router.post('/reminders/inconsistency-nudge', authenticateToken, sendInconsistencyNudge);
 router.get('/reminders/inconsistency-status', authenticateToken, getInconsistencyStatus);
+router.put('/reminders/email-permission', authenticateToken, updateEmailPermission);
 router.get('/reminders', authenticateToken, getReminders);
 
 // 8. Smart Resume-Tailored Internship Matcher & Interview Tackle Engine

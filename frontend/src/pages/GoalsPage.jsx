@@ -13,6 +13,7 @@ import {
   Trophy,
   Loader2
 } from 'lucide-react';
+import EmailGuardianCard from '../components/EmailGuardianCard';
 
 export default function GoalsPage() {
   const { user } = useAuth();
@@ -143,16 +144,6 @@ export default function GoalsPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={handleTestInconsistencyEmail}
-            disabled={sendingNudge}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition-all disabled:opacity-50"
-            title="Sends an autonomous AI nudge email to your inbox if goal milestones are lagging"
-          >
-            {sendingNudge ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            ⚡ Send AI Inconsistency Nudge Email
-          </button>
-
-          <button
             onClick={() => setModalOpen(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#3B82F6]/25 transition-all"
           >
@@ -161,6 +152,9 @@ export default function GoalsPage() {
           </button>
         </div>
       </div>
+
+      {/* Autonomous Email Guardian Sync Card */}
+      <EmailGuardianCard compact={true} />
 
       {/* AI Nudge Dispatched Alert */}
       {nudgeSuccess && (

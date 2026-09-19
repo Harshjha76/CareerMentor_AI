@@ -288,3 +288,34 @@ export async function getReminders(req, res) {
   }
 }
 
+/**
+ * Update user's explicit email consistency permission (Send-only access)
+ */
+export async function updateEmailPermission(req, res) {
+  try {
+    const userId = req.user.id;
+    const { enabled } = req.body;
+    const isEnabled = enabled !== false;
+    const now = new Date().toISOString();
+
+    await query(
+      `UPDATE users 
+       SET email_notifications_enabled = $1, email_consent_granted_at = $2 
+       WHERE id = $3`,
+      [isEnabled, isEnabled ? now : null, userId]
+    );
+
+    return res.json({
+      success: true,
+      email_notifications_enabled: isEnabled,
+      email_consent_granted_at: isEnabled ? now : null,
+      message: isEnabled 
+        ? '✅ Email consistency guardian access granted (Send-only enabled).' 
+        : '⏸️ Email consistency notifications paused.'
+    });
+  } catch (err) {
+    console.error('Error updating email permission:', err);
+    return res.status(500).json({ error: 'Failed to update email permission: ' + err.message });
+  }
+}
+
