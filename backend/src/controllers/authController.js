@@ -169,8 +169,9 @@ export async function googleLogin(req, res) {
       }
     }
 
+    const normalizedEmail = (email || '').toLowerCase().trim();
     // Check if user already exists
-    let existingUser = await query('SELECT * FROM users WHERE email = $1', [email]);
+    let existingUser = await query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     let user;
 
     if (existingUser.rows.length > 0) {
@@ -188,7 +189,7 @@ export async function googleLogin(req, res) {
         `INSERT INTO users (
           id, google_id, email, name, avatar_url, preferred_language, is_onboarded
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [newId, googleId, email, name, picture, 'en', false]
+        [newId, googleId, normalizedEmail, name, picture, 'en', false]
       );
       const created = await query('SELECT * FROM users WHERE id = $1', [newId]);
       user = created.rows[0];

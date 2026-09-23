@@ -2074,7 +2074,7 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
   ];
 
   // 4. CLOUD & DEVOPS (12 Non-Repetitive Weeks)
-  const devopsCloudCatalog = [
+  const devOpsCloudCatalog = [
     {
       title: 'Linux Systems Administration, Shell Scripting & Networking',
       milestone: 'Master Linux kernel concepts, process management, bash automation, and networking commands',

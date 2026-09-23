@@ -1,4 +1,4 @@
-﻿import { query } from '../config/db.js';
+import { query } from '../config/db.js';
 import {
   matchInternshipsForCandidate,
   getInternshipInterviewQuestionsCatalog,
@@ -12,11 +12,22 @@ export async function getRecommendedInternships(req, res) {
   try {
     const user = req.user;
 
+    // Fetch latest user details including skills_inventory
+    let userDetails = user;
+    try {
+      const userRes = await query('SELECT * FROM users WHERE id = $1', [user.id]);
+      if (userRes.rows.length > 0) {
+        userDetails = userRes.rows[0];
+      }
+    } catch (uErr) {
+      console.warn('Notice loading user details:', uErr.message);
+    }
+
     // Look for user's latest parsed resume
     let resumeData = null;
     try {
       const resumeRes = await query(
-        'SELECT ai_feedback FROM resumes WHERE user_id =  ORDER BY uploaded_at DESC LIMIT 1',
+        'SELECT ai_feedback FROM resumes WHERE user_id = $1 ORDER BY uploaded_at DESC LIMIT 1',
         [user.id]
       );
       if (resumeRes.rows.length > 0 && resumeRes.rows[0].ai_feedback) {
@@ -31,7 +42,7 @@ export async function getRecommendedInternships(req, res) {
       console.warn('Notice reading latest resume for matching:', parseErr.message);
     }
 
-    const matches = await matchInternshipsForCandidate(user, resumeData);
+    const matches = await matchInternshipsForCandidate(userDetails, resumeData);
 
     return res.json({
       success: true,

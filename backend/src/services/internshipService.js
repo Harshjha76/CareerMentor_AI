@@ -6,19 +6,54 @@ import { evaluateInternshipAnswerAI } from './aiService.js';
 export async function matchInternshipsForCandidate(userProfile = {}, resumeData = null) {
   const targetRole = (userProfile.target_role || 'Software Engineer').toLowerCase();
   
-  // Extract user skills from resume or profile
+  // Extract user skills from all possible sources: parsed resume, skills_inventory, and profile
   const parsedSkills = [];
-  if (resumeData && resumeData.categorized_skills) {
-    const cs = resumeData.categorized_skills;
-    Object.values(cs).forEach(arr => {
-      if (Array.isArray(arr)) parsedSkills.push(...arr);
-    });
-  } else if (userProfile.current_skills) {
+
+  // 1. From latest parsed resume
+  if (resumeData) {
+    if (resumeData.categorized_skills && typeof resumeData.categorized_skills === 'object') {
+      Object.values(resumeData.categorized_skills).forEach(arr => {
+        if (Array.isArray(arr)) parsedSkills.push(...arr);
+      });
+    }
+    if (Array.isArray(resumeData.detected_skills)) {
+      parsedSkills.push(...resumeData.detected_skills);
+    }
+    if (Array.isArray(resumeData.skills)) {
+      parsedSkills.push(...resumeData.skills);
+    }
+  }
+
+  // 2. From user profile skills_inventory (verified database inventory)
+  if (userProfile.skills_inventory) {
+    let inv = userProfile.skills_inventory;
+    if (typeof inv === 'string') {
+      try { inv = JSON.parse(inv); } catch {}
+    }
+    if (Array.isArray(inv)) {
+      inv.forEach(item => {
+        if (typeof item === 'string') parsedSkills.push(item);
+        else if (item && item.name) parsedSkills.push(item.name);
+      });
+    } else if (inv && typeof inv === 'object') {
+      Object.values(inv).forEach(val => {
+        if (Array.isArray(val)) {
+          val.forEach(item => {
+            if (typeof item === 'string') parsedSkills.push(item);
+            else if (item && item.name) parsedSkills.push(item.name);
+          });
+        }
+      });
+    }
+  }
+
+  // 3. From current_skills field
+  if (userProfile.current_skills && typeof userProfile.current_skills === 'string') {
     parsedSkills.push(...userProfile.current_skills.split(',').map(s => s.trim()));
   }
 
   // Normalize skill set
-  const userSkillSet = new Set(parsedSkills.map(s => s.toLowerCase()));
+  const userSkillSet = new Set(parsedSkills.filter(Boolean).map(s => s.toLowerCase().trim()));
   if (userSkillSet.size === 0) {
     ['javascript', 'react', 'node.js', 'python', 'sql', 'git', 'dsa'].forEach(s => userSkillSet.add(s));
   }
@@ -231,15 +266,16 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       }
     });
 
-    const matchRatio = matchingSkills.length / item.required_skills.length;
-    const roleBoost = item.role.toLowerCase().includes(targetRole) || item.domain.toLowerCase().includes(targetRole) ? 12 : 5;
-    const rawScore = Math.round(matchRatio * 75 + roleBoost + 10);
-    const matchScore = Math.min(98, Math.max(68, rawScore));
+    const matchRatio = item.required_skills.length > 0 ? (matchingSkills.length / item.required_skills.length) : 0.5;
+    const roleBoost = item.role.toLowerCase().includes(targetRole) || item.domain.toLowerCase().includes(targetRole) ? 14 : 6;
+    const rawScore = Math.round(matchRatio * 72 + roleBoost + 12);
+    // Ensure verified candidate skills yield >= 60% match score for relevant roles
+    const matchScore = Math.min(98, Math.max(matchingSkills.length > 0 ? 62 : 45, rawScore));
 
-    let matchTier = 'Strong Fit';
+    let matchTier = 'Relevant Match ⚡';
     if (matchScore >= 90) matchTier = 'Top Match 🌟';
-    else if (matchScore >= 80) matchTier = 'High Fit 🎯';
-    else matchTier = 'Good Potential 📈';
+    else if (matchScore >= 78) matchTier = 'Strong Fit 🎯';
+    else if (matchScore >= 60) matchTier = 'Good Potential 📈';
 
     return {
       ...item,
@@ -250,17 +286,26 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       match_score: matchScore,
       matchScore: matchScore,
       match_tier: matchTier,
-      fit_analysis: `Your skills in ${matchingSkills.slice(0, 3).join(', ')} align closely with ${item.company}'s requirements. Review ${missingSkills.slice(0, 2).join(' & ') || 'system architecture'} for competitive advantage.`
+      fit_analysis: matchingSkills.length > 0
+        ? `Your verified expertise in ${matchingSkills.slice(0, 3).join(', ')} directly aligns with ${item.company}'s requirements (${matchScore}% match). Strengthening ${missingSkills.slice(0, 2).join(' & ') || 'system design'} will maximize selection potential.`
+        : `Target role ${item.role} aligns with your career trajectory. Adding ${missingSkills.slice(0, 3).join(', ')} will elevate competitiveness.`
     };
   });
 
-  scoredInternships.sort((a, b) => b.match_score - a.match_score);
+  // Filter to keep matches >= 60%
+  let filteredMatches = scoredInternships.filter(item => item.match_score >= 60);
+  if (filteredMatches.length === 0) {
+    // Fallback guarantee if very few skills detected
+    filteredMatches = scoredInternships.slice(0, 6);
+  }
+
+  filteredMatches.sort((a, b) => b.match_score - a.match_score);
 
   return {
     candidate_target_role: userProfile.target_role || 'Software Engineer',
     detected_skills_count: userSkillSet.size,
     detected_skills: Array.from(userSkillSet),
-    top_internships: scoredInternships
+    top_internships: filteredMatches
   };
 }
 
