@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [roadmaps, setRoadmaps] = useState([]);
   const [plannerTasks, setPlannerTasks] = useState([]);
   const [goals, setGoals] = useState([]);
+  const [userSkills, setUserSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [agentNotification, setAgentNotification] = useState(null);
   const [triggeringCheckin, setTriggeringCheckin] = useState(false);
@@ -59,11 +60,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [resumeRes, roadmapsRes, plannerRes, goalsRes] = await Promise.all([
+        const [resumeRes, roadmapsRes, plannerRes, goalsRes, skillsRes] = await Promise.all([
           api.resume.getLatest().catch(() => ({ resume: null })),
           api.roadmap.getAll().catch(() => ({ roadmaps: [] })),
           api.planner.get('weekly').catch(() => ({ tasks: [] })),
-          api.goals.getAll().catch(() => ({ goals: [] }))
+          api.goals.getAll().catch(() => ({ goals: [] })),
+          api.skills.get().catch(() => ({ skills: [] }))
         ]);
 
         if (resumeRes.resume) {
@@ -73,6 +75,7 @@ export default function DashboardPage() {
         setRoadmaps(roadmapsRes.roadmaps || []);
         setPlannerTasks(plannerRes.tasks || []);
         setGoals(goalsRes.goals || []);
+        setUserSkills(skillsRes.skills || []);
       } catch (err) {
         console.error('Failed to load dashboard:', err);
       } finally {
@@ -303,87 +306,149 @@ export default function DashboardPage() {
       </div>
 
       {/* DEDICATED COMPARTMENT: WHAT I KNOW & SKILLS VAULT */}
-      <div className="bg-gradient-to-br from-[#111827] via-[#172033] to-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#1E293B] pb-5">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] animate-ping"></span>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#06B6D4]">
-                Knowledge Vault & Skill Gap Compartment
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-[#F8FAFC]">
-              What I Know vs What I Need To Know
-            </h2>
-            <p className="text-xs sm:text-sm text-[#94A3B8] mt-0.5">
-              Live skill alignment for <span className="font-bold text-[#F8FAFC]">{user?.target_role || 'Software Engineer'}</span> at <span className="font-bold text-[#F8FAFC]">{user?.dream_companies || 'Google, Microsoft'}</span>.
-            </p>
-          </div>
+      {(() => {
+        const targetRole = user?.target_role || 'Software Engineer';
+        const isPythonDomain = /python|ai|machine learning|data science|ml|nlp/i.test(targetRole);
+        const isJavaDomain = /java|spring/i.test(targetRole);
+        const isDevOpsDomain = /devops|cloud|sre|infrastructure|kubernetes|linux/i.test(targetRole);
+        const isFrontendDomain = /frontend|ui|react|vue|angular/i.test(targetRole);
 
-          <Link
-            to="/what-i-know"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white text-xs sm:text-sm font-bold shadow-lg shadow-[#3B82F6]/20 transition-all hover:scale-[1.02]"
-          >
-            <BrainCircuit className="w-4 h-4" />
-            Manage Full Vault →
-          </Link>
-        </div>
+        const getTargetRoleRequirements = () => {
+          if (isPythonDomain) {
+            return ['Python', 'Django / FastAPI', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Redis Caching', 'Data Structures & Algorithms', 'System Design'];
+          } else if (isJavaDomain) {
+            return ['Java', 'Spring Boot', 'SQL & PostgreSQL', 'Docker', 'REST APIs', 'Microservices', 'Git & GitHub', 'Data Structures & Algorithms', 'System Design'];
+          } else if (isDevOpsDomain) {
+            return ['Linux', 'Docker', 'Kubernetes', 'AWS / Cloud', 'CI/CD Pipelines', 'Git & GitHub', 'Terraform', 'Python / Bash Scripting', 'Monitoring & Grafana'];
+          } else if (isFrontendDomain) {
+            return ['JavaScript', 'TypeScript', 'React.js', 'HTML5 & CSS3', 'Tailwind CSS', 'REST / GraphQL APIs', 'Git & GitHub', 'State Management'];
+          }
+          return ['JavaScript', 'React.js', 'Node.js', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Tailwind CSS', 'System Design'];
+        };
 
-        {/* Skill Matrix Breakdown Preview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Mastered Skills Preview */}
-          <div className="p-5 rounded-2xl bg-[#0B1220]/70 border border-[#10B981]/30 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-[#10B981] flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                What I Know (Mastered • 68%)
-              </h4>
-              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-                Verified
-              </span>
+        const targetRoleSkills = getTargetRoleRequirements();
+        const knownSkillNames = userSkills.map(s => s.name);
+        
+        const matchedSkillsList = targetRoleSkills.filter(req => 
+          knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
+        );
+
+        const missingGapsList = targetRoleSkills.filter(req => 
+          !knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
+        );
+
+        const compatibilityPct = userSkills.length === 0 ? 0 : Math.min(95, Math.max(15, Math.round((matchedSkillsList.length / targetRoleSkills.length) * 100)));
+        const gapPct = 100 - compatibilityPct;
+
+        return (
+          <div className="bg-gradient-to-br from-[#111827] via-[#172033] to-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#1E293B] pb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] animate-ping"></span>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#06B6D4]">
+                    Knowledge Vault & Skill Gap Compartment
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-[#F8FAFC]">
+                  What I Know vs What I Need To Know
+                </h2>
+                <p className="text-xs sm:text-sm text-[#94A3B8] mt-0.5">
+                  Live skill alignment for <span className="font-bold text-[#F8FAFC]">{user?.target_role || 'Software Engineer'}</span> at <span className="font-bold text-[#F8FAFC]">{user?.dream_companies || 'Google, Microsoft'}</span>.
+                </p>
+              </div>
+
+              <Link
+                to="/what-i-know"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white text-xs sm:text-sm font-bold shadow-lg shadow-[#3B82F6]/20 transition-all hover:scale-[1.02]"
+              >
+                <BrainCircuit className="w-4 h-4" />
+                Manage Full Vault →
+              </Link>
             </div>
-            <p className="text-xs text-[#94A3B8]">
-              Proficiencies proven in previous projects and verified ATS assessments:
-            </p>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {['Python', 'JavaScript', 'React.js', 'Node.js', 'PostgreSQL', 'Git & GitHub', 'REST APIs'].map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="px-2.5 py-1 rounded-lg bg-[#10B981]/10 text-[#10B981] text-xs font-semibold border border-[#10B981]/25"
-                >
-                  ✓ {skill}
-                </span>
-              ))}
+
+            {/* Skill Matrix Breakdown Preview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Mastered Skills Preview */}
+              <div className="p-5 rounded-2xl bg-[#0B1220]/70 border border-[#10B981]/30 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-[#10B981] flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                    What I Know {userSkills.length > 0 ? `(Mastered • ${compatibilityPct}%)` : '(Awaiting Skills)'}
+                  </h4>
+                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                    {userSkills.length > 0 ? `${userSkills.length} Verified` : '0 Verified'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#94A3B8]">
+                  {userSkills.length > 0
+                    ? 'Proficiencies extracted from your resume and verified assessments:'
+                    : 'No skills added yet. Upload your resume or add your skills in What I Know:'}
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {userSkills.length > 0 ? (
+                    userSkills.map((skill, idx) => (
+                      <span
+                        key={skill.id || idx}
+                        className="px-2.5 py-1 rounded-lg bg-[#10B981]/10 text-[#10B981] text-xs font-semibold border border-[#10B981]/25"
+                      >
+                        ✓ {skill.name}
+                      </span>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-3 pt-1">
+                      <Link
+                        to="/resume"
+                        className="px-3 py-1.5 rounded-xl bg-[#172033] hover:bg-[#1E293B] text-[#06B6D4] text-xs font-bold border border-[#1E293B]"
+                      >
+                        📄 Upload Resume
+                      </Link>
+                      <Link
+                        to="/what-i-know"
+                        className="px-3 py-1.5 rounded-xl bg-[#3B82F6]/20 hover:bg-[#3B82F6]/30 text-[#3B82F6] text-xs font-bold border border-[#3B82F6]/30"
+                      >
+                        + Add Skills
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Target Gap Skills Preview */}
+              <div className="p-5 rounded-2xl bg-[#0B1220]/70 border border-amber-500/30 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                    What I Need To Know (Target Gap • {userSkills.length > 0 ? `${gapPct}%` : '100%'})
+                  </h4>
+                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    Tier-1 Required
+                  </span>
+                </div>
+                <p className="text-xs text-[#94A3B8]">
+                  Priority gaps to bridge for technical interviews at {user?.dream_companies || 'Google, Microsoft'}:
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {missingGapsList.length > 0 ? (
+                    missingGapsList.slice(0, 6).map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 text-xs font-semibold border border-amber-500/25"
+                      >
+                        ⚡ {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-[#10B981] font-semibold">
+                      🎉 Full skill alignment achieved for {targetRole}!
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Target Gap Skills Preview */}
-          <div className="p-5 rounded-2xl bg-[#0B1220]/70 border border-amber-500/30 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-400" />
-                What I Need To Know (Target Gap • 32%)
-              </h4>
-              <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                Tier-1 Required
-              </span>
-            </div>
-            <p className="text-xs text-[#94A3B8]">
-              Priority gaps to bridge for technical interviews at {user?.dream_companies || 'Google, Microsoft'}:
-            </p>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {['System Design & Architecture', 'Redis Caching & Pub/Sub', 'Docker & CI/CD Pipelines', 'Dynamic Programming on Trees'].map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 text-xs font-semibold border border-amber-500/25"
-                >
-                  ⚡ {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* REALISTIC INTERACTIVE PIE CHARTS & VISUAL ANALYTICS WITH CURSOR HOVER TOOLTIP */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -618,123 +683,166 @@ export default function DashboardPage() {
         </div>
 
         {/* Pie Chart 2: "What I Know vs What I Need to Know" Interactive Donut Chart */}
-        <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-extrabold text-[#F8FAFC] flex items-center gap-2">
-                <BrainCircuit className="w-5 h-5 text-[#06B6D4]" />
-                Knowledge Gap Analysis
-              </h3>
-              <p className="text-xs text-[#94A3B8]">
-                What I Know vs What I Need for {user?.dream_companies?.split(',')[0] || 'Google'}
-              </p>
-            </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30">
-              68% Compatible
-            </span>
-          </div>
+        {(() => {
+          const targetRole = user?.target_role || 'Software Engineer';
+          const isPythonDomain = /python|ai|machine learning|data science|ml|nlp/i.test(targetRole);
+          const isJavaDomain = /java|spring/i.test(targetRole);
+          const isDevOpsDomain = /devops|cloud|sre|infrastructure|kubernetes|linux/i.test(targetRole);
+          const isFrontendDomain = /frontend|ui|react|vue|angular/i.test(targetRole);
 
-          <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-            {/* SVG Donut with Hover */}
-            <div className="relative w-48 h-48 flex-shrink-0">
-              <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                {/* What I Know 68% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#10B981"
-                  strokeWidth={hoveredGapIndex === 0 ? "7" : "4.5"}
-                  strokeDasharray="68 32"
-                  strokeDashoffset="0"
-                  className="cursor-pointer transition-all duration-200 hover:opacity-95"
-                  onMouseEnter={() => setHoveredGapIndex(0)}
-                  onMouseLeave={() => setHoveredGapIndex(null)}
-                />
-                {/* What I Need to Know 32% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#F59E0B"
-                  strokeWidth={hoveredGapIndex === 1 ? "7" : "4.5"}
-                  strokeDasharray="32 68"
-                  strokeDashoffset="-68"
-                  className="cursor-pointer transition-all duration-200 hover:opacity-95"
-                  onMouseEnter={() => setHoveredGapIndex(1)}
-                  onMouseLeave={() => setHoveredGapIndex(null)}
-                />
-              </svg>
+          const getTargetRoleRequirements = () => {
+            if (isPythonDomain) {
+              return ['Python', 'Django / FastAPI', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Redis Caching', 'Data Structures & Algorithms', 'System Design'];
+            } else if (isJavaDomain) {
+              return ['Java', 'Spring Boot', 'SQL & PostgreSQL', 'Docker', 'REST APIs', 'Microservices', 'Git & GitHub', 'Data Structures & Algorithms', 'System Design'];
+            } else if (isDevOpsDomain) {
+              return ['Linux', 'Docker', 'Kubernetes', 'AWS / Cloud', 'CI/CD Pipelines', 'Git & GitHub', 'Terraform', 'Python / Bash Scripting', 'Monitoring & Grafana'];
+            } else if (isFrontendDomain) {
+              return ['JavaScript', 'TypeScript', 'React.js', 'HTML5 & CSS3', 'Tailwind CSS', 'REST / GraphQL APIs', 'Git & GitHub', 'State Management'];
+            }
+            return ['JavaScript', 'React.js', 'Node.js', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Tailwind CSS', 'System Design'];
+          };
 
-              {/* Dynamic Center Display */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                {hoveredGapIndex === 0 && (
-                  <>
-                    <span className="text-xs font-extrabold text-[#10B981]">Mastered Skills</span>
-                    <span className="text-2xl font-black text-[#F8FAFC]">68%</span>
-                    <span className="text-[10px] text-[#94A3B8]">7 Verified</span>
-                  </>
-                )}
-                {hoveredGapIndex === 1 && (
-                  <>
-                    <span className="text-xs font-extrabold text-[#F59E0B]">Missing Gaps</span>
-                    <span className="text-2xl font-black text-[#F8FAFC]">32%</span>
-                    <span className="text-[10px] text-[#94A3B8]">4 Gaps to Bridge</span>
-                  </>
-                )}
-                {hoveredGapIndex === null && (
-                  <>
-                    <span className="text-2xl font-black text-[#F8FAFC]">68%</span>
-                    <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Role Match</span>
-                  </>
-                )}
+          const targetRoleSkills = getTargetRoleRequirements();
+          const knownSkillNames = userSkills.map(s => s.name);
+          
+          const matchedSkillsList = targetRoleSkills.filter(req => 
+            knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
+          );
+
+          const missingGapsList = targetRoleSkills.filter(req => 
+            !knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
+          );
+
+          const compatibilityPct = userSkills.length === 0 ? 0 : Math.min(95, Math.max(15, Math.round((matchedSkillsList.length / targetRoleSkills.length) * 100)));
+          const gapPct = 100 - compatibilityPct;
+
+          return (
+            <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-[#F8FAFC] flex items-center gap-2">
+                    <BrainCircuit className="w-5 h-5 text-[#06B6D4]" />
+                    Knowledge Gap Analysis
+                  </h3>
+                  <p className="text-xs text-[#94A3B8]">
+                    What I Know vs What I Need for {user?.dream_companies?.split(',')[0] || 'Google'}
+                  </p>
+                </div>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                  compatibilityPct >= 75
+                    ? 'bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30'
+                    : compatibilityPct > 0
+                    ? 'bg-[#3B82F6]/20 text-[#3B82F6] border-[#3B82F6]/30'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
+                  {compatibilityPct}% Compatible
+                </span>
               </div>
-            </div>
 
-            {/* Interactive Legend */}
-            <div className="space-y-3 w-full sm:w-auto text-xs">
-              <div
-                onMouseEnter={() => setHoveredGapIndex(0)}
-                onMouseLeave={() => setHoveredGapIndex(null)}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                  hoveredGapIndex === 0
-                    ? 'bg-[#172033] border-[#10B981]/60 shadow-sm'
-                    : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-4 mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#10B981]"></span>
-                    <span className="font-bold text-[#F8FAFC]">What I Know</span>
+              <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
+                {/* SVG Donut with Hover */}
+                <div className="relative w-48 h-48 flex-shrink-0">
+                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                    {/* What I Know Slice */}
+                    <circle
+                      cx="18" cy="18" r="15.915"
+                      fill="transparent"
+                      stroke="#10B981"
+                      strokeWidth={hoveredGapIndex === 0 ? "7" : "4.5"}
+                      strokeDasharray={`${compatibilityPct} ${gapPct}`}
+                      strokeDashoffset="0"
+                      className="cursor-pointer transition-all duration-200 hover:opacity-95"
+                      onMouseEnter={() => setHoveredGapIndex(0)}
+                      onMouseLeave={() => setHoveredGapIndex(null)}
+                    />
+                    {/* What I Need to Know Slice */}
+                    <circle
+                      cx="18" cy="18" r="15.915"
+                      fill="transparent"
+                      stroke="#F59E0B"
+                      strokeWidth={hoveredGapIndex === 1 ? "7" : "4.5"}
+                      strokeDasharray={`${gapPct} ${compatibilityPct}`}
+                      strokeDashoffset={`-${compatibilityPct}`}
+                      className="cursor-pointer transition-all duration-200 hover:opacity-95"
+                      onMouseEnter={() => setHoveredGapIndex(1)}
+                      onMouseLeave={() => setHoveredGapIndex(null)}
+                    />
+                  </svg>
+
+                  {/* Dynamic Center Display */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                    {hoveredGapIndex === 0 && (
+                      <>
+                        <span className="text-xs font-extrabold text-[#10B981]">Mastered Skills</span>
+                        <span className="text-2xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
+                        <span className="text-[10px] text-[#94A3B8]">{userSkills.length} Verified</span>
+                      </>
+                    )}
+                    {hoveredGapIndex === 1 && (
+                      <>
+                        <span className="text-xs font-extrabold text-[#F59E0B]">Missing Gaps</span>
+                        <span className="text-2xl font-black text-[#F8FAFC]">{gapPct}%</span>
+                        <span className="text-[10px] text-[#94A3B8]">{missingGapsList.length} Gaps to Bridge</span>
+                      </>
+                    )}
+                    {hoveredGapIndex === null && (
+                      <>
+                        <span className="text-2xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
+                        <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Role Match</span>
+                      </>
+                    )}
                   </div>
-                  <span className="font-black text-[#10B981]">68%</span>
                 </div>
-                <div className="text-[11px] text-[#94A3B8]">
-                  Python, React, Node.js, SQL, Git & APIs
-                </div>
-              </div>
 
-              <div
-                onMouseEnter={() => setHoveredGapIndex(1)}
-                onMouseLeave={() => setHoveredGapIndex(null)}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                  hoveredGapIndex === 1
-                    ? 'bg-[#172033] border-amber-500/60 shadow-sm'
-                    : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-4 mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
-                    <span className="font-bold text-[#F8FAFC]">What I Need To Know</span>
+                {/* Interactive Legend */}
+                <div className="space-y-3 w-full sm:w-auto text-xs">
+                  <div
+                    onMouseEnter={() => setHoveredGapIndex(0)}
+                    onMouseLeave={() => setHoveredGapIndex(null)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                      hoveredGapIndex === 0
+                        ? 'bg-[#172033] border-[#10B981]/60 shadow-sm'
+                        : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-[#10B981]"></span>
+                        <span className="font-bold text-[#F8FAFC]">What I Know</span>
+                      </div>
+                      <span className="font-black text-[#10B981]">{compatibilityPct}%</span>
+                    </div>
+                    <div className="text-[11px] text-[#94A3B8] max-w-[200px] truncate">
+                      {userSkills.length > 0 ? userSkills.map(s => s.name).join(', ') : 'No verified skills yet'}
+                    </div>
                   </div>
-                  <span className="font-black text-amber-400">32%</span>
-                </div>
-                <div className="text-[11px] text-[#94A3B8]">
-                  System Design, Redis, Docker, DP Algorithms
+
+                  <div
+                    onMouseEnter={() => setHoveredGapIndex(1)}
+                    onMouseLeave={() => setHoveredGapIndex(null)}
+                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                      hoveredGapIndex === 1
+                        ? 'bg-[#172033] border-amber-500/60 shadow-sm'
+                        : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
+                        <span className="font-bold text-[#F8FAFC]">What I Need To Know</span>
+                      </div>
+                      <span className="font-black text-amber-400">{gapPct}%</span>
+                    </div>
+                    <div className="text-[11px] text-[#94A3B8] max-w-[200px] truncate">
+                      {missingGapsList.length > 0 ? missingGapsList.slice(0, 3).join(', ') : 'Zero Gaps Remaining'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
       {/* Today's Schedule & Goal Progress */}

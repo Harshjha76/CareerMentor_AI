@@ -101,8 +101,8 @@ export async function emailLogin(req, res) {
           'en',
           false,
           'Software Engineer',
-          'Google, Microsoft, TCS, Infosys',
-          'JavaScript, React, SQL',
+          'Google, Microsoft',
+          '',
           2,
           57
         ]
@@ -277,9 +277,28 @@ export async function saveOnboarding(req, res) {
     } = req.body;
 
     // Validate preferred_language strictly to en, hi, mr, sa
-    const validLanguages = ['en', 'hi', 'mr', 'sa'];
-    const selectedLang = validLanguages.includes(preferred_language) ? preferred_language : 'en';
-    const studyMins = available_study_minutes ? parseInt(available_study_minutes, 10) : (daily_study_hours ? parseInt(daily_study_hours, 10) * 60 : 120);
+    const cleanSkillsStr = Array.isArray(current_skills) ? current_skills.join(', ') : (current_skills || '');
+    
+    // Convert onboarding skills to structured inventory if present
+    let initialInventory = [];
+    if (cleanSkillsStr.trim()) {
+      initialInventory = cleanSkillsStr.split(',').map((s, idx) => {
+        const trimmed = s.trim();
+        let cat = 'languages';
+        const lower = trimmed.toLowerCase();
+        if (/react|node|express|fastapi|django|flask|spring|tailwind|vue|angular|redux|zustand/i.test(lower)) cat = 'frameworks';
+        else if (/postgres|mongo|redis|mysql|sqlite|cassandra|dynamodb|sql/i.test(lower)) cat = 'databases';
+        else if (/docker|aws|git|linux|kubernetes|postman|gcp|azure|terraform/i.test(lower)) cat = 'tools';
+        else if (/data structures|algorithms|dsa|system design|os|dbms|oop/i.test(lower)) cat = 'core';
+
+        return {
+          id: `sk-onboard-${idx}-${Date.now()}`,
+          name: trimmed,
+          category: cat,
+          level: 'intermediate'
+        };
+      }).filter(s => s.name);
+    }
 
     await query(
       `UPDATE users SET
@@ -292,18 +311,20 @@ export async function saveOnboarding(req, res) {
         branch = $7,
         phone_number = $8,
         preferred_language = $9,
+        skills_inventory = $10,
         is_onboarded = TRUE
-      WHERE id = $10`,
+      WHERE id = $11`,
       [
         target_role || 'Software Engineer',
         dream_companies || 'Google, Microsoft',
-        Array.isArray(current_skills) ? current_skills.join(', ') : current_skills || 'General Tech',
+        cleanSkillsStr,
         daily_study_hours ? parseInt(daily_study_hours, 10) : Math.round(studyMins / 60),
         studyMins,
         university_name || '',
         branch || '',
         phone_number || '',
         selectedLang,
+        initialInventory.length > 0 ? JSON.stringify(initialInventory) : null,
         userId
       ]
     );

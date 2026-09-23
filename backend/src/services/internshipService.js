@@ -54,169 +54,103 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
 
   // Normalize skill set
   const userSkillSet = new Set(parsedSkills.filter(Boolean).map(s => s.toLowerCase().trim()));
-  if (userSkillSet.size === 0) {
-    ['javascript', 'react', 'node.js', 'python', 'sql', 'git', 'dsa'].forEach(s => userSkillSet.add(s));
-  }
+  
+  // Identify candidate's target domain
+  const isPythonDomain = /python|ai|machine learning|data science|ml|nlp|data engineer/i.test(targetRole);
+  const isJavaDomain = /java|spring/i.test(targetRole);
+  const isDevOpsDomain = /devops|cloud|sre|infrastructure|kubernetes|docker|linux|aws|azure/i.test(targetRole);
+  const isFrontendDomain = /frontend|ui|react|vue|angular|web designer/i.test(targetRole);
+  const isFullStackDomain = /full stack|mern|software engineer|swe|developer/i.test(targetRole);
 
-  // Curated active tier-1 and high-growth startup internships
+  // Curated active industry-standard company internships across domains
   const internshipCatalog = [
+    // --- PYTHON, AI & DATA SCIENCE DOMAIN ---
     {
-      id: 'intern-01',
-      company: 'Google',
-      company_tier: 'Tier-1 Global Tech',
-      role: 'Software Engineering (SWE) Intern - Summer 2026',
-      domain: 'Full Stack & Distributed Systems',
-      location: 'Bangalore / Hyderabad / Remote',
-      work_mode: 'Hybrid',
-      stipend: '₹1,20,000 / month (,500/mo)',
-      duration: '3 Months (Full-time)',
-      experience_level: 'Undergraduate / Graduate',
-      required_skills: ['Data Structures & Algorithms', 'Java', 'C++', 'Python', 'System Design', 'Git'],
-      apply_urls: {
-        careers: 'https://careers.google.com/jobs/results/?q=software%20engineer%20intern',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=google%20software%20engineer%20intern',
-        internshala: 'https://internshala.com/internships/google-internship'
-      },
-      description: 'Collaborate with world-class engineering teams building planetary-scale web applications, microservices, and distributed backend systems.'
-    },
-    {
-      id: 'intern-02',
-      company: 'Microsoft',
-      company_tier: 'Tier-1 Global Tech',
-      role: 'Full Stack Cloud Developer Intern',
-      domain: 'Cloud & Full Stack',
-      location: 'Hyderabad / Noida / Remote',
-      work_mode: 'Hybrid',
-      stipend: '₹1,10,000 / month',
-      duration: '2 - 6 Months',
-      experience_level: 'B.Tech / M.Tech Student',
-      required_skills: ['React', 'TypeScript', 'Node.js', 'Azure', 'RESTful APIs', 'SQL'],
-      apply_urls: {
-        careers: 'https://careers.microsoft.com/students/us/en/search-results?keywords=intern',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=microsoft%20software%20intern',
-        wellfound: 'https://wellfound.com/jobs'
-      },
-      description: 'Build responsive UI components and resilient serverless cloud APIs supporting Azure developer tools and Microsoft 365 services.'
-    },
-    {
-      id: 'intern-03',
-      company: 'Amazon Web Services (AWS)',
-      company_tier: 'Tier-1 Global Tech',
-      role: 'Backend Engineering Intern (AWS Cloud Services)',
-      domain: 'Backend & Cloud Infrastructure',
-      location: 'Bangalore / Chennai / Hybrid',
-      work_mode: 'Hybrid',
-      stipend: '₹1,15,000 / month',
-      duration: '6 Months',
-      experience_level: 'Pre-final / Final Year',
-      required_skills: ['Java', 'Python', 'AWS', 'Docker', 'PostgreSQL', 'Microservices', 'Distributed Systems'],
-      apply_urls: {
-        careers: 'https://www.amazon.jobs/en/job_categories/software-development',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=amazon%20sde%20intern',
-        internshala: 'https://internshala.com/internships/software-development-internship'
-      },
-      description: 'Design highly available distributed storage and computing pipelines with sub-100ms latency guarantees.'
-    },
-    {
-      id: 'intern-04',
-      company: 'Postman',
-      company_tier: 'Unicorn Tech Startup',
-      role: 'Frontend Engineering Intern (Developer Tools)',
-      domain: 'Frontend Engineering',
-      location: 'Bangalore / Remote',
-      work_mode: 'Remote',
-      stipend: '₹60,000 / month',
-      duration: '6 Months',
-      experience_level: 'College Students & Self-Taught',
-      required_skills: ['React', 'JavaScript', 'TypeScript', 'Tailwind CSS', 'Redux / Zustand', 'RESTful APIs'],
-      apply_urls: {
-        careers: 'https://www.postman.com/company/careers/',
-        wellfound: 'https://wellfound.com/company/postman/jobs',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=postman%20frontend%20intern'
-      },
-      description: 'Craft high-performance interactive interfaces, API client dashboards, and canvas visualization components for 30M+ developers.'
-    },
-    {
-      id: 'intern-05',
-      company: 'CRED / Razorpay',
-      company_tier: 'High-Growth FinTech Unicorn',
-      role: 'Backend & Systems Engineering Intern',
-      domain: 'Backend & FinTech Infrastructure',
-      location: 'Bangalore / Hybrid',
-      work_mode: 'Hybrid',
-      stipend: '₹75,000 / month',
-      duration: '3 - 6 Months',
-      experience_level: 'Final Year / Fresh Graduates',
-      required_skills: ['Go', 'Java', 'Node.js', 'PostgreSQL', 'Redis', 'Kafka', 'System Architecture'],
-      apply_urls: {
-        careers: 'https://razorpay.com/jobs/',
-        wellfound: 'https://wellfound.com/jobs',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=razorpay%20software%20intern'
-      },
-      description: 'Build mission-critical payment processing pipelines, idempotent transaction workflows, and caching layers with 99.999% reliability.'
-    },
-    {
-      id: 'intern-06',
-      company: 'Atlassian',
-      company_tier: 'Global SaaS Leader',
-      role: 'Full Stack Engineering Intern (Jira & Confluence)',
-      domain: 'Full Stack SaaS',
-      location: 'Remote / Bangalore',
-      work_mode: 'Remote',
-      stipend: '₹1,00,000 / month',
-      duration: '3 Months (Summer)',
-      experience_level: 'Penultimate Year',
-      required_skills: ['React', 'Java', 'Spring Boot', 'TypeScript', 'GraphQL', 'Docker'],
-      apply_urls: {
-        careers: 'https://www.atlassian.com/company/careers/students',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=atlassian%20software%20intern'
-      },
-      description: 'Join distributed collaborative SaaS teams building real-time document editing and automated project workflows.'
-    },
-    {
-      id: 'intern-07',
-      company: 'Zomato / Swiggy',
-      company_tier: 'Consumer Tech Unicorn',
-      role: 'AI & Data Engineering Intern',
+      id: 'intern-py-01',
+      company: 'NVIDIA',
+      company_tier: 'Tier-1 AI & Hardware Global Leader',
+      role: 'AI Software & Deep Learning Engineer Intern',
       domain: 'AI & Data Science',
+      domain_key: 'python_ai',
+      location: 'Bangalore / Pune / Hybrid',
+      work_mode: 'Hybrid',
+      stipend: '₹1,30,000 / month',
+      duration: '3 - 6 Months',
+      experience_level: 'B.Tech / M.Tech / MS in CS, AI or related',
+      required_skills: ['Python', 'PyTorch', 'Machine Learning', 'Linux', 'Git', 'Data Structures & Algorithms', 'REST APIs'],
+      apply_urls: {
+        careers: 'https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=nvidia%20software%20intern'
+      },
+      description: 'Develop CUDA-accelerated deep learning algorithms, inference pipelines, and autonomous AI model serving platforms.'
+    },
+    {
+      id: 'intern-py-02',
+      company: 'Zomato & Blinkit',
+      company_tier: 'Consumer Tech Unicorn',
+      role: 'Python & AI Data Systems Intern',
+      domain: 'AI & Data Science',
+      domain_key: 'python_ai',
       location: 'Gurgaon / Bangalore',
       work_mode: 'Hybrid',
-      stipend: '₹50,000 / month',
+      stipend: '₹65,000 / month',
       duration: '4 Months',
-      experience_level: 'College Students',
-      required_skills: ['Python', 'SQL', 'FastAPI', 'Pandas', 'Machine Learning', 'Docker'],
+      experience_level: 'Pre-final / Final Year College Students',
+      required_skills: ['Python', 'FastAPI', 'PostgreSQL', 'Pandas', 'Docker', 'Redis', 'REST APIs'],
       apply_urls: {
         careers: 'https://www.zomato.com/careers',
         internshala: 'https://internshala.com/internships/data-science-internship',
         linkedin: 'https://www.linkedin.com/jobs/search/?keywords=zomato%20data%20science%20intern'
       },
-      description: 'Develop dispatch optimization algorithms, predictive delivery routing, and user recommendation models.'
+      description: 'Build predictive real-time dispatch routing, dynamic pricing algorithms, and high-throughput Python backend microservices.'
     },
     {
-      id: 'intern-08',
-      company: 'BrowserStack',
-      company_tier: 'DevOps & Testing Leader',
-      role: 'DevOps & Cloud Infrastructure Intern',
-      domain: 'DevOps & Cloud',
-      location: 'Mumbai / Remote',
-      work_mode: 'Remote',
-      stipend: '₹55,000 / month',
+      id: 'intern-py-03',
+      company: 'Swiggy',
+      company_tier: 'Consumer Tech Unicorn',
+      role: 'Machine Learning & Python Backend Intern',
+      domain: 'AI & Data Science',
+      domain_key: 'python_ai',
+      location: 'Bangalore / Remote',
+      work_mode: 'Hybrid',
+      stipend: '₹70,000 / month',
       duration: '6 Months',
-      experience_level: 'B.Tech CS / IT',
-      required_skills: ['Linux', 'Docker', 'Kubernetes', 'AWS', 'Python', 'CI/CD Pipelines', 'Git'],
+      experience_level: 'Undergraduate / Postgraduate Students',
+      required_skills: ['Python', 'SQL', 'FastAPI', 'Pandas', 'Machine Learning', 'Git', 'Docker'],
       apply_urls: {
-        careers: 'https://www.browserstack.com/careers',
-        wellfound: 'https://wellfound.com/company/browserstack/jobs',
-        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=browserstack%20devops%20intern'
+        careers: 'https://careers.swiggy.com/',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=swiggy%20software%20intern'
       },
-      description: 'Scale cloud device farms and maintain automated virtualization infrastructure across global data centers.'
+      description: 'Train recommendation models, build vector search embeddings, and optimize dispatch latency across millions of daily orders.'
     },
     {
-      id: 'intern-09',
+      id: 'intern-py-04',
+      company: 'Amazon Web Services (AWS)',
+      company_tier: 'Tier-1 Global Tech',
+      role: 'Python Cloud Backend Engineering Intern',
+      domain: 'Backend & Cloud Infrastructure',
+      domain_key: 'python_ai',
+      location: 'Bangalore / Hyderabad / Hybrid',
+      work_mode: 'Hybrid',
+      stipend: '₹1,15,000 / month',
+      duration: '6 Months',
+      experience_level: 'Pre-final / Final Year Students',
+      required_skills: ['Python', 'AWS', 'Docker', 'PostgreSQL', 'REST APIs', 'Git', 'Data Structures & Algorithms'],
+      apply_urls: {
+        careers: 'https://www.amazon.jobs/en/job_categories/software-development',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=amazon%20sde%20intern'
+      },
+      description: 'Design highly available cloud telemetry services and distributed Python backend APIs with 99.99% uptime guarantees.'
+    },
+
+    // --- JAVA & ENTERPRISE BACKEND DOMAIN ---
+    {
+      id: 'intern-java-01',
       company: 'Goldman Sachs',
       company_tier: 'Tier-1 Global Investment Bank',
       role: 'Java Backend & Enterprise Systems Engineering Intern',
       domain: 'Java Backend & Distributed Systems',
+      domain_key: 'java_backend',
       location: 'Bangalore / Hyderabad',
       work_mode: 'Hybrid',
       stipend: '₹1,05,000 / month',
@@ -231,11 +165,12 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       description: 'Engineer high-throughput transactional order execution and portfolio management microservices with ultra-low latency Java.'
     },
     {
-      id: 'intern-10',
+      id: 'intern-java-02',
       company: 'Oracle',
       company_tier: 'Tier-1 Enterprise Cloud Leader',
       role: 'Java Cloud Infrastructure & Database Intern',
       domain: 'Java Cloud & Enterprise',
+      domain_key: 'java_backend',
       location: 'Bangalore / Noida / Hyderabad',
       work_mode: 'Hybrid',
       stipend: '₹85,000 / month',
@@ -247,6 +182,169 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
         linkedin: 'https://www.linkedin.com/jobs/search/?keywords=oracle%20software%20engineer%20intern'
       },
       description: 'Develop next-generation Autonomous Database tooling, Java cloud microservices, and distributed clustering components.'
+    },
+    {
+      id: 'intern-java-03',
+      company: 'Morgan Stanley',
+      company_tier: 'Global Financial Services Leader',
+      role: 'Enterprise Java Systems Developer Intern',
+      domain: 'Java Backend & Enterprise',
+      domain_key: 'java_backend',
+      location: 'Mumbai / Bangalore',
+      work_mode: 'Hybrid',
+      stipend: '₹90,000 / month',
+      duration: '6 Months',
+      experience_level: 'B.Tech / M.Tech Students',
+      required_skills: ['Java', 'Spring Boot', 'SQL', 'PostgreSQL', 'REST APIs', 'Git', 'Linux'],
+      apply_urls: {
+        careers: 'https://www.morganstanley.com/people/students-and-graduates',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=morgan%20stanley%20intern'
+      },
+      description: 'Build mission-critical settlement platforms, high-volume event stream processors, and microservices in Spring Boot.'
+    },
+
+    // --- FULL STACK & FRONTEND DOMAIN ---
+    {
+      id: 'intern-fs-01',
+      company: 'Microsoft',
+      company_tier: 'Tier-1 Global Tech',
+      role: 'Full Stack Cloud Developer Intern',
+      domain: 'Cloud & Full Stack',
+      domain_key: 'full_stack',
+      location: 'Hyderabad / Noida / Remote',
+      work_mode: 'Hybrid',
+      stipend: '₹1,10,000 / month',
+      duration: '2 - 6 Months',
+      experience_level: 'B.Tech / M.Tech Student',
+      required_skills: ['React', 'TypeScript', 'Node.js', 'Azure', 'RESTful APIs', 'SQL', 'Git'],
+      apply_urls: {
+        careers: 'https://careers.microsoft.com/students/us/en/search-results?keywords=intern',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=microsoft%20software%20intern',
+        wellfound: 'https://wellfound.com/jobs'
+      },
+      description: 'Build responsive UI components and resilient serverless cloud APIs supporting Azure developer tools and Microsoft 365 services.'
+    },
+    {
+      id: 'intern-fs-02',
+      company: 'Postman',
+      company_tier: 'Unicorn Tech Startup',
+      role: 'Frontend Engineering Intern (Developer Tools)',
+      domain: 'Frontend Engineering',
+      domain_key: 'frontend',
+      location: 'Bangalore / Remote',
+      work_mode: 'Remote',
+      stipend: '₹60,000 / month',
+      duration: '6 Months',
+      experience_level: 'College Students & Self-Taught',
+      required_skills: ['React', 'JavaScript', 'TypeScript', 'Tailwind CSS', 'Redux / Zustand', 'RESTful APIs', 'Git'],
+      apply_urls: {
+        careers: 'https://www.postman.com/company/careers/',
+        wellfound: 'https://wellfound.com/company/postman/jobs',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=postman%20frontend%20intern'
+      },
+      description: 'Craft high-performance interactive interfaces, API client dashboards, and canvas visualization components for 30M+ developers.'
+    },
+    {
+      id: 'intern-fs-03',
+      company: 'Atlassian',
+      company_tier: 'Global SaaS Leader',
+      role: 'Full Stack Engineering Intern (Jira & Confluence)',
+      domain: 'Full Stack SaaS',
+      domain_key: 'full_stack',
+      location: 'Remote / Bangalore',
+      work_mode: 'Remote',
+      stipend: '₹1,00,000 / month',
+      duration: '3 Months (Summer)',
+      experience_level: 'Penultimate Year',
+      required_skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL', 'Docker', 'RESTful APIs', 'Git'],
+      apply_urls: {
+        careers: 'https://www.atlassian.com/company/careers/students',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=atlassian%20software%20intern'
+      },
+      description: 'Join distributed collaborative SaaS teams building real-time document editing and automated project workflows.'
+    },
+    {
+      id: 'intern-fs-04',
+      company: 'Razorpay / CRED',
+      company_tier: 'High-Growth FinTech Unicorn',
+      role: 'Full Stack & FinTech Systems Intern',
+      domain: 'Full Stack & FinTech Infrastructure',
+      domain_key: 'full_stack',
+      location: 'Bangalore / Hybrid',
+      work_mode: 'Hybrid',
+      stipend: '₹75,000 / month',
+      duration: '3 - 6 Months',
+      experience_level: 'Final Year / Fresh Graduates',
+      required_skills: ['React', 'Node.js', 'PostgreSQL', 'Redis', 'RESTful APIs', 'Git', 'Docker'],
+      apply_urls: {
+        careers: 'https://razorpay.com/jobs/',
+        wellfound: 'https://wellfound.com/jobs',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=razorpay%20software%20intern'
+      },
+      description: 'Build mission-critical payment processing pipelines, checkout UI components, and caching layers with 99.999% reliability.'
+    },
+
+    // --- CLOUD & DEVOPS DOMAIN ---
+    {
+      id: 'intern-devops-01',
+      company: 'BrowserStack',
+      company_tier: 'DevOps & Testing Leader',
+      role: 'DevOps & Cloud Infrastructure Intern',
+      domain: 'DevOps & Cloud',
+      domain_key: 'cloud_devops',
+      location: 'Mumbai / Remote',
+      work_mode: 'Remote',
+      stipend: '₹55,000 / month',
+      duration: '6 Months',
+      experience_level: 'B.Tech CS / IT',
+      required_skills: ['Linux', 'Docker', 'Kubernetes', 'AWS', 'Python', 'CI/CD Pipelines', 'Git'],
+      apply_urls: {
+        careers: 'https://www.browserstack.com/careers',
+        wellfound: 'https://wellfound.com/company/browserstack/jobs',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=browserstack%20devops%20intern'
+      },
+      description: 'Scale cloud device farms and maintain automated virtualization infrastructure across global data centers.'
+    },
+    {
+      id: 'intern-devops-02',
+      company: 'Red Hat',
+      company_tier: 'Open Source & Cloud Platform Leader',
+      role: 'Cloud Infrastructure & Kubernetes Intern',
+      domain: 'Cloud Infrastructure',
+      domain_key: 'cloud_devops',
+      location: 'Bangalore / Pune / Remote',
+      work_mode: 'Hybrid',
+      stipend: '₹60,000 / month',
+      duration: '6 Months',
+      experience_level: 'Engineering Undergraduates',
+      required_skills: ['Linux', 'Kubernetes', 'Docker', 'Python', 'Git', 'CI/CD Pipelines', 'Bash'],
+      apply_urls: {
+        careers: 'https://www.redhat.com/en/jobs',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=red%20hat%20intern'
+      },
+      description: 'Work with OpenShift cloud platform engineers deploying distributed containers, service meshes, and CI/CD pipelines.'
+    },
+
+    // --- GENERAL TIER-1 GLOBAL SWE ---
+    {
+      id: 'intern-swe-01',
+      company: 'Google',
+      company_tier: 'Tier-1 Global Tech',
+      role: 'Software Engineering (SWE) Intern - Summer 2026',
+      domain: 'Full Stack & Distributed Systems',
+      domain_key: 'swe_general',
+      location: 'Bangalore / Hyderabad / Remote',
+      work_mode: 'Hybrid',
+      stipend: '₹1,20,000 / month',
+      duration: '3 Months (Full-time)',
+      experience_level: 'Undergraduate / Graduate',
+      required_skills: ['Data Structures & Algorithms', 'Python', 'Java', 'C++', 'System Design', 'Git'],
+      apply_urls: {
+        careers: 'https://careers.google.com/jobs/results/?q=software%20engineer%20intern',
+        linkedin: 'https://www.linkedin.com/jobs/search/?keywords=google%20software%20engineer%20intern',
+        internshala: 'https://internshala.com/internships/google-internship'
+      },
+      description: 'Collaborate with world-class engineering teams building planetary-scale web applications, microservices, and distributed backend systems.'
     }
   ];
 
@@ -256,9 +354,14 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
     const missingSkills = [];
 
     item.required_skills.forEach(req => {
-      const isMatched = Array.from(userSkillSet).some(us => 
-        us.includes(req.toLowerCase()) || req.toLowerCase().includes(us)
-      );
+      const reqLower = req.toLowerCase();
+      const isMatched = Array.from(userSkillSet).some(us => {
+        const u = us.toLowerCase();
+        return u.includes(reqLower) || reqLower.includes(u) ||
+          (reqLower.includes('dsa') && (u.includes('algorithm') || u.includes('data structure'))) ||
+          (reqLower.includes('sql') && (u.includes('postgres') || u.includes('mysql') || u.includes('database')));
+      });
+
       if (isMatched) {
         matchingSkills.push(req);
       } else {
@@ -266,16 +369,38 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       }
     });
 
-    const matchRatio = item.required_skills.length > 0 ? (matchingSkills.length / item.required_skills.length) : 0.5;
-    const roleBoost = item.role.toLowerCase().includes(targetRole) || item.domain.toLowerCase().includes(targetRole) ? 14 : 6;
-    const rawScore = Math.round(matchRatio * 72 + roleBoost + 12);
-    // Ensure verified candidate skills yield >= 60% match score for relevant roles
-    const matchScore = Math.min(98, Math.max(matchingSkills.length > 0 ? 62 : 45, rawScore));
+    // Check if the internship domain matches candidate's specific target role
+    let isDomainMatch = false;
+    if (isPythonDomain && (item.domain_key === 'python_ai' || item.domain_key === 'swe_general')) isDomainMatch = true;
+    else if (isJavaDomain && (item.domain_key === 'java_backend' || item.domain_key === 'swe_general')) isDomainMatch = true;
+    else if (isDevOpsDomain && (item.domain_key === 'cloud_devops' || item.domain_key === 'swe_general')) isDomainMatch = true;
+    else if (isFrontendDomain && (item.domain_key === 'frontend' || item.domain_key === 'full_stack')) isDomainMatch = true;
+    else if (isFullStackDomain && (item.domain_key === 'full_stack' || item.domain_key === 'frontend' || item.domain_key === 'java_backend' || item.domain_key === 'python_ai' || item.domain_key === 'swe_general')) isDomainMatch = true;
+    else if (item.role.toLowerCase().includes(targetRole) || item.domain.toLowerCase().includes(targetRole)) isDomainMatch = true;
 
-    let matchTier = 'Relevant Match ⚡';
+    // Filter out completely non-matching domain items if a specific domain is targeted
+    if (!isDomainMatch && !isFullStackDomain && matchingSkills.length === 0) {
+      return null;
+    }
+
+    const matchRatio = item.required_skills.length > 0 ? (matchingSkills.length / item.required_skills.length) : 0;
+    
+    // Mathematical scoring reflecting exact skill overlap with distinct values (e.g. 94%, 87%, 78%, 68%, 62%)
+    let rawScore = 55;
+    if (matchingSkills.length > 0) {
+      rawScore = Math.round(58 + (matchRatio * 34) + (isDomainMatch ? 6 : 0));
+    } else if (isDomainMatch) {
+      rawScore = 60;
+    } else {
+      rawScore = 48;
+    }
+
+    const matchScore = Math.min(98, Math.max(matchingSkills.length > 0 ? 60 : 45, rawScore));
+
+    let matchTier = 'Good Potential 📈';
     if (matchScore >= 90) matchTier = 'Top Match 🌟';
     else if (matchScore >= 78) matchTier = 'Strong Fit 🎯';
-    else if (matchScore >= 60) matchTier = 'Good Potential 📈';
+    else if (matchScore >= 60) matchTier = 'Relevant Match ⚡';
 
     return {
       ...item,
@@ -286,20 +411,25 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       match_score: matchScore,
       matchScore: matchScore,
       match_tier: matchTier,
+      is_domain_match: isDomainMatch,
       fit_analysis: matchingSkills.length > 0
-        ? `Your verified expertise in ${matchingSkills.slice(0, 3).join(', ')} directly aligns with ${item.company}'s requirements (${matchScore}% match). Strengthening ${missingSkills.slice(0, 2).join(' & ') || 'system design'} will maximize selection potential.`
-        : `Target role ${item.role} aligns with your career trajectory. Adding ${missingSkills.slice(0, 3).join(', ')} will elevate competitiveness.`
+        ? `Your verified expertise in ${matchingSkills.slice(0, 3).join(', ')} directly matches ${item.company}'s requirements (${matchScore}% match). Strengthening ${missingSkills.slice(0, 2).join(' & ') || 'system architecture'} will maximize selection potential.`
+        : `Target role ${item.role} aligns with your career trajectory. Adding ${missingSkills.slice(0, 3).join(', ')} will elevate your competitiveness.`
     };
-  });
+  }).filter(Boolean);
 
   // Filter to keep matches >= 60%
   let filteredMatches = scoredInternships.filter(item => item.match_score >= 60);
   if (filteredMatches.length === 0) {
-    // Fallback guarantee if very few skills detected
     filteredMatches = scoredInternships.slice(0, 6);
   }
 
-  filteredMatches.sort((a, b) => b.match_score - a.match_score);
+  // Sort by domain match priority first, then highest score
+  filteredMatches.sort((a, b) => {
+    if (a.is_domain_match && !b.is_domain_match) return -1;
+    if (!a.is_domain_match && b.is_domain_match) return 1;
+    return b.match_score - a.match_score;
+  });
 
   return {
     candidate_target_role: userProfile.target_role || 'Software Engineer',

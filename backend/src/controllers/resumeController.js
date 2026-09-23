@@ -44,6 +44,64 @@ export async function uploadAndAnalyzeResume(req, res) {
       ]
     );
 
+    // Automatically sync authentic extracted skills into users.skills_inventory & current_skills
+    try {
+      const extractedSkillItems = [];
+      const seenSkillNames = new Set();
+
+      const addSkillIfNew = (name, cat = 'languages') => {
+        if (!name || typeof name !== 'string') return;
+        const cleanName = name.trim();
+        const lower = cleanName.toLowerCase();
+        if (cleanName.length > 1 && !seenSkillNames.has(lower)) {
+          seenSkillNames.add(lower);
+          let detectedCategory = cat;
+          if (/react|node|express|fastapi|django|flask|spring|tailwind|vue|angular|redux|zustand/i.test(lower)) detectedCategory = 'frameworks';
+          else if (/postgres|mongo|redis|mysql|sqlite|cassandra|dynamodb|sql/i.test(lower)) detectedCategory = 'databases';
+          else if (/docker|aws|git|linux|kubernetes|postman|gcp|azure|terraform|ci\/cd/i.test(lower)) detectedCategory = 'tools';
+          else if (/data structures|algorithms|dsa|system design|os|dbms|oop|networking/i.test(lower)) detectedCategory = 'core';
+
+          extractedSkillItems.push({
+            id: `sk-${uuidv4().slice(0, 8)}`,
+            name: cleanName,
+            category: detectedCategory,
+            level: 'intermediate'
+          });
+        }
+      };
+
+      if (analysis.categorized_skills && typeof analysis.categorized_skills === 'object') {
+        Object.entries(analysis.categorized_skills).forEach(([catKey, skillsArr]) => {
+          if (Array.isArray(skillsArr)) {
+            skillsArr.forEach(s => addSkillIfNew(s, catKey));
+          }
+        });
+      }
+
+      if (Array.isArray(analysis.detected_skills)) {
+        analysis.detected_skills.forEach(s => addSkillIfNew(s));
+      }
+
+      if (extractedProfile?.technical_skills && typeof extractedProfile.technical_skills === 'object') {
+        Object.entries(extractedProfile.technical_skills).forEach(([catKey, skillsArr]) => {
+          if (Array.isArray(skillsArr)) {
+            skillsArr.forEach(s => addSkillIfNew(s, catKey));
+          }
+        });
+      }
+
+      if (extractedSkillItems.length > 0) {
+        const commaList = extractedSkillItems.map(s => s.name).join(', ');
+        await query(
+          `UPDATE users SET skills_inventory = $1, current_skills = $2 WHERE id = $3`,
+          [JSON.stringify(extractedSkillItems), commaList, userId]
+        );
+        console.log(`✅ Synced ${extractedSkillItems.length} authentic extracted skills to user's knowledge vault.`);
+      }
+    } catch (syncErr) {
+      console.warn('Notice syncing extracted skills to knowledge vault:', syncErr.message);
+    }
+
     return res.json({
       message: 'Resume analyzed and structured profile extracted successfully',
       resumeId,
