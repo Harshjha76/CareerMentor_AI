@@ -102,12 +102,25 @@ export async function uploadAndAnalyzeResume(req, res) {
       console.warn('Notice syncing extracted skills to knowledge vault:', syncErr.message);
     }
 
+    // Automatically run internship matcher right after resume analysis completes
+    let matchedInternships = [];
+    try {
+      const { matchInternshipsForCandidate } = await import('../services/internshipService.js');
+      const latestUserRes = await query('SELECT * FROM users WHERE id = $1', [userId]);
+      const activeUser = latestUserRes.rows[0] || req.user;
+      const matchResult = await matchInternshipsForCandidate(activeUser, combinedPayload);
+      matchedInternships = matchResult.top_internships || [];
+    } catch (matchErr) {
+      console.warn('Notice matching internships automatically upon resume upload:', matchErr.message);
+    }
+
     return res.json({
       message: 'Resume analyzed and structured profile extracted successfully',
       resumeId,
       score,
       analysis,
       extractedProfile,
+      matched_internships: matchedInternships,
       fileName: req.file.originalname
     });
   } catch (err) {
