@@ -77,6 +77,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹1,30,000 / month',
       duration: '3 - 6 Months',
       experience_level: 'B.Tech / M.Tech / MS in CS, AI or related',
+      posted_date: '2026-09-18',
       required_skills: ['Python', 'PyTorch', 'Machine Learning', 'Linux', 'Git', 'Data Structures & Algorithms', 'REST APIs'],
       apply_urls: {
         careers: 'https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite',
@@ -96,6 +97,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹65,000 / month',
       duration: '4 Months',
       experience_level: 'Pre-final / Final Year College Students',
+      posted_date: '2026-09-20',
       required_skills: ['Python', 'FastAPI', 'PostgreSQL', 'Pandas', 'Docker', 'Redis', 'REST APIs'],
       apply_urls: {
         careers: 'https://www.zomato.com/careers',
@@ -116,6 +118,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹70,000 / month',
       duration: '6 Months',
       experience_level: 'Undergraduate / Postgraduate Students',
+      posted_date: '2026-09-19',
       required_skills: ['Python', 'SQL', 'FastAPI', 'Pandas', 'Machine Learning', 'Git', 'Docker'],
       apply_urls: {
         careers: 'https://careers.swiggy.com/',
@@ -135,6 +138,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹1,15,000 / month',
       duration: '6 Months',
       experience_level: 'Pre-final / Final Year Students',
+      posted_date: '2026-09-16',
       required_skills: ['Python', 'AWS', 'Docker', 'PostgreSQL', 'REST APIs', 'Git', 'Data Structures & Algorithms'],
       apply_urls: {
         careers: 'https://www.amazon.jobs/en/job_categories/software-development',
@@ -156,6 +160,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹1,05,000 / month',
       duration: '2 - 6 Months',
       experience_level: 'Pre-final / Final Year',
+      posted_date: '2026-09-17',
       required_skills: ['Java', 'Spring Boot', 'Data Structures & Algorithms', 'SQL', 'PostgreSQL', 'Multithreading', 'Git'],
       apply_urls: {
         careers: 'https://www.goldmansachs.com/careers/students/programs/india-summer-analyst.html',
@@ -176,6 +181,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹85,000 / month',
       duration: '6 Months',
       experience_level: 'Undergraduate / Postgraduate',
+      posted_date: '2026-09-15',
       required_skills: ['Java', 'SQL', 'PostgreSQL', 'Docker', 'REST APIs', 'Data Structures & Algorithms'],
       apply_urls: {
         careers: 'https://www.oracle.com/corporate/careers/students-grads/',
@@ -195,6 +201,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹90,000 / month',
       duration: '6 Months',
       experience_level: 'B.Tech / M.Tech Students',
+      posted_date: '2026-09-19',
       required_skills: ['Java', 'Spring Boot', 'SQL', 'PostgreSQL', 'REST APIs', 'Git', 'Linux'],
       apply_urls: {
         careers: 'https://www.morganstanley.com/people/students-and-graduates',
@@ -216,6 +223,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹1,10,000 / month',
       duration: '2 - 6 Months',
       experience_level: 'B.Tech / M.Tech Student',
+      posted_date: '2026-09-18',
       required_skills: ['React', 'TypeScript', 'Node.js', 'Azure', 'RESTful APIs', 'SQL', 'Git'],
       apply_urls: {
         careers: 'https://careers.microsoft.com/students/us/en/search-results?keywords=intern',
@@ -236,6 +244,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹60,000 / month',
       duration: '6 Months',
       experience_level: 'College Students & Self-Taught',
+      posted_date: '2026-09-20',
       required_skills: ['React', 'JavaScript', 'TypeScript', 'Tailwind CSS', 'Redux / Zustand', 'RESTful APIs', 'Git'],
       apply_urls: {
         careers: 'https://www.postman.com/company/careers/',
@@ -256,6 +265,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹1,00,000 / month',
       duration: '3 Months (Summer)',
       experience_level: 'Penultimate Year',
+      posted_date: '2026-09-14',
       required_skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL', 'Docker', 'RESTful APIs', 'Git'],
       apply_urls: {
         careers: 'https://www.atlassian.com/company/careers/students',
@@ -275,6 +285,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹75,000 / month',
       duration: '3 - 6 Months',
       experience_level: 'Final Year / Fresh Graduates',
+      posted_date: '2026-09-19',
       required_skills: ['React', 'Node.js', 'PostgreSQL', 'Redis', 'RESTful APIs', 'Git', 'Docker'],
       apply_urls: {
         careers: 'https://razorpay.com/jobs/',
@@ -297,6 +308,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹55,000 / month',
       duration: '6 Months',
       experience_level: 'B.Tech CS / IT',
+      posted_date: '2026-09-20',
       required_skills: ['Linux', 'Docker', 'Kubernetes', 'AWS', 'Python', 'CI/CD Pipelines', 'Git'],
       apply_urls: {
         careers: 'https://www.browserstack.com/careers',
@@ -317,6 +329,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹60,000 / month',
       duration: '6 Months',
       experience_level: 'Engineering Undergraduates',
+      posted_date: '2026-09-17',
       required_skills: ['Linux', 'Kubernetes', 'Docker', 'Python', 'Git', 'CI/CD Pipelines', 'Bash'],
       apply_urls: {
         careers: 'https://www.redhat.com/en/jobs',
@@ -338,6 +351,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       stipend: '₹1,20,000 / month',
       duration: '3 Months (Full-time)',
       experience_level: 'Undergraduate / Graduate',
+      posted_date: '2026-09-21',
       required_skills: ['Data Structures & Algorithms', 'Python', 'Java', 'C++', 'System Design', 'Git'],
       apply_urls: {
         careers: 'https://careers.google.com/jobs/results/?q=software%20engineer%20intern',
@@ -348,7 +362,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
     }
   ];
 
-  // Calculate dynamic match scores based on candidate skill set and target role
+  // Calculate dynamic match scores strictly using weighted skill overlap + role/domain fit
   const scoredInternships = internshipCatalog.map(item => {
     const matchingSkills = [];
     const missingSkills = [];
@@ -357,7 +371,7 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       const reqLower = req.toLowerCase();
       const isMatched = Array.from(userSkillSet).some(us => {
         const u = us.toLowerCase();
-        return u.includes(reqLower) || reqLower.includes(u) ||
+        return u === reqLower || u.includes(reqLower) || reqLower.includes(u) ||
           (reqLower.includes('dsa') && (u.includes('algorithm') || u.includes('data structure'))) ||
           (reqLower.includes('sql') && (u.includes('postgres') || u.includes('mysql') || u.includes('database')));
       });
@@ -378,29 +392,27 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
     else if (isFullStackDomain && (item.domain_key === 'full_stack' || item.domain_key === 'frontend' || item.domain_key === 'java_backend' || item.domain_key === 'python_ai' || item.domain_key === 'swe_general')) isDomainMatch = true;
     else if (item.role.toLowerCase().includes(targetRole) || item.domain.toLowerCase().includes(targetRole)) isDomainMatch = true;
 
-    // Filter out completely non-matching domain items if a specific domain is targeted
+    // Filter out completely non-matching domain items if a specific domain is targeted and no skills match
     if (!isDomainMatch && !isFullStackDomain && matchingSkills.length === 0) {
       return null;
     }
 
-    const matchRatio = item.required_skills.length > 0 ? (matchingSkills.length / item.required_skills.length) : 0;
+    const skillRatio = item.required_skills.length > 0 ? (matchingSkills.length / item.required_skills.length) : 0;
     
-    // Mathematical scoring reflecting exact skill overlap with distinct values (e.g. 94%, 87%, 78%, 68%, 62%)
-    let rawScore = 55;
-    if (matchingSkills.length > 0) {
-      rawScore = Math.round(58 + (matchRatio * 34) + (isDomainMatch ? 6 : 0));
-    } else if (isDomainMatch) {
-      rawScore = 60;
-    } else {
-      rawScore = 48;
+    // Strict weighted calculation: 65% skill overlap + 35% role/domain fit
+    const skillScore = skillRatio * 65;
+    const domainScore = isDomainMatch ? 33 : 15;
+    const matchScore = Math.min(98, Math.round(skillScore + domainScore));
+
+    // Never show or inflate if matchScore is below 60%
+    if (matchScore < 60) {
+      return null;
     }
 
-    const matchScore = Math.min(98, Math.max(matchingSkills.length > 0 ? 60 : 45, rawScore));
-
-    let matchTier = 'Good Potential 📈';
+    let matchTier = 'Relevant Match ⚡';
     if (matchScore >= 90) matchTier = 'Top Match 🌟';
     else if (matchScore >= 78) matchTier = 'Strong Fit 🎯';
-    else if (matchScore >= 60) matchTier = 'Relevant Match ⚡';
+    else if (matchScore >= 60) matchTier = 'Good Potential 📈';
 
     return {
       ...item,
@@ -413,29 +425,22 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
       match_tier: matchTier,
       is_domain_match: isDomainMatch,
       fit_analysis: matchingSkills.length > 0
-        ? `Your verified expertise in ${matchingSkills.slice(0, 3).join(', ')} directly matches ${item.company}'s requirements (${matchScore}% match). Strengthening ${missingSkills.slice(0, 2).join(' & ') || 'system architecture'} will maximize selection potential.`
+        ? `Your verified expertise in ${matchingSkills.slice(0, 3).join(', ')} matches ${item.company}'s requirements (${matchScore}% match). Strengthening ${missingSkills.slice(0, 2).join(' & ') || 'system architecture'} will elevate your selection rank.`
         : `Target role ${item.role} aligns with your career trajectory. Adding ${missingSkills.slice(0, 3).join(', ')} will elevate your competitiveness.`
     };
   }).filter(Boolean);
 
-  // Filter to keep matches >= 60%
-  let filteredMatches = scoredInternships.filter(item => item.match_score >= 60);
-  if (filteredMatches.length === 0) {
-    filteredMatches = scoredInternships.slice(0, 6);
-  }
-
-  // Sort by domain match priority first, then highest score
-  filteredMatches.sort((a, b) => {
-    if (a.is_domain_match && !b.is_domain_match) return -1;
-    if (!a.is_domain_match && b.is_domain_match) return 1;
-    return b.match_score - a.match_score;
-  });
+  // Sort strictly high to low by match_score
+  scoredInternships.sort((a, b) => b.match_score - a.match_score);
 
   return {
     candidate_target_role: userProfile.target_role || 'Software Engineer',
     detected_skills_count: userSkillSet.size,
     detected_skills: Array.from(userSkillSet),
-    top_internships: filteredMatches
+    top_internships: scoredInternships,
+    message: scoredInternships.length === 0
+      ? 'No active internships found matching >= 60% compatibility for your current skill set. Follow your roadmap to unlock matching roles.'
+      : null
   };
 }
 

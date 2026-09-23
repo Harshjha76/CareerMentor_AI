@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "test": "node tests/verifyRules.test.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
