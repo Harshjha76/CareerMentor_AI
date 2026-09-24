@@ -532,7 +532,7 @@ export default function InternshipsPage() {
                       </h3>
                       <p className="text-xs text-slate-400 leading-relaxed">
                         {internshipsData?.top_internships?.length === 0
-                          ? 'We strictly enforce candidate quality and never inflate match scores. Use your Roadmap Planner to master missing core skills and unlock tier-1 company listings.'
+                          ? `Found ${internshipsData?.pipeline_stats?.stage_counts?.raw_fetched || 'several'} openings across live sources, but none currently meet the >= 60% skill threshold. We never inflate scores. Focus on learning target skills using your Roadmap Planner to qualify!`
                           : 'Try switching your work mode, domain, or location filters to see qualified internships.'}
                       </p>
                     </div>
@@ -557,6 +557,53 @@ export default function InternshipsPage() {
                           <RefreshCw className="w-3.5 h-3.5" /> Reset Filters
                         </button>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Below 60% (Not Recommended) Separate Section */}
+                {internshipsData?.below_threshold_internships?.length > 0 && (
+                  <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl">
+                      <div className="flex items-center gap-2 text-amber-400">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <h4 className="text-sm font-bold text-amber-300">Below 60% (Not Recommended — Skill Gaps Identified)</h4>
+                      </div>
+                      <span className="text-xs text-amber-200/70">Showing closest listings below the strict 60% threshold</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {internshipsData.below_threshold_internships.map((item) => (
+                        <div key={item.id} className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 space-y-3 opacity-80 hover:opacity-100 transition-opacity">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h5 className="text-sm font-bold text-slate-200 line-clamp-1">{item.role}</h5>
+                              <p className="text-xs text-slate-400">{item.company}</p>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold shrink-0">
+                              {item.match_score}%
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            <span className="text-slate-500 block mb-1">Missing Skills:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {(item.missing_skills || []).slice(0, 3).map((sk, i) => (
+                                <span key={i} className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-amber-300/80">
+                                  {sk}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <a
+                            href={item.apply_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 pt-1"
+                          >
+                            <ExternalLink className="w-3 h-3" /> View Listing on {item.source}
+                          </a>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
