@@ -1330,6 +1330,375 @@ function getFallbackPlanAnalysis(targetRole, dailyHours, language) {
 }
 
 /**
+ * 4.5 Dynamic Human + AI Collaborative Study Plan Generator
+ * Produces structured, role-specific, progression-based weekly plans with checklist subtasks, time budgets & free resources.
+ */
+export async function generateStudyPlanWithAI({
+  targetRole = 'Full Stack Developer',
+  skillLevel = 'Intermediate',
+  sessionMinutes = 57,
+  daysPerWeek = 7,
+  language = 'en'
+}) {
+  const cleanRole = (targetRole || 'Full Stack Developer').trim();
+  const cleanLevel = ['Beginner', 'Intermediate', 'Advanced'].includes(skillLevel) ? skillLevel : 'Intermediate';
+  const cleanMinutes = Number(sessionMinutes) > 0 ? Number(sessionMinutes) : 57;
+  const cleanDays = Math.min(7, Math.max(1, Number(daysPerWeek) || 7));
+
+  const systemPrompt = `You are a Principal Curriculum Architect and Personalized Learning Strategist.
+Create a highly practical, realistic, step-by-step weekly study plan for a student pursuing:
+- Role / Topic: "${cleanRole}"
+- Skill Level: "${cleanLevel}"
+- Daily Study Budget: EXACTLY ${cleanMinutes} minutes per study day
+- Active Study Days: ${cleanDays} days this week
+
+CRITICAL INSTRUCTIONS:
+1. SPECIFICITY: EVERY day must focus on a distinct, authentic topic tailored specifically to "${cleanRole}". NEVER use generic titles like "Practice core concepts" or "Study basics". Name exact tools, frameworks, algorithms, chapters, or concepts (e.g. for Full Stack: "React Custom Hooks & Context API", "Express Middleware & Error Handling"; for AI/ML: "PyTorch Tensor Operations & Autograd", "Linear Regression & Gradient Descent from Scratch"; for UPSC: "Indian Polity: Preamble & Fundamental Rights", "Modern History: 1857 Revolt & British Policies"; for Guitar: "Major & Minor Pentatonic Scales", "Fingerstyle Patterns & Barre Chords").
+2. PROGRESSION: Build a logical arc across the days:
+   - Day 1: Core Fundamentals & Theory (type: "learn")
+   - Day 2: Guided Hands-on Practice & Problem Solving (type: "practice")
+   - Day 3: Intermediate Application & Real-world Workflows (type: "practice")
+   - Day 4: Mini Project / Practical Implementation (type: "project")
+   - Day 5: Architecture / Advanced Case Study / Optimization (type: "project")
+   - Day 6: Timed Challenge / Mock Interview / Practice Exam (type: "mock test")
+   - Day 7: Weekly Revision, Flashcards & Buffer (type: "revision")
+   (If active days is less than 7, distribute accordingly so the final day is revision/mock).
+3. REALISTIC TIME BUDGET:
+   - The total duration of all subtasks for each day MUST SUM EXACTLY to ${cleanMinutes} minutes (e.g. 25m + 25m + 7m review = ${cleanMinutes}m).
+   - Provide 2 to 4 actionable subtasks per day.
+4. SUBTASKS: Each subtask must include:
+   - "title": Actionable task description
+   - "duration_minutes": Allocated minutes (sum equals ${cleanMinutes})
+   - "resource": High-yield free resource recommendation (Documentation, MDN, YouTube, LeetCode, GitHub, etc.)
+   - "done_when": Verifiable, concrete completion milestone (e.g. "Component renders with dynamic state and 0 console errors", "3 Medium problems accepted on LeetCode", "Notes summarized with 10 flashcards")
+
+Return ONLY a valid JSON object without markdown formatting:
+{
+  "role": "${cleanRole}",
+  "skill_level": "${cleanLevel}",
+  "session_minutes": ${cleanMinutes},
+  "days": [
+    {
+      "id": "day-1",
+      "day": "Monday",
+      "topic": "Specific Topic Name",
+      "type": "learn",
+      "duration_minutes": ${cleanMinutes},
+      "time": "${cleanMinutes} min Session",
+      "description": "Short 1-sentence summary of today's focus.",
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "title": "...",
+          "duration_minutes": ...,
+          "resource": "...",
+          "done_when": "..."
+        }
+      ]
+    }
+  ]
+}`;
+
+  const prompt = `Generate the structured ${cleanDays}-day study plan for "${cleanRole}" (${cleanLevel}, ${cleanMinutes} mins/day).`;
+  const aiText = await callGemini(systemPrompt, prompt, language);
+
+  if (aiText) {
+    try {
+      const cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      if (Array.isArray(parsed.days) && parsed.days.length > 0) {
+        return parsed;
+      }
+    } catch (parseErr) {
+      console.warn('Notice parsing Gemini study plan response:', parseErr.message);
+    }
+  }
+
+  // Intelligent dynamic fallback generator
+  return generateDynamicFallbackPlan(cleanRole, cleanLevel, cleanMinutes, cleanDays, language);
+}
+
+/**
+ * Intelligent Dynamic Fallback Plan Generator
+ * Produces structured progression for ANY target domain, ensuring zero empty plans.
+ */
+function generateDynamicFallbackPlan(role, level, minutes, numDays, language) {
+  const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const activeDays = DAYS_OF_WEEK.slice(0, numDays);
+
+  // Determine domain-specific topic curricula
+  const roleLower = role.toLowerCase();
+  let curriculum = [];
+
+  if (/full stack|mern|web dev|frontend|react|node/i.test(roleLower)) {
+    curriculum = [
+      {
+        topic: 'Modern Frontend Architecture: React 18 Hooks, Context & State Management',
+        type: 'learn',
+        desc: 'Master state management, useEffect dependency trees, and custom hooks.',
+        subtasks: [
+          { title: 'Deconstruct useState & custom hooks lifecycle', ratio: 0.45, res: 'React.dev Official Documentation', done: '3 reusable custom hooks implemented in sandbox' },
+          { title: 'Build a dynamic multi-state filter dashboard', ratio: 0.45, res: 'FreeCodeCamp React Course', done: 'Dashboard filtering items with zero re-render lag' },
+          { title: 'Code review & console warning audit', ratio: 0.10, res: 'React Developer Tools', done: 'Zero ESLint/React warnings in terminal' }
+        ]
+      },
+      {
+        topic: 'Backend REST API Engineering: Express.js Middleware & PostgreSQL Connection Pooling',
+        type: 'practice',
+        desc: 'Architect robust CRUD endpoints with parameterized SQL queries and error handlers.',
+        subtasks: [
+          { title: 'Write structured Express router with custom auth middleware', ratio: 0.45, res: 'Express.js Documentation & MDN', done: 'JWT token verification middleware active' },
+          { title: 'Implement PostgreSQL parameterized queries with node-postgres', ratio: 0.45, res: 'PostgreSQL Tutorial & Node pg docs', done: '5 CRUD endpoints tested via Postman' },
+          { title: 'Database query execution time benchmarking', ratio: 0.10, res: 'pgAdmin EXPLAIN ANALYZE', done: 'All queries responding in < 25ms' }
+        ]
+      },
+      {
+        topic: 'Data Modeling & Relational Schema Design with Foreign Keys & Constraints',
+        type: 'practice',
+        desc: 'Normalize relational schemas (3NF) and add indexing for fast lookups.',
+        subtasks: [
+          { title: 'Design ER diagram with 1-to-many and many-to-many tables', ratio: 0.45, res: 'Database Systems Concept Notes', done: 'Clean SQL migration schema file committed' },
+          { title: 'Create B-tree indexes on foreign keys and search columns', ratio: 0.45, res: 'Postgres Indexing Deep Dive', done: 'Indexes created and verified in SQL CLI' },
+          { title: 'Write sample join queries with aggregation', ratio: 0.10, res: 'SQLZoo Practice Drills', done: 'Complex multi-table join executed with correct totals' }
+        ]
+      },
+      {
+        topic: 'Full-Stack Feature Integration: End-to-End Authentication & Protected Routes',
+        type: 'project',
+        desc: 'Connect React client to Express backend with HttpOnly cookie tokens.',
+        subtasks: [
+          { title: 'Implement React AuthContext with persistent login session', ratio: 0.45, res: 'MDN Web Security Guide', done: 'User remains authenticated across browser refreshes' },
+          { title: 'Build protected route wrapper with redirect logic', ratio: 0.45, res: 'React Router v6 Documentation', done: 'Unauthorized users redirected to /login' },
+          { title: 'Test login failure states and inline error feedback', ratio: 0.10, res: 'UI Accessibility Checklist', done: 'Clear error banners displayed on invalid credentials' }
+        ]
+      },
+      {
+        topic: 'System Performance: Redis Caching, Rate Limiting & Async Job Queue',
+        type: 'project',
+        desc: 'Accelerate API response times using Redis key-value caching.',
+        subtasks: [
+          { title: 'Implement Redis caching layer for heavy read queries', ratio: 0.45, res: 'Redis University & Node ioredis docs', done: 'Cache hit returns in < 5ms' },
+          { title: 'Add express-rate-limit middleware to prevent DDoS abuse', ratio: 0.45, res: 'OWASP Security Guidelines', done: 'Rate limit returns 429 after threshold' },
+          { title: 'Cache invalidation on write/update operations', ratio: 0.10, res: 'System Design Interview Primer', done: 'Cache purged automatically on PUT/DELETE' }
+        ]
+      },
+      {
+        topic: 'Timed Full-Stack Coding Challenge & Mock Technical Interview Tackle',
+        type: 'mock test',
+        desc: 'Simulate high-pressure live coding: Build an autocomplete search component with debouncing.',
+        subtasks: [
+          { title: 'Live build: Custom debounce search hook + backend prefix search', ratio: 0.50, res: 'LeetCode / GreatFrontEnd Challenges', done: 'Working debounced typeahead search under 30 mins' },
+          { title: 'STAR interview answer tackle: System scalability bottleneck', ratio: 0.40, res: 'CareerPilot Interview Sandbox', done: 'Articulated situation, task, action, result clearly' },
+          { title: 'Self-reflection and code optimization notes', ratio: 0.10, res: 'Personal Dev Journal', done: '3 takeaways documented for next interview' }
+        ]
+      },
+      {
+        topic: 'Weekly Retrospective, GitHub Code Cleanup & Portfolio Deployment',
+        type: 'revision',
+        desc: 'Consolidate the week’s codebase, polish README documentation, and deploy to production.',
+        subtasks: [
+          { title: 'Refactor code, remove dead imports & polish README badges', ratio: 0.45, res: 'Make A README Guide', done: 'Architecture diagram and setup instructions committed' },
+          { title: 'Deploy full-stack demo to Render / Vercel / Supabase', ratio: 0.45, res: 'Vercel / Render Deployment Docs', done: 'Live production URL accessible without errors' },
+          { title: 'Review flashcards on week’s core architectural concepts', ratio: 0.10, res: 'Anki / Flashcard Vault', done: '15 concept flashcards reviewed with 100% accuracy' }
+        ]
+      }
+    ];
+  } else if (/ai|ml|machine learning|data science|deep learning|data analyst/i.test(roleLower)) {
+    curriculum = [
+      {
+        topic: 'Mathematical Foundations & Vector Operations: NumPy & Linear Algebra',
+        type: 'learn',
+        desc: 'Master matrix multiplications, dot products, broadcasting, and vectorization.',
+        subtasks: [
+          { title: 'Implement matrix transformations & eigen decomposition in NumPy', ratio: 0.45, res: 'NumPy Quickstart & 3Blue1Brown Linear Algebra', done: '10 vector manipulation drills solved without loops' },
+          { title: 'Vectorized loss functions (MSE, Cross-Entropy) from scratch', ratio: 0.45, res: 'Stanford CS229 Lecture Notes', done: 'Loss functions validated against PyTorch tensor outputs' },
+          { title: 'Review mathematical notation and gradient derivatives', ratio: 0.10, res: 'Deep Learning Book by Goodfellow', done: 'Derivations written out cleanly' }
+        ]
+      },
+      {
+        topic: 'Exploratory Data Analysis & Feature Engineering: Pandas & Scikit-Learn',
+        type: 'practice',
+        desc: 'Handle missing values, outlier detection, one-hot encoding, and feature scaling.',
+        subtasks: [
+          { title: 'Build automated data cleaning and imputation pipeline', ratio: 0.45, res: 'Kaggle Datasets & Pandas Guide', done: 'Clean dataframe created with 0 null values' },
+          { title: 'Perform correlation analysis & feature importance ranking', ratio: 0.45, res: 'Scikit-Learn Preprocessing Docs', done: 'Correlation heatmap and top 5 features plotted' },
+          { title: 'Train-test stratified split verification', ratio: 0.10, res: 'ML Mastery Guides', done: 'Balanced class distributions verified in split sets' }
+        ]
+      },
+      {
+        topic: 'Supervised Learning Algorithms: Regression, Decision Trees & Random Forests',
+        type: 'practice',
+        desc: 'Train baseline predictive models with hyperparameter tuning via GridSearchCV.',
+        subtasks: [
+          { title: 'Train and evaluate Random Forest Classifier with cross-validation', ratio: 0.45, res: 'Scikit-Learn User Guide', done: 'Model achieving > 85% F1-score on test set' },
+          { title: 'Optimize hyperparameters (n_estimators, max_depth) with GridSearchCV', ratio: 0.45, res: 'Hands-On Machine Learning with Scikit-Learn', done: 'Best params identified with validation curve plotted' },
+          { title: 'Evaluate confusion matrix, ROC-AUC curve & precision-recall', ratio: 0.10, res: 'StatQuest with Josh Starmer YouTube', done: 'Classification report exported' }
+        ]
+      },
+      {
+        topic: 'Neural Networks from Scratch: Multi-Layer Perceptrons & Backpropagation in PyTorch',
+        type: 'project',
+        desc: 'Construct forward pass, autograd backprop, and training loops in PyTorch.',
+        subtasks: [
+          { title: 'Build custom nn.Module architecture with ReLU & Dropout', ratio: 0.45, res: 'PyTorch Official Tutorials (pytorch.org)', done: 'Model compiles and forward pass runs on sample batch' },
+          { title: 'Implement training loop with Adam optimizer and learning rate scheduler', ratio: 0.45, res: 'Fast.ai Deep Learning Course', done: 'Training loss decreasing steadily over 10 epochs' },
+          { title: 'Plot training vs validation loss curves for overfitting check', ratio: 0.10, res: 'Weights & Biases / Matplotlib Guide', done: 'Clean loss curve chart saved' }
+        ]
+      },
+      {
+        topic: 'Model Evaluation, Explainability & SHAP Feature Attribution',
+        type: 'project',
+        desc: 'Interpret model predictions using SHAP values and deploy inference pipeline.',
+        subtasks: [
+          { title: 'Compute SHAP summary and waterfall plots for model predictions', ratio: 0.45, res: 'SHAP Documentation (shap.readthedocs.io)', done: 'Top feature explanations plotted for 3 test samples' },
+          { title: 'Serialize model to ONNX / TorchScript for fast serving', ratio: 0.45, res: 'PyTorch Production Deployment Docs', done: 'Inference latency benchmarked under 15ms' },
+          { title: 'Containerize inference microservice with FastAPI', ratio: 0.10, res: 'FastAPI Machine Learning Guide', done: 'Endpoint returning predictions via JSON' }
+        ]
+      },
+      {
+        topic: 'Timed Machine Learning Modeling Challenge & Technical STAR Interview',
+        type: 'mock test',
+        desc: 'Complete a 45-minute timed predictive modeling challenge on Kaggle.',
+        subtasks: [
+          { title: 'Timed Kaggle tabular competition baseline build & submission', ratio: 0.50, res: 'Kaggle Competitions Sandbox', done: 'Valid submission scored on leaderboard' },
+          { title: 'STAR interview tackle: Handling class imbalance and data leakage', ratio: 0.40, res: 'CareerPilot AI Interview Sandbox', done: 'Structured answer delivered explaining SMOTE and leakage' },
+          { title: 'Review test mistakes and log improvement notes', ratio: 0.10, res: 'ML Study Log', done: '3 concrete insights recorded' }
+        ]
+      },
+      {
+        topic: 'Weekly Retrospective, Research Paper Summary & Model Portfolio Polish',
+        type: 'revision',
+        desc: 'Summarize one foundational ML paper and polish GitHub Jupyter notebooks.',
+        subtasks: [
+          { title: 'Clean and comment Jupyter notebook with markdown explanations', ratio: 0.45, res: 'GitHub ML Portfolio Best Practices', done: 'Clean, reproducible notebook committed to GitHub' },
+          { title: 'Read and summarize 1 seminal paper (e.g. Attention Is All You Need)', ratio: 0.45, res: 'ArXiv / Papers With Code', done: '1-page structured paper summary written' },
+          { title: 'Review flashcards on loss functions, regularizers & metrics', ratio: 0.10, res: 'Anki ML Flashcards', done: '15 cards reviewed with zero errors' }
+        ]
+      }
+    ];
+  } else {
+    // Dynamic universal generator for ANY custom role or domain (e.g. UPSC, Guitar, Cyber, DevOps, CA, etc.)
+    curriculum = [
+      {
+        topic: `${role}: Core Foundations, Theoretical Principles & Key Terminology`,
+        type: 'learn',
+        desc: `Master the foundational building blocks and core theory of ${role}.`,
+        subtasks: [
+          { title: `Study fundamental principles and core taxonomy of ${role}`, ratio: 0.45, res: `Official ${role} Reference Guide & Documentation`, done: `Structured notes created covering core concepts` },
+          { title: `Hands-on introductory drill and baseline exercise`, ratio: 0.45, res: `High-yield ${role} tutorial videos & articles`, done: `First practical exercise completed with verified output` },
+          { title: `Summarize key definitions and conceptual boundaries`, ratio: 0.10, res: `Personal Study Notes`, done: `5 core definitions memorized and reviewed` }
+        ]
+      },
+      {
+        topic: `${role}: Practical Techniques, Core Tools & Guided Drills`,
+        type: 'practice',
+        desc: `Apply standard industry methods and techniques in ${role}.`,
+        subtasks: [
+          { title: `Execute guided practical exercises in ${role}`, ratio: 0.45, res: `Interactive ${role} practice platform`, done: `3 standard exercises solved end-to-end` },
+          { title: `Deep dive into common patterns and best practices`, ratio: 0.45, res: `Curated ${role} reference resources`, done: `Techniques applied to sample challenge` },
+          { title: `Error analysis and troubleshooting review`, ratio: 0.10, res: `Community Discussion & FAQs`, done: `Common failure points identified and mitigated` }
+        ]
+      },
+      {
+        topic: `${role}: Intermediate Problem Solving & Real-World Application`,
+        type: 'practice',
+        desc: `Tackle complex scenarios and real-world case studies in ${role}.`,
+        subtasks: [
+          { title: `Solve intermediate-level scenarios and workflow challenges`, ratio: 0.45, res: `Real-world ${role} case studies`, done: `Comprehensive solution drafted and verified` },
+          { title: `Refine execution speed and precision`, ratio: 0.45, res: `Practice drills and benchmarking guide`, done: `Completed exercise in 20% less time` },
+          { title: `Self-check against industry benchmarks`, ratio: 0.10, res: `Evaluation Rubric`, done: `All quality criteria fulfilled` }
+        ]
+      },
+      {
+        topic: `${role}: Practical Implementation & Capstone Deliverable`,
+        type: 'project',
+        desc: `Build a tangible project, artifact, or comprehensive deliverable in ${role}.`,
+        subtasks: [
+          { title: `Architect and execute hands-on deliverable for ${role}`, ratio: 0.45, res: `Project Specifications & Blueprints`, done: `Deliverable drafted with all core sections active` },
+          { title: `Refine, polish and validate deliverable functionality`, ratio: 0.45, res: `Quality Standards & Guidelines`, done: `Deliverable tested and verified working` },
+          { title: `Document methodology and key learnings`, ratio: 0.10, res: `Project Portfolio Log`, done: `Summary documentation committed` }
+        ]
+      },
+      {
+        topic: `${role}: Advanced Optimization, Strategy & Edge Cases`,
+        type: 'project',
+        desc: `Master high-level optimizations, advanced workflows, and risk mitigation in ${role}.`,
+        subtasks: [
+          { title: `Analyze advanced scenarios and edge cases in ${role}`, ratio: 0.45, res: `Advanced ${role} Masterclass Notes`, done: `Edge cases resolved with systematic approach` },
+          { title: `Optimize efficiency, workflow throughput & quality`, ratio: 0.45, res: `Optimization Case Studies`, done: `Measurable improvement documented` },
+          { title: `Conduct peer / self-evaluation review`, ratio: 0.10, res: `Expert Rubric`, done: `Checklist completed with 0 gaps` }
+        ]
+      },
+      {
+        topic: `${role}: Timed Simulation, Mock Exam & Pressure Test`,
+        type: 'mock test',
+        desc: `Simulate high-pressure evaluation conditions for ${role}.`,
+        subtasks: [
+          { title: `Timed mock assessment / challenge under strict time limits`, ratio: 0.50, res: `Timed Simulation Sandbox`, done: `Challenge completed within allotted duration` },
+          { title: `Detailed answer review & gap analysis`, ratio: 0.40, res: `Answer Key & Evaluation Guide`, done: `Mistakes analyzed and corrective actions planned` },
+          { title: `Document key takeaways for next sprint`, ratio: 0.10, res: `Performance Tracker`, done: `3 concrete adjustments recorded` }
+        ]
+      },
+      {
+        topic: `${role}: Weekly Synthesis, Comprehensive Revision & Next Sprint Plan`,
+        type: 'revision',
+        desc: `Consolidate all weekly learnings into long-term memory and prepare next goals.`,
+        subtasks: [
+          { title: `Comprehensive review of all notes and practical drills`, ratio: 0.45, res: `Master Summary Notes`, done: `Full curriculum reviewed from start to end` },
+          { title: `Active recall testing on critical concepts and formulas`, ratio: 0.45, res: `Flashcards & Self-Quiz Vault`, done: `Achieved 90%+ recall on all key topics` },
+          { title: `Calibrate roadmap goals for the upcoming week`, ratio: 0.10, res: `CareerPilot AI Roadmap Planner`, done: `Next week's target milestones defined` }
+        ]
+      }
+    ];
+  }
+
+  // Build final structured days ensuring exact minutes match
+  const days = activeDays.map((dayName, idx) => {
+    const item = curriculum[idx % curriculum.length];
+    
+    // Calculate subtask minutes so they sum EXACTLY to `minutes`
+    let allocatedSum = 0;
+    const subtasks = item.subtasks.map((st, sIdx) => {
+      let stMinutes;
+      if (sIdx === item.subtasks.length - 1) {
+        stMinutes = Math.max(5, minutes - allocatedSum);
+      } else {
+        stMinutes = Math.max(5, Math.round(minutes * st.ratio));
+        allocatedSum += stMinutes;
+      }
+      return {
+        id: `subtask-${idx + 1}-${sIdx + 1}`,
+        title: st.title,
+        duration_minutes: stMinutes,
+        resource: st.res,
+        done_when: st.done,
+        is_completed: false
+      };
+    });
+
+    return {
+      id: `day-${idx + 1}`,
+      day: dayName,
+      topic: item.topic,
+      type: item.type,
+      duration_minutes: minutes,
+      time: `${minutes} min Session`,
+      description: item.desc,
+      is_completed: false,
+      is_ai_suggested: true,
+      subtasks
+    };
+  });
+
+  return {
+    role,
+    skill_level: level,
+    session_minutes: minutes,
+    days
+  };
+}
+
+/**
  * 5. 2-Hour Autonomous AI Agent Reminder Dispatcher
  */
 export function generate2HourCheckinReminder(userName, pendingCount = 2, language = 'en') {

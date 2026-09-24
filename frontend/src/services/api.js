@@ -135,10 +135,11 @@ export const api = {
         headers: getAuthHeaders()
       }).then(handleResponse),
 
-    generateAI: () =>
+    generateAI: (payload = {}) =>
       fetch(`${API_BASE}/planner/generate`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
       }).then(handleResponse),
 
     saveTasks: (tasks) =>

@@ -1,6 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
-import { evaluateStudyPlanProsAndCons } from '../services/aiService.js';
+import {
+  evaluateStudyPlanProsAndCons,
+  generateStudyPlanWithAI
+} from '../services/aiService.js';
 
 export async function getPlan(req, res) {
   try {
@@ -36,73 +39,109 @@ export async function getPlan(req, res) {
 export async function generateAIPlan(req, res) {
   try {
     const userId = req.user.id;
-    const userRole = req.user.target_role || 'Software Engineer';
-    const hours = req.user.daily_study_hours || 2;
+    const {
+      target_role,
+      skill_level = 'Intermediate',
+      session_minutes,
+      days_per_week = 7
+    } = req.body || {};
+
+    const cleanRole = (target_role || req.user.target_role || '').trim();
+    if (!cleanRole) {
+      return res.status(400).json({
+        error: 'Please enter your target role, exam, or learning domain (e.g. Full Stack Developer, AI/ML, UPSC, Guitar).'
+      });
+    }
+
+    const sessionMinutes = Number(session_minutes) > 0 ? Number(session_minutes) : (req.user.available_study_minutes || 57);
     const language = req.user.preferred_language || 'en';
 
-    // Fetch active roadmap tasks
-    const activeTasks = await query(
-      `SELECT rt.task_description, r.skill_name
-       FROM roadmap_tasks rt
-       JOIN roadmaps r ON rt.roadmap_id = r.id
-       WHERE r.user_id = $1 AND rt.is_completed = FALSE
-       LIMIT 10`,
-      [userId]
-    );
-
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const generatedTasks = [];
-
-    days.forEach((day, index) => {
-      let taskTitle = '';
-      if (activeTasks.rows[index]) {
-        taskTitle = activeTasks.rows[index].task_description;
-      } else {
-        if (language === 'hi') {
-          taskTitle = `${day}: ${userRole} के लिए समस्या-समाधान और कोडिंग अभ्यास (${hours} घंटे)`;
-        } else if (language === 'mr') {
-          taskTitle = `${day}: ${userRole} साठी कोडिंग व तांत्रिक विषयांचा अभ्यास (${hours} तास)`;
-        } else if (language === 'sa') {
-          taskTitle = `${day}: ${userRole}-पदाय कोडिंग-समस्यासमाधानं च (${hours} होराः)`;
-        } else {
-          taskTitle = `${day}: Practice core concepts and mock questions for ${userRole} (${hours} hrs)`;
-        }
-      }
-
-      generatedTasks.push({
-        id: uuidv4(),
-        day,
-        time: '18:00 - 20:00',
-        description: taskTitle,
-        is_completed: false,
-        status: 'pending',
-        is_ai_suggested: true
-      });
+    // Generate comprehensive, progression-based weekly plan with subtasks & free resources
+    const planData = await generateStudyPlanWithAI({
+      targetRole: cleanRole,
+      skillLevel: skill_level,
+      sessionMinutes,
+      daysPerWeek: Number(days_per_week) || 7,
+      language
     });
+
+    const generatedDays = planData.days || [];
+
+    // Structure tasks with topic titles, duration, and subtask checklists
+    const planTasks = generatedDays.map((d, index) => ({
+      id: d.id || `plan-day-${index + 1}-${Date.now()}`,
+      day: d.day,
+      topic: d.topic,
+      type: d.type || 'learn',
+      time: d.time || `${sessionMinutes} min Session`,
+      duration_minutes: d.duration_minutes || sessionMinutes,
+      description: d.topic,
+      subtasks: (d.subtasks || []).map((st, sIdx) => ({
+        id: st.id || `subtask-${index + 1}-${sIdx + 1}`,
+        title: st.title,
+        duration_minutes: st.duration_minutes,
+        resource: st.resource || 'Documentation & Guides',
+        done_when: st.done_when || 'Task completed with output verified',
+        is_completed: false
+      })),
+      is_completed: false,
+      status: 'pending',
+      is_ai_suggested: true
+    }));
+
+    // Update user target_role if changed
+    try {
+      await query(`UPDATE users SET target_role = $1 WHERE id = $2`, [cleanRole, userId]);
+    } catch (uErr) {
+      console.warn('Notice updating user target role:', uErr.message);
+    }
 
     const planId = uuidv4();
     const today = new Date().toISOString().split('T')[0];
     const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
-    await query(
-      `INSERT INTO plans (id, user_id, plan_type, start_date, end_date, tasks, ai_suggestions, is_edited_by_user)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        planId,
-        userId,
-        'weekly',
-        today,
-        nextWeek,
-        JSON.stringify(generatedTasks),
-        `AI generated schedule optimized for ${hours} hours/day preparation towards ${userRole}.`,
-        false
-      ]
+    // Save to plans table
+    const existing = await query(
+      `SELECT id FROM plans WHERE user_id = $1 AND plan_type = 'weekly' ORDER BY start_date DESC LIMIT 1`,
+      [userId]
     );
 
+    if (existing.rows.length > 0) {
+      await query(
+        `UPDATE plans SET tasks = $1, ai_suggestions = $2, is_edited_by_user = FALSE WHERE id = $3`,
+        [
+          JSON.stringify(planTasks),
+          `AI study plan generated for ${cleanRole} (${skill_level}, ${sessionMinutes}m/day).`,
+          existing.rows[0].id
+        ]
+      );
+    } else {
+      await query(
+        `INSERT INTO plans (id, user_id, plan_type, start_date, end_date, tasks, ai_suggestions, is_edited_by_user)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          planId,
+          userId,
+          'weekly',
+          today,
+          nextWeek,
+          JSON.stringify(planTasks),
+          `AI study plan generated for ${cleanRole} (${skill_level}, ${sessionMinutes}m/day).`,
+          false
+        ]
+      );
+    }
+
     return res.json({
+      success: true,
       message: 'Plan generated successfully with AI',
       planId,
-      tasks: generatedTasks
+      role: cleanRole,
+      skill_level,
+      session_minutes: sessionMinutes,
+      days_per_week: days_per_week,
+      tasks: planTasks,
+      plan_data: planData
     });
   } catch (err) {
     console.error('Generate AI Plan Error:', err);
