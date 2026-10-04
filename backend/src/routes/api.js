@@ -22,6 +22,8 @@ import {
   createRoadmap,
   getUserRoadmaps,
   toggleTaskComplete,
+  toggleRoadmapSubtask,
+  regenerateWeekRoadmap,
   updateTask,
   getRoadmapStreak,
   sendRoadmapStreakAlert
@@ -85,6 +87,7 @@ const router = express.Router();
 // 1. Authentication & Profile
 router.post('/auth/email', emailLogin);
 router.post('/auth/google', googleLogin);
+router.all('/auth/google/callback', googleLogin);
 router.post('/auth/demo', demoLogin);
 router.post('/auth/onboarding', authenticateToken, saveOnboarding);
 router.get('/auth/me', authenticateToken, getMe);
@@ -99,9 +102,11 @@ router.get('/resume/latest', authenticateToken, getLatestResume);
 // 3. Smart Roadmap
 router.post('/roadmap/generate', authenticateToken, createRoadmap);
 router.get('/roadmap', authenticateToken, getUserRoadmaps);
+router.post('/roadmap/regenerate-week', authenticateToken, regenerateWeekRoadmap);
 router.get('/roadmap/streak', authenticateToken, getRoadmapStreak);
 router.post('/roadmap/streak-alert', authenticateToken, sendRoadmapStreakAlert);
 router.put('/roadmap/tasks/:taskId/toggle', authenticateToken, toggleTaskComplete);
+router.put('/roadmap/tasks/:taskId/subtask', authenticateToken, toggleRoadmapSubtask);
 router.put('/roadmap/tasks/:taskId', authenticateToken, updateTask);
 
 // 4. AI Planner (Human + AI Co-Planning)

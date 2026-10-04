@@ -35,12 +35,16 @@ export const api = {
         body: JSON.stringify({ email, name })
       }).then(handleResponse),
 
-    googleLogin: (tokenOrCredential) =>
-      fetch(`${API_BASE}/auth/google`, {
+    googleLogin: (tokenOrPayload, extraPayload = {}) => {
+      const body = typeof tokenOrPayload === 'string'
+        ? { credential: tokenOrPayload, id_token: tokenOrPayload, ...extraPayload }
+        : { ...tokenOrPayload, ...extraPayload };
+      return fetch(`${API_BASE}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: tokenOrCredential, id_token: tokenOrCredential })
-      }).then(handleResponse),
+        body: JSON.stringify(body)
+      }).then(handleResponse);
+    },
 
     demoLogin: () =>
       fetch(`${API_BASE}/auth/demo`, {
@@ -114,6 +118,20 @@ export const api = {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ task_description })
+      }).then(handleResponse),
+
+    toggleSubtask: (taskId, subtaskId, is_completed) =>
+      fetch(`${API_BASE}/roadmap/tasks/${taskId}/subtask`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ subtaskId, is_completed })
+      }).then(handleResponse),
+
+    regenerateWeek: (payload) =>
+      fetch(`${API_BASE}/roadmap/regenerate-week`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
       }).then(handleResponse),
 
     getStreak: () =>

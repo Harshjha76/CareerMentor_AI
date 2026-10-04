@@ -1736,12 +1736,19 @@ export function generate2HourCheckinReminder(userName, pendingCount = 2, languag
 /**
  * 6. AI Smart Roadmap Generator - Senior Mentor Curriculum
  */
-export async function generateRoadmapWithAI(skillName, durationWeeks = 4, dailyHours = 2, targetRole = 'Software Engineer', language = 'en') {
+export async function generateRoadmapWithAI(skillName, durationWeeks = 12, dailyHoursOrMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate') {
   const lowerSkill = (skillName || '').toLowerCase();
   
+  // Normalize daily minutes: if <= 12, it was passed as hours (e.g. 1 -> 60m, 2 -> 120m); if > 12, it is minutes (e.g. 57, 60, 90)
+  const numericInput = Number(dailyHoursOrMinutes) || 60;
+  const dailyMinutes = numericInput <= 12 ? numericInput * 60 : numericInput;
+  const totalWeeks = Math.min(52, Math.max(1, Number(durationWeeks) || 12));
+
   let domainFocusInstruction = '';
   if (/full\s*stack|mern|mean|react|frontend|next|web\s*dev|node|express|vue|angular|backend|javascript|typescript|html|css/i.test(lowerSkill)) {
     domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants FULL STACK WEB DEVELOPMENT. The curriculum MUST be 100% focused on Web Development (HTML/CSS, modern JavaScript/TypeScript, React/Next.js frontend, Node.js/Express/PostgreSQL/MongoDB backend, REST/GraphQL APIs, Auth, Docker, and Cloud Deployment). DO NOT introduce unrelated LeetCode algorithmic puzzle topics or unrelated languages!`;
+  } else if (/data\s*analyst|analytics|power\s*bi|tableau|sql|excel|bi\s*developer|data\s*visualization/i.test(lowerSkill)) {
+    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants DATA ANALYTICS & BI ENGINEERING. The curriculum MUST be 100% focused on Advanced Excel, SQL data extraction, Python/Pandas data wrangling, Power BI/Tableau dashboards, Statistics/A-B Testing, and Business Analytics reporting!`;
   } else if (/python|ai|machine\s*learning|data\s*science|deep\s*learning|pytorch|tensorflow|nlp|llm|langchain|rag|genai/i.test(lowerSkill)) {
     domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants PYTHON, AI & MACHINE LEARNING. The curriculum MUST be 100% focused on Python data stack, NumPy/Pandas, Scikit-Learn, PyTorch, Deep Learning, NLP, Transformers, and LLM RAG pipelines. DO NOT introduce unrelated LeetCode tree/graph puzzles or web UI topics!`;
   } else if (/devops|cloud|kubernetes|docker|aws|terraform|ci\/?cd|linux|sysadmin|azure|gcp/i.test(lowerSkill)) {
@@ -1757,58 +1764,19 @@ export async function generateRoadmapWithAI(skillName, durationWeeks = 4, dailyH
   }
 
   const systemPrompt = `You are a Principal Software Engineer and Senior Technical Curriculum Architect.
-Create a detailed, day-by-day, non-repetitive learning roadmap for mastering "${skillName}" over ${durationWeeks} weeks with ${dailyHours} hours/day study commitment, calibrated for the goal of becoming a "${targetRole}".
+Create a detailed, 7-days-per-week, non-repetitive learning roadmap for mastering "${skillName}" over ${totalWeeks} weeks with EXACTLY ${dailyMinutes} minutes/day study commitment, calibrated for the goal of becoming a "${targetRole}".
 
 ${domainFocusInstruction}
 
-CRITICAL RESOURCE RULES:
-1. On Day 1 ONLY of each week, provide exactly:
-   - 1 curated YouTube Masterclass video link (type: "video")
-   - 1 official website/documentation link (type: "article")
-   - 1 curated practical coding challenge or repository link (type: "practice")
-2. On Days 2 through 6 of each week, provide an EMPTY ARRAY [] for "resource_links". Do NOT repeat links on subsequent days!
-3. Granular Progression: Detail specific micro-topics day by day (Day 1 through Day 6).
-4. For each week, provide a "milestone_project" with { "title": "...", "description": "...", "tech_stack": ["..."], "deliverables": ["..."] } directly related to ${skillName}.
-5. Provide a "time_distribution" object: { "theory_percent": 25, "practical_build_percent": 40, "project_percent": 25, "revision_percent": 10 }.
+CRITICAL STRUCTURE RULES:
+1. Every week must have exactly 7 distinct days (Day 1: Learn, Day 2: Practice, Day 3: Practice, Day 4: Project, Day 5: Project, Day 6: Mock test, Day 7: Revision).
+2. Each day has a specific unique topic, a duration of ${dailyMinutes} minutes, 2-3 subtasks whose minutes sum exactly to ${dailyMinutes}, and a concrete "done when" criteria.
+3. On Day 1 ONLY of each week, provide 3 curated resource links (1x Video, 1x Article/Docs, 1x Practice).
+4. Each subtask must also include a high-yield free resource link or tutorial reference.
 
-Return ONLY a valid JSON array of week objects without markdown fences, formatted as:
-[
-  {
-    "week_number": 1,
-    "title": "Week 1: Title",
-    "milestone": "Weekly Milestone Objective",
-    "milestone_project": {
-      "title": "Milestone Project Title",
-      "description": "Project summary",
-      "tech_stack": ["..."],
-      "deliverables": ["Deliverable 1", "Deliverable 2"]
-    },
-    "time_distribution": {
-      "theory_percent": 25,
-      "practical_build_percent": 40,
-      "project_percent": 25,
-      "revision_percent": 10
-    },
-    "tasks": [
-      {
-        "day_number": 1,
-        "task_description": "...",
-        "resource_links": [
-          {"title": "... Masterclass", "type": "video", "url": "..."},
-          {"title": "... Documentation", "type": "article", "url": "..."},
-          {"title": "... Practice Challenge", "type": "practice", "url": "..."}
-        ]
-      },
-      {
-        "day_number": 2,
-        "task_description": "...",
-        "resource_links": []
-      }
-    ]
-  }
-]`;
+Return ONLY a valid JSON array of week objects without markdown fences.`;
 
-  const aiText = await callGemini(systemPrompt, `Skill: ${skillName}, Duration: ${durationWeeks} weeks, Daily Hours: ${dailyHours}, Target Role: ${targetRole}`, language);
+  const aiText = await callGemini(systemPrompt, `Skill: ${skillName}, Duration: ${totalWeeks} weeks, Daily Minutes: ${dailyMinutes}, Target Role: ${targetRole}, Level: ${skillLevel}`, language);
 
   if (aiText) {
     try {
@@ -1822,18 +1790,64 @@ Return ONLY a valid JSON array of week objects without markdown fences, formatte
     }
   }
 
-  return getFallbackRoadmap(skillName, durationWeeks, dailyHours, targetRole, language);
+  return getFallbackRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, language, skillLevel);
 }
 
-function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
+/**
+ * Regenerate only a single week for a given domain/skill
+ */
+export async function regenerateSingleWeekWithAI({ skillName, weekNumber = 1, totalWeeks = 12, dailyMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate' }) {
+  const full = getFallbackRoadmap(skillName, Math.max(weekNumber, totalWeeks), dailyMinutes, targetRole, language, skillLevel);
+  const targetWeek = full.find(w => w.week_number === Number(weekNumber)) || full[0];
+  return targetWeek;
+}
+
+function getFallbackRoadmap(skill, durationWeeks, dailyMinutes = 60, role = 'Software Engineer', language = 'en', skillLevel = 'Intermediate') {
   const weeks = [];
-  const totalWeeks = Math.min(Math.max(durationWeeks, 2), 52);
+  const totalWeeks = Math.min(Math.max(durationWeeks, 1), 52);
   const lowerSkill = (skill || '').toLowerCase();
+  const minutes = Math.max(15, Number(dailyMinutes) || 60);
+
+  // Helper to partition minutes into 3 subtasks summing EXACTLY to `minutes`
+  const makeSubtasks = (wNum, dNum, st1Title, st1Res, st1Done, st2Title, st2Res, st2Done, st3Title, st3Res, st3Done) => {
+    const r1 = 0.45;
+    const r2 = 0.40;
+    const m1 = Math.round(minutes * r1);
+    const m2 = Math.round(minutes * r2);
+    const m3 = minutes - (m1 + m2); // guaranteed exact sum
+
+    return [
+      {
+        id: `subtask-w${wNum}-d${dNum}-1`,
+        title: st1Title,
+        duration_minutes: m1,
+        resource: st1Res,
+        done_when: st1Done,
+        is_completed: false
+      },
+      {
+        id: `subtask-w${wNum}-d${dNum}-2`,
+        title: st2Title,
+        duration_minutes: m2,
+        resource: st2Res,
+        done_when: st2Done,
+        is_completed: false
+      },
+      {
+        id: `subtask-w${wNum}-d${dNum}-3`,
+        title: st3Title,
+        duration_minutes: m3,
+        resource: st3Res,
+        done_when: st3Done,
+        is_completed: false
+      }
+    ];
+  };
 
   // 1. FULL STACK WEB DEVELOPMENT (12 Non-Repetitive Weeks)
   const fullStackCatalog = [
     {
-      title: 'Modern HTML5, Semantic DOM & Advanced CSS Grid/Flexbox',
+      title: 'Modern HTML5 Semantic DOM, CSS Grid & Responsive Design Systems',
       milestone: 'Master modern semantic layouts, CSS Flexbox/Grid, and responsive mobile-first UI patterns',
       project: {
         title: 'Responsive Developer Portfolio & Design System',
@@ -1842,12 +1856,13 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
         deliverables: ['Semantic accessibility (a11y)', 'Lighthouse 95+ performance score', 'Responsive mobile drawer navigation']
       },
       days: [
-        'HTML5 Semantic Structure (header, main, section, article, nav, aside) & SEO meta tags',
-        'CSS Box Model in-depth: margin collapse, border-box, z-index stacking contexts & specificity calculation',
-        'CSS Flexbox Mastery: justify-content, align-items, flex-grow, flex-shrink & flex-wrap patterns',
-        'CSS Grid Architecture: grid-template-columns, minmax, auto-fit/auto-fill & responsive layout without media queries',
-        'CSS Custom Properties (Variables), clamp() fluid typography & Dark Mode prefers-color-scheme',
-        'Milestone Lab: Build and deploy Responsive Developer Portfolio to Vercel/Netlify'
+        { topic: 'HTML5 Semantic Structure & SEO Meta Architecture', type: 'learn', desc: 'Deconstruct semantic tags (header, main, section, article) & open-graph meta.' },
+        { topic: 'CSS Box Model, Specificity & Stacking Contexts', type: 'practice', desc: 'Master margin collapse, border-box sizing, and z-index isolation.' },
+        { topic: 'CSS Flexbox Layouts & Responsive Fluid UI', type: 'practice', desc: 'Build flexible navbars, card grids, and auto-spacing containers.' },
+        { topic: 'CSS Grid Architecture & Dynamic Template Areas', type: 'project', desc: 'Implement multi-column magazine and dashboard grid layouts without media queries.' },
+        { topic: 'CSS Variables, Fluid Typography & Dark Mode Systems', type: 'project', desc: 'Design tokenized theme engine with prefers-color-scheme listener.' },
+        { topic: 'Timed Assessment: Build Pixel-Perfect Responsive Page', type: 'mock test', desc: 'Construct a responsive landing page under timed constraints.' },
+        { topic: 'Weekly Revision: CSS Grid/Flexbox Cheatsheet & Code Audit', type: 'revision', desc: 'Review layout edge cases and validate Lighthouse 95+ score.' }
       ],
       docs: 'https://developer.mozilla.org/en-US/docs/Web',
       practice: 'https://github.com/bradtraversy/50projects50days'
@@ -1862,18 +1877,19 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
         deliverables: ['Custom event emitter pattern', 'Local storage synchronization', 'Zero-dependency drag and drop physics']
       },
       days: [
-        'JavaScript Execution Context: Call Stack, Memory Heap, Hoisting, Scope Chain & Closures',
-        'Prototypes & Classes: Prototypal inheritance, constructor functions, Symbol, and Map/Set data structures',
-        'DOM Manipulation & Event Loop: Event bubbling vs capturing, event delegation & passive listeners',
-        'Asynchronous JS: Event Loop, Microtasks (Promises) vs Macrotasks (setTimeout), async/await & Promise.allSettled',
-        'Modern ES6+ Modules, Fetch API, AbortController, Error Handling & Debounce/Throttle implementations',
-        'Milestone Lab: Build Interactive Kanban Task Board with local storage persistence and drag-and-drop'
+        { topic: 'JavaScript Call Stack, Execution Context & Closures', type: 'learn', desc: 'Master lexical scoping, closures in factory functions, and memory heaps.' },
+        { topic: 'Prototypes, Classes & ES6 Object Oriented Patterns', type: 'practice', desc: 'Implement class inheritance, getters/setters, and Symbol primitives.' },
+        { topic: 'DOM Event Delegation, Capturing & Custom Events', type: 'practice', desc: 'Build high-performance event listeners using bubbling and passive flags.' },
+        { topic: 'Asynchronous JS: Event Loop, Microtasks & Promises', type: 'project', desc: 'Deconstruct Promise.allSettled, async/await, and abort controllers.' },
+        { topic: 'Fetch API, REST Client Wrapper & LocalStorage Cache', type: 'project', desc: 'Write a robust API request client with retry backoff and caching.' },
+        { topic: 'Timed Assessment: Vanilla JS Kanban State Engine', type: 'mock test', desc: 'Implement a drag-and-drop state manager under a 60-minute clock.' },
+        { topic: 'Weekly Revision: Async JS & Event Loop Mind Map', type: 'revision', desc: 'Synthesize microtask ordering and review common async race conditions.' }
       ],
       docs: 'https://javascript.info/',
       practice: 'https://github.com/tastejs/todomvc'
     },
     {
-      title: 'TypeScript Foundations & Type-Safe Frontend Architecture',
+      title: 'TypeScript Foundations, Generics & Strict Type Architecture',
       milestone: 'Master static typing, interfaces, generics, utility types, and strict tsconfig setups',
       project: {
         title: 'Type-Safe E-Commerce Cart & Checkout State Engine',
@@ -1882,687 +1898,1229 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
         deliverables: ['Zero "any" type safety', 'Discriminated union state transitions', 'Generic API wrapper with Zod schema parsing']
       },
       days: [
-        'TypeScript Basics: Primitive types, type inference, type aliases vs interfaces & strict compiler flags',
-        'Union Types, Intersection Types, Literal Types & Type Narrowing with typeof/instanceof/in operators',
-        'Generics in TypeScript: Generic functions, generic constraints (extends keyof), default type parameters',
-        'Advanced Utility Types: Partial, Required, Pick, Omit, Record, ReturnType & Template Literal types',
-        'Zod Runtime Validation: Defining schemas, parsing untrusted API payloads & type inference with z.infer',
-        'Milestone Lab: Build Type-Safe Checkout System with discriminated union state transitions'
+        { topic: 'TypeScript Primitives, Interfaces & Type Narrowing', type: 'learn', desc: 'Configure strict compiler options, type aliases, and in/typeof guards.' },
+        { topic: 'Discriminated Unions, Literal Types & Exhaustive Checks', type: 'practice', desc: 'Model state machine transitions with never-exhaustiveness checks.' },
+        { topic: 'Generics in TypeScript: Functions, Classes & Constraints', type: 'practice', desc: 'Write reusable generic collection helpers with keyof constraints.' },
+        { topic: 'Advanced Utility Types: Partial, Record, Omit & ReturnType', type: 'project', desc: 'Compose type transformations and conditional template types.' },
+        { topic: 'Runtime Data Validation with Zod & TypeScript Schema Inference', type: 'project', desc: 'Parse untrusted JSON payloads with automatic z.infer types.' },
+        { topic: 'Timed Assessment: Type-Safe State Machine Challenge', type: 'mock test', desc: 'Solve 5 complex Type-Challenges under timed conditions.' },
+        { topic: 'Weekly Revision: TypeScript Strict Mode Best Practices', type: 'revision', desc: 'Audit codebase for any implicit any types and solidify type-guards.' }
       ],
       docs: 'https://www.typescriptlang.org/docs/',
       practice: 'https://github.com/type-challenges/type-challenges'
     },
     {
-      title: 'React 18 Core: Virtual DOM, Hooks & State Management',
-      milestone: 'Master component lifecycle, reconciliation (Virtual DOM), custom hooks, and Zustand state',
+      title: 'React Core Architecture, Hooks & Component Lifecycle',
+      milestone: 'Build reusable UI components, manage component state with hooks, and understand reconciliation',
       project: {
-        title: 'Cryptocurrency & Stock Market Real-Time Dashboard',
-        description: 'Interactive React application rendering live asset tickers, sparkline charts, debounced search filtering, and global watchlists.',
-        tech_stack: ['React 18', 'Tailwind CSS', 'Zustand', 'Recharts / Chart.js'],
-        deliverables: ['Debounced search hook (useDebounce)', 'Optimistic UI state updates with Zustand', 'Real-time WebSocket/polling live updates']
+        title: 'Real-Time Financial Market Watch & Portfolio Tracker',
+        description: 'Multi-view React dashboard tracking crypto and stock metrics with live search, custom charts, and responsive filter drawers.',
+        tech_stack: ['React 18', 'Tailwind CSS', 'Lucide React', 'Vite'],
+        deliverables: ['Custom useDebounce and useLocalStorage hooks', 'Optimistic UI state updates', 'Component memoization optimization']
       },
       days: [
-        'React Architecture: Virtual DOM, Fiber Reconciliation algorithm, JSX compilation & Component purity',
-        'State & Props: useState, useEffect dependency arrays, cleanup functions & race condition guards',
-        'Advanced Hooks: useRef (DOM & mutable ref), useMemo, useCallback & memoization profiling',
-        'Complex State: useReducer pattern, Context API architecture & lightweight global state with Zustand',
-        'Custom Hooks: Building reusable useFetch, useLocalStorage, useDebounce & useMediaQuery hooks',
-        'Milestone Lab: Build Crypto Dashboard with real-time price charts and custom filter hooks'
+        { topic: 'React 18 Fiber Architecture, JSX & Virtual DOM Diffing', type: 'learn', desc: 'Understand React rendering cycles, pure components, and immutability.' },
+        { topic: 'State Management with useState & useReducer Action Handlers', type: 'practice', desc: 'Model complex multi-field forms and undoable transactions.' },
+        { topic: 'Side Effects with useEffect, Cleanup Functions & AbortSignals', type: 'practice', desc: 'Manage subscriptions, resize listeners, and prevent memory leaks.' },
+        { topic: 'Custom Hooks: useFetch, useDebounce & useLocalStorage', type: 'project', desc: 'Extract reusable stateful logic into isolated unit-testable hooks.' },
+        { topic: 'Context API, Prop Drilling Solutions & Component Composition', type: 'project', desc: 'Build scalable global theme and auth context providers.' },
+        { topic: 'Timed Assessment: Build Multi-Step Checkout Wizard in React', type: 'mock test', desc: 'Develop validated multi-step form with state persistence in 60m.' },
+        { topic: 'Weekly Revision: React Lifecycle & Hook Rules Deep Dive', type: 'revision', desc: 'Verify hook dependency arrays and review stale closure traps.' }
       ],
-      docs: 'https://react.dev/learn',
+      docs: 'https://react.dev/',
       practice: 'https://github.com/alan2207/bulletproof-react'
     },
     {
-      title: 'Backend Engineering with Node.js, Express & REST APIs',
-      milestone: 'Build scalable RESTful microservices with middleware, input validation, and JWT security',
+      title: 'Advanced React: TanStack Query, Zustand & Performance Tuning',
+      milestone: 'Master asynchronous server state, global client stores, and React Profiler optimizations',
       project: {
-        title: 'Multi-Tenant E-Commerce REST API Gateway',
-        description: 'Production-ready Node.js/Express API with JWT authentication, role-based access control (RBAC), rate-limiting, and error handling.',
-        tech_stack: ['Node.js', 'Express.js', 'JSON Web Tokens', 'Zod Validation'],
-        deliverables: ['Stateless JWT authentication & refresh rotation', 'Global error-handling middleware', 'Rate limiting & input sanitization']
+        title: 'Collaborative Real-Time Issue Tracker with TanStack Query',
+        description: 'Full-featured Jira/Linear clone with optimistic mutations, infinite scroll pagination, and Zustand global modal management.',
+        tech_stack: ['React', 'TanStack Query v5', 'Zustand', 'React Virtual'],
+        deliverables: ['Optimistic cache updates on mutation', 'Infinite query pagination with intersection observers', 'Profiler flamegraph analysis']
       },
       days: [
-        'Node.js Runtime: V8 Engine, libuv, Event Loop phases (timers, poll, check), and non-blocking I/O',
-        'Express.js Core: Routing architecture, middleware pipeline execution order & next() lifecycle',
-        'REST API Design: HTTP verbs (Idempotency), status codes, pagination, filtering & versioning contracts',
-        'Authentication & Security: bcrypt password hashing, JWT stateless access tokens & CORS protection',
-        'Validation & Logging: Schema validation with Zod, request logging with Morgan/Winston & global error handlers',
-        'Milestone Lab: Build and test E-Commerce REST API with automated Postman integration tests'
+        { topic: 'Server State vs Client State Separation Architecture', type: 'learn', desc: 'Differentiate server caching from local UI modal/sidebar state.' },
+        { topic: 'TanStack Query: Queries, Invalidation & Optimistic Updates', type: 'practice', desc: 'Configure automatic query refetching, background sync, and rollbacks.' },
+        { topic: 'Zustand State Store: Slices, Middleware & Selectors', type: 'practice', desc: 'Build lightweight atomic global store avoiding unnecessary re-renders.' },
+        { topic: 'React.memo, useMemo, useCallback & Profiler Flamegraphs', type: 'project', desc: 'Benchmark heavy list components and eliminate costly renders.' },
+        { topic: 'Virtualization with TanStack Virtual for 10,000+ Row Lists', type: 'project', desc: 'Render massive datasets smoothly with windowing techniques.' },
+        { topic: 'Timed Assessment: Build Infinite Feed with Optimistic Likes', type: 'mock test', desc: 'Implement instant optimistic toggle with TanStack Query in 45m.' },
+        { topic: 'Weekly Revision: Frontend Caching Invalidation Strategies', type: 'revision', desc: 'Document query key hierarchies and store normalization patterns.' }
       ],
-      docs: 'https://nodejs.org/en/docs',
-      practice: 'https://github.com/goldbergyoni/nodebestpractices'
+      docs: 'https://tanstack.com/query/latest',
+      practice: 'https://github.com/pmndrs/zustand'
     },
     {
-      title: 'Database Architecture: PostgreSQL, Prisma ORM & Migrations',
-      milestone: 'Design normalized relational schemas, write optimized SQL queries, and manage database migrations',
+      title: 'Next.js App Router, Server Components (RSC) & SEO Optimization',
+      milestone: 'Build full-stack production React applications with Next.js App Router, SSR, and Server Actions',
       project: {
-        title: 'Collaborative Workspace & Project Database Engine',
-        description: 'Relational data model supporting organizations, users, projects, tasks, comments, and audit logs with complex joins and transactions.',
-        tech_stack: ['PostgreSQL', 'Prisma ORM', 'Docker Compose'],
-        deliverables: ['ACID transaction guarantees', 'N+1 query resolution with eager loading', 'Database migration workflows']
+        title: 'Production SaaS Marketing & Documentation Platform',
+        description: 'Blazing fast Next.js SaaS portal with Server Components, MDX blog, dynamic OpenGraph image generation, and dynamic sitemaps.',
+        tech_stack: ['Next.js 14/15 App Router', 'React Server Components', 'Tailwind CSS', 'MDX'],
+        deliverables: ['Zero client-bundle landing page with RSC', 'Dynamic metadata and OG image generation', 'Next.js Server Actions with Zod validation']
       },
       days: [
-        'Relational DB Principles: 1NF, 2NF, 3NF normalization, foreign keys & primary key indexing',
-        'Complex SQL: INNER/LEFT/FULL OUTER JOINs, Aggregations (GROUP BY, HAVING), Subqueries & Window Functions',
-        'Transactions & ACID: Isolation levels (Read Committed vs Serializable), locking & optimistic concurrency',
-        'ORM Modeling with Prisma: Schema definitions, relations (1-to-1, 1-to-N, M-to-N) & migration scripts',
-        'Indexing & Performance: B-Tree vs GIN indexes, EXPLAIN ANALYZE query plans & connection pooling (PgBouncer)',
-        'Milestone Lab: Setup Dockerized PostgreSQL with Prisma schema, seed data & write benchmarked queries'
-      ],
-      docs: 'https://www.postgresql.org/docs/',
-      practice: 'https://www.prisma.io/docs'
-    },
-    {
-      title: 'In-Memory Caching & Background Queues: Redis & BullMQ',
-      milestone: 'Implement high-speed distributed caching, session stores, and asynchronous background job queues',
-      project: {
-        title: 'High-Throughput Analytics & Notification Queue Service',
-        description: 'Microservice caching database queries in Redis with TTL and offloading heavy email notifications to asynchronous BullMQ worker threads.',
-        tech_stack: ['Redis (ioredis)', 'BullMQ', 'Node.js Workers'],
-        deliverables: ['Cache-aside pattern with automatic invalidation', 'Retry backoff strategies in background workers', 'Redis rate limiter with sliding window']
-      },
-      days: [
-        'Redis Core: Key-value primitives (Strings, Hashes, Lists, Sets, Sorted Sets) & in-memory persistence',
-        'Caching Patterns: Cache-Aside, Write-Through, Write-Back & Cache Stampede prevention (TTL + Jitter)',
-        'Distributed Rate Limiting: Sliding window counter algorithm using Redis atomic transactions (MULTI/EXEC)',
-        'Asynchronous Background Queues: BullMQ worker processes, job priorities, delayed jobs & exponential backoff',
-        'Pub/Sub Architecture: Redis Pub/Sub channels vs Streams for real-time inter-service communication',
-        'Milestone Lab: Implement Redis Cache Layer and BullMQ Email Notification Worker for Express API'
-      ],
-      docs: 'https://redis.io/docs/',
-      practice: 'https://docs.bullmq.io/'
-    },
-    {
-      title: 'Next.js 15 App Router, Server Components (RSC) & Server Actions',
-      milestone: 'Master Server-Side Rendering (SSR), React Server Components (RSC), and full stack Next.js apps',
-      project: {
-        title: 'SaaS Subscription Platform with Stripe Payments',
-        description: 'Full stack Next.js application with Server Actions, authenticated protected routes, database persistence, and Stripe webhooks.',
-        tech_stack: ['Next.js 15', 'React Server Components', 'Tailwind CSS', 'Stripe API'],
-        deliverables: ['Server-Side Rendering (SSR) & Static Site Generation (SSG)', 'Next.js Server Actions for zero-API form handling', 'Webhook validation & subscription state management']
-      },
-      days: [
-        'Next.js App Router: File-system routing, layout hierarchies, loading/error boundaries & route groups',
-        'Server Components (RSC) vs Client Components ("use client"): Streaming, Suspense & bundle optimization',
-        'Server Actions & Data Mutations: Forms, revalidatePath, revalidateTag & optimistic UI updates',
-        'Full-Stack Auth: NextAuth.js / Auth.js with OAuth (Google/GitHub) and session persistence',
-        'Third-Party Integrations: Payment gateways (Stripe Checkout & Webhooks) & transactional email dispatches',
-        'Milestone Lab: Build and deploy SaaS Platform with Next.js App Router and PostgreSQL database'
+        { topic: 'Next.js App Router Architecture: Server vs Client Components', type: 'learn', desc: 'Understand component boundaries, SSR hydration, and serialization.' },
+        { topic: 'Dynamic Routing, Parallel Routes & Intercepting Modals', type: 'practice', desc: 'Implement modal route interception and dashboard layout slots.' },
+        { topic: 'Data Fetching with React Server Components & Cache Tags', type: 'practice', desc: 'Master fetch revalidation, unstable_cache, and ISR strategies.' },
+        { topic: 'Next.js Server Actions, Progressive Enhancement & useFormStatus', type: 'project', desc: 'Execute secure database mutations directly from server actions.' },
+        { topic: 'SEO Architecture: Dynamic Metadata, Sitemaps & robots.txt', type: 'project', desc: 'Automate OpenGraph card generation and search crawler indexes.' },
+        { topic: 'Timed Assessment: Next.js Dynamic Blog with Server Actions', type: 'mock test', desc: 'Construct full dynamic CRUD blog with Server Actions in 60m.' },
+        { topic: 'Weekly Revision: Next.js Caching Architecture & Hydration Traps', type: 'revision', desc: 'Review four-layer Next.js caching and fix SSR hydration warnings.' }
       ],
       docs: 'https://nextjs.org/docs',
       practice: 'https://github.com/vercel/next.js/tree/canary/examples'
     },
     {
-      title: 'Real-Time Communication: WebSockets & Socket.IO',
-      milestone: 'Build bidirectional, low-latency collaborative real-time web applications with WebSockets',
+      title: 'Node.js Internals, Express REST APIs & Middleware Pipeline',
+      milestone: 'Master Node.js asynchronous I/O, event loops, streaming, and production Express REST architectures',
       project: {
-        title: 'Real-Time Collaborative Code Editor & Chat Platform',
-        description: 'Multi-user shared workspace with live cursor tracking, instant code synchronization, chat rooms, and presence indicators.',
-        tech_stack: ['WebSockets / Socket.IO', 'React 18', 'Node.js', 'Monaco Editor'],
-        deliverables: ['Sub-50ms message broadcast latency', 'Room-based access control and user presence heartbeat', 'Reconnection and message buffering logic']
+        title: 'High-Throughput File Processing & Media Streaming REST API',
+        description: 'Scalable REST API with custom rate-limiting, chunked audio/video streaming, structured Winston logging, and global error handling.',
+        tech_stack: ['Node.js', 'Express.js', 'Winston', 'Multer', 'Joi/Zod'],
+        deliverables: ['Custom middleware stack with correlation IDs', 'Chunked HTTP range video streaming', 'Centralized error handler with RFC 7807 payloads']
       },
       days: [
-        'HTTP vs WebSockets: TCP handshake upgrade (101 Switching Protocols), frame structure & full-duplex communication',
-        'Socket.IO Server & Client: Events, namespaces, rooms, broadcasts & acknowledgement callbacks',
-        'Presence & Heartbeats: Ping/Pong mechanisms, tracking active users & handling unexpected disconnects',
-        'Real-Time State Synchronization: Conflict resolution concepts, operational transformation basics & debounced sync',
-        'Scaling WebSockets: Multi-node horizontal scaling using Redis Socket.IO adapter',
-        'Milestone Lab: Build Real-Time Multi-Room Collaborative Code Editor with presence indicators'
+        { topic: 'Node.js Architecture: Libuv, Event Loop Phases & Streams', type: 'learn', desc: 'Understand timers, poll, check phases, buffer manipulation, and streams.' },
+        { topic: 'Express REST API Design, Routing & Controller Patterns', type: 'practice', desc: 'Structure modular router-controller-service layered architecture.' },
+        { topic: 'Custom Express Middleware: Auth, Rate Limiting & Request ID', type: 'practice', desc: 'Build composable middleware chaining and audit loggers.' },
+        { topic: 'Input Validation, Sanitization & RFC 7807 Error Handling', type: 'project', desc: 'Secure endpoints against prototype pollution and bad payloads.' },
+        { topic: 'Node.js Streams & Chunked File Upload Processing', type: 'project', desc: 'Handle multi-gigabyte file uploads without blowing memory limits.' },
+        { topic: 'Timed Assessment: Build Production-Ready Express Microservice', type: 'mock test', desc: 'Create authenticated REST service with CRUD and validation in 60m.' },
+        { topic: 'Weekly Revision: Node.js Security Hardening & Event Loop Tuning', type: 'revision', desc: 'Audit headers with Helmet and check for event loop blocking calls.' }
       ],
-      docs: 'https://socket.io/docs/v4/',
-      practice: 'https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API'
+      docs: 'https://nodejs.org/api/',
+      practice: 'https://github.com/goldbergyoni/nodebestpractices'
     },
     {
-      title: 'Containerization with Docker & Microservices Compose',
-      milestone: 'Package full stack web applications into minimal, production-grade multi-stage Docker containers',
+      title: 'Relational Database Engineering: PostgreSQL, Prisma ORM & Indexing',
+      milestone: 'Design normalized SQL schemas, optimize queries with EXPLAIN ANALYZE, and manage migrations with Prisma',
       project: {
-        title: 'Dockerized Full-Stack Cloud Environment with Nginx Reverse Proxy',
-        description: 'Complete production compose environment linking Next.js frontend, Express API, PostgreSQL, Redis, and Nginx SSL reverse proxy.',
-        tech_stack: ['Docker', 'Dockerfile Multi-Stage', 'Docker Compose', 'Nginx'],
-        deliverables: ['Production Dockerfile (<70MB Alpine build)', 'Docker Compose service network with health checks', 'Nginx reverse proxy with gzip and caching headers']
+        title: 'Enterprise Multi-Tenant SaaS Relational Database Architecture',
+        description: 'Complex PostgreSQL schema with foreign keys, composite indexes, JSONB columns, ACID transactions, and automated Prisma migrations.',
+        tech_stack: ['PostgreSQL 16', 'Prisma ORM', 'Docker Compose', 'pgAdmin'],
+        deliverables: ['3NF normalized schema with Prisma migrations', 'Optimized complex SQL joins with sub-5ms query times', 'Interactive database seed script']
       },
       days: [
-        'Container Fundamentals: Namespaces, cgroups, images vs containers & container security basics',
-        'Dockerfile Optimization: Multi-stage builds, layer caching, non-root user execution & minimal base images (Alpine)',
-        'Docker Compose: Service orchestration, bridge networking, named volumes & environment variable files',
-        'Nginx as Reverse Proxy: Upstream routing, SSL termination, gzip compression & rate-limiting headers',
-        'Container Health Checks & Logging: Docker inspect, restart policies, container resource constraints (CPU/RAM)',
-        'Milestone Lab: Dockerize full stack Next.js + Express + PostgreSQL stack and test local multi-container boot'
+        { topic: 'Relational Database Modeling: 1-1, 1-N, N-N & Normalization (3NF)', type: 'learn', desc: 'Design clean entity-relationship schemas preventing data redundancy.' },
+        { topic: 'Complex SQL Queries: Joins, Aggregations, Group By & Subqueries', type: 'practice', desc: 'Write analytical SQL queries extracting multi-table business metrics.' },
+        { topic: 'PostgreSQL Indexing: B-Tree, GIN, Composite & EXPLAIN ANALYZE', type: 'practice', desc: 'Diagnose slow sequential scans and build high-performance indexes.' },
+        { topic: 'Prisma ORM: Schemas, Relations, Fluent Queries & Transactions', type: 'project', desc: 'Execute atomic batch operations with prisma.$transaction rollback.' },
+        { topic: 'Database Migrations, Seeding & Connection Pooling with PgBouncer', type: 'project', desc: 'Safely execute zero-downtime database migrations in CI/CD.' },
+        { topic: 'Timed Assessment: SQL Query Optimization & Prisma Modeling', type: 'mock test', desc: 'Write schema and optimize 5 heavy queries under 45m timer.' },
+        { topic: 'Weekly Revision: ACID Guarantees, Isolation Levels & Deadlocks', type: 'revision', desc: 'Synthesize Read Committed vs Serializable transaction behaviors.' }
+      ],
+      docs: 'https://www.postgresql.org/docs/',
+      practice: 'https://www.prisma.io/docs'
+    },
+    {
+      title: 'Authentication, Authorization & Security Architecture (JWT, OAuth2, RBAC)',
+      milestone: 'Implement bulletproof user auth, JWT refresh token rotation, OAuth2 social login, and role-based access control',
+      project: {
+        title: 'Production Identity & Access Management (IAM) Microservice',
+        description: 'Secure authentication service featuring argon2 password hashing, HTTP-only cookie JWT rotation, Google OAuth2, and granular RBAC permissions.',
+        tech_stack: ['Node.js / Express', 'JWT', 'Argon2 / Bcrypt', 'Redis', 'OAuth2.0'],
+        deliverables: ['Automated Refresh Token rotation with Redis blacklist', 'Role-Based Access Control (RBAC) middleware', 'OWASP Top 10 security audit checklist']
+      },
+      days: [
+        { topic: 'Authentication Fundamentals: Sessions vs JWT Tokens & Cryptography', type: 'learn', desc: 'Understand HMAC-SHA256, asymmetric RSA tokens, and token expiration.' },
+        { topic: 'Password Hashing with Argon2/Bcrypt & Salt Rounds', type: 'practice', desc: 'Prevent timing attacks and rainbow table vulnerability exploitation.' },
+        { topic: 'JWT Refresh Token Rotation & Redis Token Revocation Blacklist', type: 'practice', desc: 'Secure client tokens against XSS theft and replay attacks.' },
+        { topic: 'OAuth 2.0 & OpenID Connect: Google and GitHub Social Login', type: 'project', desc: 'Implement authorization code flow with PKCE state verification.' },
+        { topic: 'Role-Based Access Control (RBAC) & Permission Matrix Middleware', type: 'project', desc: 'Enforce granular Admin, Manager, User endpoint permissions.' },
+        { topic: 'Timed Assessment: Build Complete Auth & RBAC Security Layer', type: 'mock test', desc: 'Implement signup, login, refresh token, and RBAC guard in 60m.' },
+        { topic: 'Weekly Revision: OWASP Top 10 Prevention & Security Headers', type: 'revision', desc: 'Review CORS, CSRF tokens, Content Security Policy (CSP), and rate-limiting.' }
+      ],
+      docs: 'https://cheatsheetseries.owasp.org/',
+      practice: 'https://github.com/OWASP/CheatSheetSeries'
+    },
+    {
+      title: 'Full-Stack Integration, WebSockets & Real-Time Collaboration',
+      milestone: 'Connect Next.js frontend with Express backend via REST and WebSockets (Socket.io) for live collaborative features',
+      project: {
+        title: 'Real-Time Multiplayer Collaborative Workspace & Live Chat',
+        description: 'Full-stack collaborative workspace with live typing indicators, room broadcasting, presence tracking, and synchronized document editing.',
+        tech_stack: ['Next.js', 'Socket.io', 'Node.js', 'PostgreSQL', 'Tailwind CSS'],
+        deliverables: ['Bi-directional WebSocket event architecture', 'Heartbeat presence monitoring system', 'Offline message queuing and sync']
+      },
+      days: [
+        { topic: 'WebSocket Protocol Internals vs HTTP Polling / Server-Sent Events', type: 'learn', desc: 'Understand TCP handshake upgrade, framing, and full-duplex communication.' },
+        { topic: 'Socket.io Architecture: Rooms, Namespaces & Acknowledgements', type: 'practice', desc: 'Build isolated multi-tenant channels and reliable message acknowledgements.' },
+        { topic: 'Real-Time Presence Tracking & Heartbeat Monitoring', type: 'practice', desc: 'Track online/offline user states and disconnections reliably.' },
+        { topic: 'Synchronized State & Optimistic UI Message Broadcasting', type: 'project', desc: 'Implement instant message delivery with timestamp reconciliation.' },
+        { topic: 'Securing WebSockets with JWT Handshake Middleware', type: 'project', desc: 'Authenticate socket connections before joining authorized rooms.' },
+        { topic: 'Timed Assessment: Build Live Notification & Chat Channel', type: 'mock test', desc: 'Implement real-time notification engine with Socket.io in 60m.' },
+        { topic: 'Weekly Revision: WebSocket Scaling with Redis Pub/Sub Adapter', type: 'revision', desc: 'Review multi-instance WebSocket synchronization strategies.' }
+      ],
+      docs: 'https://socket.io/docs/v4/',
+      practice: 'https://github.com/socketio/socket.io/tree/main/examples'
+    },
+    {
+      title: 'DevOps, Docker Containerization, CI/CD & Cloud Deployment',
+      milestone: 'Containerize full-stack apps with multi-stage Dockerfiles, set up GitHub Actions CI/CD, and deploy to AWS/Vercel',
+      project: {
+        title: 'Automated Multi-Environment CI/CD & Production Deployment',
+        description: 'Multi-container application orchestrated via Docker Compose, automated GitHub Actions testing and build pipeline, deployed to cloud infrastructure.',
+        tech_stack: ['Docker', 'Docker Compose', 'GitHub Actions', 'AWS / Render / Vercel'],
+        deliverables: ['Production multi-stage Dockerfile (<100MB image)', 'Automated CI/CD workflow running lints, tests, and builds', 'Live production deployment URL']
+      },
+      days: [
+        { topic: 'Docker Fundamentals: Images, Containers, Layers & Daemon', type: 'learn', desc: 'Understand container isolation, namespaces, and cgroups.' },
+        { topic: 'Multi-Stage Dockerfiles for Node.js & Next.js Production Builds', type: 'practice', desc: 'Minimize image size and eliminate development dependencies from production.' },
+        { topic: 'Docker Compose: Multi-Container Networking (App, Postgres, Redis)', type: 'practice', desc: 'Orchestrate localized multi-service environments with healthchecks.' },
+        { topic: 'GitHub Actions CI/CD Pipeline: Lint, Test, Build & Artifact Caching', type: 'project', desc: 'Automate unit test verification and Docker image registry pushes on PRs.' },
+        { topic: 'Production Cloud Deployment: Environment Secrets & Monitoring', type: 'project', desc: 'Deploy containerized web services with automated SSL and health checks.' },
+        { topic: 'Timed Assessment: Write Multi-Stage Dockerfile & CI Workflow', type: 'mock test', desc: 'Create working Dockerfile and GitHub Action workflow in 45m.' },
+        { topic: 'Weekly Revision: 12-Factor App Methodology & Cloud Best Practices', type: 'revision', desc: 'Audit codebase against 12-Factor principles (config, backing services, parity).' }
       ],
       docs: 'https://docs.docker.com/',
       practice: 'https://github.com/docker/awesome-compose'
     },
     {
-      title: 'Automated Testing: Unit, Integration & End-to-End (E2E)',
-      milestone: 'Implement comprehensive test suites with Vitest, React Testing Library, Supertest, and Playwright',
+      title: 'Full-Stack Capstone Launch, Performance Optimization & Mock Interviews',
+      milestone: 'Finalize your end-to-end production SaaS capstone, achieve 95+ Lighthouse score, and master full-stack interview rounds',
       project: {
-        title: 'Comprehensive 90%+ Code Coverage Testing Suite & CI Gate',
-        description: 'Automated test suite verifying frontend components, backend REST endpoints, and end-to-end user checkout flows.',
-        tech_stack: ['Vitest', 'React Testing Library', 'Supertest', 'Playwright'],
-        deliverables: ['Backend API integration tests with mock database', 'Frontend component user interaction tests', 'E2E checkout workflow automation in headless Chrome']
+        title: 'Enterprise Full-Stack SaaS Platform (Production Capstone)',
+        description: 'Comprehensive, scalable, production-grade SaaS application with full auth, relational database, real-time events, CI/CD pipeline, and public documentation.',
+        tech_stack: ['Next.js', 'Node.js Express', 'PostgreSQL', 'Prisma', 'Docker', 'Tailwind CSS'],
+        deliverables: ['Live production application with custom domain', 'Comprehensive public GitHub repository with video walkthrough', 'Full-stack system architecture documentation']
       },
       days: [
-        'Testing Pyramid: Unit vs Integration vs End-to-End (E2E) testing ROI and test isolation',
-        'Backend Testing: Testing Express endpoints with Vitest + Supertest, in-memory databases & mocking services',
-        'Frontend Unit Testing: React Testing Library (render, screen, userEvent, fireEvent) & mocking network requests (MSW)',
-        'End-to-End Testing (E2E): Playwright test runners, page fixtures, locators, auto-waiting & visual regression',
-        'CI Test Automation: Setting up automated test runners in GitHub Actions on every Pull Request',
-        'Milestone Lab: Write complete test suite for E-Commerce app with Vitest, Supertest, and Playwright E2E'
+        { topic: 'Full-Stack System Architecture Documentation & Diagrams (C4 Model)', type: 'learn', desc: 'Draw clear architectural diagrams mapping frontend, backend, DB, and external APIs.' },
+        { topic: 'Frontend Performance Audit: Web Vitals (LCP, FID/INP, CLS) Tuning', type: 'practice', desc: 'Optimize asset loading, bundle splitting, and image formats for 95+ score.' },
+        { topic: 'Backend Load Testing & Stress Profiling with Artillery / k6', type: 'practice', desc: 'Benchmark endpoint throughput under 500 concurrent virtual users.' },
+        { topic: 'End-to-End Testing with Playwright & Automated Integration Tests', type: 'project', desc: 'Write robust automated E2E test suites covering core user signup and checkout.' },
+        { topic: 'Portfolio Showcase, Resume Metrics & README Documentation', type: 'project', desc: 'Craft compelling GitHub README with architecture diagrams, demo GIFs, and benchmarks.' },
+        { topic: 'Timed Assessment: Full-Stack System Design & Live Coding Interview', type: 'mock test', desc: 'Complete 60-minute mock technical interview covering architecture and coding.' },
+        { topic: 'Weekly Revision: Engineering Career Roadmap & Behavioral Strategy', type: 'revision', desc: 'Finalize STAR method behavioral stories and technical portfolio presentation.' }
       ],
-      docs: 'https://vitest.dev/',
-      practice: 'https://playwright.dev/docs/intro'
-    },
-    {
-      title: 'Production CI/CD, Cloud Deployment & Capstone Launch',
-      milestone: 'Deploy production full-stack application with automated GitHub Actions CI/CD, SSL, and monitoring',
-      project: {
-        title: 'Production-Grade Full Stack SaaS Platform Live Deployment',
-        description: 'End-to-end deployed production web platform with custom domain, automated zero-downtime GitHub Actions deployment, and health monitoring.',
-        tech_stack: ['AWS / Vercel / Render', 'GitHub Actions CI/CD', 'Sentry Error Tracking', 'PostgreSQL Cloud'],
-        deliverables: ['Automated PR build, test & deploy workflow', 'Sentry live error logging and performance alerts', 'Live production demonstration URL and documentation']
-      },
-      days: [
-        'CI/CD Pipelines: GitHub Actions workflow triggers, secrets management, linting, building & automated deployment',
-        'Production Cloud Hosting: AWS (EC2/ECS/RDS), Vercel, or Render with custom domain DNS (A/CNAME records) and SSL',
-        'Production Security Hardening: Helmet.js headers, Content Security Policy (CSP), CORS lock-down & SQL injection audit',
-        'Application Monitoring: Sentry error tracking, uptime health check endpoints & server response metrics',
-        'Performance Auditing: Core Web Vitals optimization (LCP, FID, CLS), asset compression & CDN caching',
-        'Milestone Lab: Deploy complete Capstone Platform with GitHub Actions CI/CD, custom domain, and live demo link'
-      ],
-      docs: 'https://docs.github.com/en/actions',
-      practice: 'https://web.dev/learn'
+      docs: 'https://github.com/donnemartin/system-design-primer',
+      practice: 'https://playwright.dev/'
     }
   ];
 
-  // 2. DATA STRUCTURES & ALGORITHMS (12 Non-Repetitive Weeks)
+  // 2. DATA STRUCTURES & ALGORITHMS (DSA) (12 Non-Repetitive Weeks)
   const dsaCatalog = [
     {
-      title: 'Language Environment & Memory Foundations',
-      milestone: 'Master language architecture, primitive memory layouts, bitwise operators, and control flow',
+      title: 'Asymptotic Analysis, Arrays, Dynamic Sizing & Prefix Sums',
+      milestone: 'Master Big-O time and space complexity, array memory layout, and prefix-sum subarray optimization',
       project: {
-        title: 'CLI Financial Utility & Grade Matrix Analyzer',
-        description: 'Command-line utility computing compound interest, tax brackets, and matrix calculations using primitive types and clean branching.',
-        tech_stack: ['Java 21 / C++', 'IntelliJ / VS Code', 'Git'],
-        deliverables: ['Type-safe input validation', 'Tiered conditional calculator', 'Clean terminal UI']
+        title: 'High-Performance Immutable Vector & Sliding Window Analytics Library',
+        description: 'Custom array-backed generic vector implementation with amortized resizing, sub-array range query caching, and benchmarks.',
+        tech_stack: ['Language of Choice (Java/Python/C++)', 'JUnit / PyTest', 'Benchmarking'],
+        deliverables: ['Custom resizable array implementation', 'Prefix sum range-query engine (O(1) lookups)', 'Unit test suite with 100% boundary coverage']
       },
       days: [
-        'Runtime Architecture: Compilation, memory footprints of primitives & Type Casting mechanics',
-        'Operators in-depth: Arithmetic, Relational, Logical, Bitwise (AND, OR, XOR, Shifts) & Precedence',
-        'Conditional Control Flow: if-else, nested branching, modern switch expressions & ternary syntax',
-        'Iteration & Loops: for, while, do-while, nested loops, loop labels, break & continue invariants',
-        'Functions & Call Stack: Pass-by-value vs pass-by-reference semantics and stack frame allocation',
-        'Milestone Lab: Code CLI Financial Utility with robust edge-case validation & unit test check'
+        { topic: 'Time & Space Complexity: Big-O, Big-Omega, Big-Theta & Memory Layout', type: 'learn', desc: 'Analyze asymptotic growth, memory cache locality, and worst/amortized complexity.' },
+        { topic: 'Array Operations & In-Place Manipulations', type: 'practice', desc: 'Solve LeetCode #26 (Remove Duplicates), LeetCode #189 (Rotate Array), LeetCode #88 (Merge Sorted).' },
+        { topic: 'Prefix Sums, Running Totals & Range Queries', type: 'practice', desc: 'Solve LeetCode #303 (Range Sum Query), LeetCode #560 (Subarray Sum Equals K), LeetCode #238.' },
+        { topic: 'Difference Arrays & Subarray Range Update Algorithms', type: 'project', desc: 'Solve LeetCode #1109 (Corporate Flight Bookings), LeetCode #1094 (Car Pooling).' },
+        { topic: 'Multi-Dimensional Arrays & Matrix In-Place Transformations', type: 'project', desc: 'Solve LeetCode #48 (Rotate Image), LeetCode #54 (Spiral Matrix), LeetCode #73 (Set Matrix Zeroes).' },
+        { topic: 'Timed Assessment: Array & Range Sum Timed Challenge', type: 'mock test', desc: 'Solve 3 medium LeetCode array problems under a strict 45-minute countdown.' },
+        { topic: 'Weekly Revision: Array Pattern Synthesis & Complexity Cheatsheet', type: 'revision', desc: 'Document boundary conditions, off-by-one pitfalls, and space-time trade-offs.' }
       ],
-      docs: 'https://docs.oracle.com/en/java/',
-      practice: 'https://leetcode.com/problemset/all/?difficulty=EASY&topicSlugs=math'
+      docs: 'https://leetcode.com/explore/learn/card/array-and-string/',
+      practice: 'https://leetcode.com/problemset/all/?topicSlugs=array'
     },
     {
-      title: 'Object-Oriented Programming (OOP) & Memory Stack vs Heap',
-      milestone: 'Build reusable class hierarchies adhering to encapsulation, polymorphism, and interface design',
+      title: 'Two Pointers Technique & Sliding Window Mastery',
+      milestone: 'Master fast/slow pointers, converging two-pointers, fixed-size and dynamic-size sliding windows',
       project: {
-        title: 'Bank Account & Transaction Ledger Engine',
-        description: 'Object-oriented banking system with abstract accounts, savings/checking sub-classes, interfaces for audit logging, and custom exception handling.',
-        tech_stack: ['OOP Core', 'Custom Exceptions', 'Unit Testing'],
-        deliverables: ['Inheritance & Abstract classes', 'Transaction auditing interface', 'Custom overdraft exceptions']
+        title: 'Real-Time Streaming Text Search & Substring Matcher Engine',
+        description: 'High-speed string parser using dynamic sliding windows and hash signatures to detect anagrams, unique substrings, and palindromes.',
+        tech_stack: ['Algorithms', 'String Processing', 'Unit Testing'],
+        deliverables: ['Dynamic sliding window frequency map', 'Optimized palindrome expand-around-center engine', 'Benchmark comparison against naive O(N^2) approaches']
       },
       days: [
-        'Memory Architecture: Stack vs Heap allocation, Garbage Collection fundamentals & Method Call Stack',
-        'Classes, Objects, Instance Variables, Method Signatures & Pass-by-Value mechanics',
-        'Constructors, Constructor Chaining, Static variables/methods & "this" keyword reference',
-        'Inheritance, Method Overriding, "super" keyword & Runtime Polymorphism (Dynamic Method Dispatch)',
-        'Encapsulation, Access Modifiers, Interfaces & Abstract Classes',
-        'Milestone Lab: Build OOP Banking System with transaction ledger & account polymorphism'
-      ],
-      docs: 'https://docs.oracle.com/javase/tutorial/java/concepts/',
-      practice: 'https://leetcode.com/problemset/all/?topicSlugs=design'
-    },
-    {
-      title: 'Arrays, Strings & Time-Space Complexity Analysis',
-      milestone: 'Analyze Big-O bounds and implement optimal Two-Pointer and Sliding Window techniques',
-      project: {
-        title: 'High-Throughput Log Parser & In-Memory String Indexer',
-        description: 'Utility that processes raw server log streams, parses timestamps and error codes, and extracts frequent IP subnets using optimized arrays.',
-        tech_stack: ['Arrays', 'StringBuilder', 'Two-Pointer Algorithms'],
-        deliverables: ['Big-O asymptotic profiling report', 'Sliding window anomaly detector', 'Sub-millisecond text search']
-      },
-      days: [
-        'Time & Space Complexity: Asymptotic analysis, Big-O, Big-Theta, Big-Omega & memory profiling',
-        '1D/2D Arrays: Memory layout, cache locality, dynamic resizing & array manipulation algorithms',
-        'Two-Pointer Technique: Inward and outward pointers (Two Sum, Container With Most Water pattern)',
-        'Sliding Window Pattern: Fixed-length vs variable-length windows (Maximum subarray sum, Min window substring)',
-        'String Internals: String constant pool, immutability, StringBuilder & character arrays',
-        'Milestone Lab: Build Log Parser with sliding window rate-limiting & substring pattern finder'
+        { topic: 'Converging Two Pointers: Sorted Array Search & Inversion Matching', type: 'learn', desc: 'Understand optimal pair finding in sorted arrays with O(N) single pass.' },
+        { topic: 'Two Pointers Applications: 3Sum, Container With Most Water, Trapping Rain Water', type: 'practice', desc: 'Solve LeetCode #11 (Container), LeetCode #15 (3Sum), LeetCode #42 (Trapping Rain Water).' },
+        { topic: 'Fixed-Size Sliding Window: Max Subarray & Frequency Counting', type: 'practice', desc: 'Solve LeetCode #643 (Max Average Subarray), LeetCode #438 (Find All Anagrams).' },
+        { topic: 'Dynamic Sliding Window: Longest Substring & Minimum Window Substring', type: 'project', desc: 'Solve LeetCode #3 (Longest Substring Without Repeating), LeetCode #76 (Min Window Substring).' },
+        { topic: 'Fast and Slow Pointers: Cycle Detection & In-Place Array Partitioning', type: 'project', desc: 'Solve LeetCode #141 (Linked List Cycle), LeetCode #202 (Happy Number), LeetCode #287.' },
+        { topic: 'Timed Assessment: Two Pointers & Sliding Window Speed Drill', type: 'mock test', desc: 'Solve 3 classic pointer problems under 45 minutes.' },
+        { topic: 'Weekly Revision: Window Shrinking Conditions & State Reset Rules', type: 'revision', desc: 'Review dynamic window expansion/shrink invariants and hash table counters.' }
       ],
       docs: 'https://leetcode.com/explore/learn/card/array-and-string/',
       practice: 'https://leetcode.com/tag/two-pointers/'
     },
     {
-      title: 'Searching, Sorting & Divide-and-Conquer',
-      milestone: 'Implement Binary Search variations and custom divide-and-conquer sorting algorithms',
+      title: 'Binary Search, Search Space Monotonicity & Binary Search on Answer',
+      milestone: 'Master discrete binary search, upper/lower bounds, rotated sorted arrays, and search-the-answer paradigms',
       project: {
-        title: 'E-Commerce Product Search & Ranking Engine',
-        description: 'High-speed in-memory product index allowing price range queries via modified Binary Search and multi-criteria sorting via Merge Sort.',
-        tech_stack: ['Generics', 'Binary Search', 'Comparator / Comparable'],
-        deliverables: ['Custom Binary Search lower/upper bounds', 'Merge Sort implementation with zero allocations', 'Price/Rating sorting benchmarks']
+        title: 'Distributed Log Timestamp & Rate Limiter Binary Search Engine',
+        description: 'In-memory log indexer executing microsecond timestamp lookups and capacity allocation optimization using monotonic predicate functions.',
+        tech_stack: ['Binary Search', 'Algorithm Design', 'Precision Testing'],
+        deliverables: ['Custom lower_bound and upper_bound search functions', 'Monotonic predicate solver for capacity optimization', 'Zero infinite loop boundary test suite']
       },
       days: [
-        'Linear Search vs Binary Search: Discrete search space, mid calculation overflow avoidance & search predicates',
-        'Binary Search Variations: First and last occurrence, rotated sorted array & search in matrix',
-        'Elementary Sorts: Bubble Sort, Selection Sort, Insertion Sort & their stability properties',
-        'Divide and Conquer Sorts: Merge Sort (in-place vs auxiliary) & Quick Sort (Lomuto vs Hoare partitioning)',
-        'Built-in Sorting: Dual-Pivot Quicksort, TimSort, Comparable and Comparator lambda styling',
-        'Milestone Lab: Implement Product Search Engine with custom dual-criteria sorting & range query API'
+        { topic: 'Binary Search Invariants, Mid-Point Overflow & Loop Termination', type: 'learn', desc: 'Master low + (high - low) / 2 and boundary conditions (low <= high vs low < high).' },
+        { topic: 'Binary Search in Rotated & Modulo Sorted Arrays', type: 'practice', desc: 'Solve LeetCode #33 (Search in Rotated Sorted Array), LeetCode #81, LeetCode #153 (Find Minimum).' },
+        { topic: 'First and Last Occurrence, Lower Bound & Upper Bound Implementations', type: 'practice', desc: 'Solve LeetCode #34 (Find First and Last Position), LeetCode #35 (Search Insert Position).' },
+        { topic: 'Binary Search on Answer: Monotonic Feasibility Predicates', type: 'project', desc: 'Solve LeetCode #875 (Koko Eating Bananas), LeetCode #1011 (Capacity To Ship Packages).' },
+        { topic: '2D Matrix Binary Search & Peak Finding Algorithms', type: 'project', desc: 'Solve LeetCode #74 (Search a 2D Matrix), LeetCode #240 (Search a 2D Matrix II), LeetCode #162.' },
+        { topic: 'Timed Assessment: Binary Search Problem Suite', type: 'mock test', desc: 'Solve 3 binary search variations under 45-minute countdown.' },
+        { topic: 'Weekly Revision: Monotonic Function Discovery & Invariant Checklist', type: 'revision', desc: 'Review when to apply search on answer vs brute-force search.' }
       ],
       docs: 'https://leetcode.com/explore/learn/card/binary-search/',
       practice: 'https://leetcode.com/tag/binary-search/'
     },
     {
-      title: 'Recursion, Backtracking & Combinatorial Exploration',
-      milestone: 'Trace recursion trees, master call stack unwinding, and solve constraint satisfaction problems',
+      title: 'Linked Lists, Pointer Manipulation & Reversal Algorithms',
+      milestone: 'Master singly/doubly linked list nodes, sentinel dummy heads, recursive reversals, and cycle detection',
       project: {
-        title: 'Sudoku Solver & Maze Navigation Engine',
-        description: 'Backtracking engine capable of solving any 9x9 Sudoku grid in under 50ms and discovering all valid paths in an obstacle grid.',
-        tech_stack: ['Recursive Backtracking', 'State Space Trees', 'Bitsets'],
-        deliverables: ['N-Queens state exploration visualization', '9x9 Sudoku constraint solver', 'Grid path discovery algorithm']
+        title: 'LRU (Least Recently Used) Cache with Doubly Linked List & Hash Map',
+        description: 'Production-ready O(1) read/write LRU cache combining doubly linked nodes with hash map pointers and thread-safe lock mechanisms.',
+        tech_stack: ['Linked Lists', 'Hash Tables', 'System Design'],
+        deliverables: ['O(1) get() and put() LRU Cache implementation', 'Node eviction and head/tail sentinel pointers', 'Comprehensive concurrency and eviction test suite']
       },
       days: [
-        'Recursion Foundations: Base cases, recursive leaps of faith, Call Stack frames & StackOverflowError mitigation',
-        'State Space Trees: Visualizing execution branches, parameters vs return values & tail recursion',
-        'Subsets & Subsequences: Inclusion-exclusion pattern (Generate all subsets, combination sum)',
-        'Permutations: Swapping elements, visited arrays & handling duplicate elements gracefully',
-        'Backtracking with Constraints: N-Queens problem, Sudoku solver & Word Search in grid',
-        'Milestone Lab: Implement Maze Path Discovery & 9x9 Sudoku solver with pruning heuristics'
-      ],
-      docs: 'https://leetcode.com/explore/learn/card/recursion-i/',
-      practice: 'https://leetcode.com/tag/backtracking/'
-    },
-    {
-      title: 'Linked Lists & Fast-Slow Pointer Mechanics',
-      milestone: 'Construct Singly, Doubly, and Circular Linked Lists from scratch without memory leaks',
-      project: {
-        title: 'Music Player Playlist Manager with Undo/Redo Cache',
-        description: 'Bi-directional media playlist system built on a custom Doubly Linked List with instant song skipping, shuffle, and history rewind.',
-        tech_stack: ['Pointers & Node References', 'Doubly Linked List', 'Memory Management'],
-        deliverables: ['Zero-leak Node pointer manipulation', 'Floyd Cycle detection integration', 'O(1) insertion/deletion at playlist pointers']
-      },
-      days: [
-        'Linked List Internals: Node structures, head/tail pointers & reference assignment vs primitive copies',
-        'Singly Linked List: Insertion, deletion, iterative vs recursive reversal & dummy node pattern',
-        'Floyd’s Tortoise and Hare: Cycle detection, cycle entry point discovery & middle of linked list',
-        'Doubly Linked Lists: Bidirectional traversal, sentinel head/tail nodes & O(1) arbitrary node splicing',
-        'Advanced List Problems: Merge two sorted lists, intersection point, reverse nodes in k-groups',
-        'Milestone Lab: Build Music Playlist Manager with bidirectionally linked tracks and shuffle'
+        { topic: 'Singly and Doubly Linked List Memory Models & Sentinel Dummy Nodes', type: 'learn', desc: 'Understand heap pointer references and eliminate null edge checks with dummy heads.' },
+        { topic: 'Linked List Reversal: Iterative 3-Pointer & Recursive Approaches', type: 'practice', desc: 'Solve LeetCode #206 (Reverse Linked List), LeetCode #92 (Reverse Linked List II).' },
+        { topic: 'Merge & Sort Linked Lists: K-Way Merge & Merge Sort on Lists', type: 'practice', desc: 'Solve LeetCode #21 (Merge Two Sorted Lists), LeetCode #23 (Merge k Sorted Lists), LeetCode #148.' },
+        { topic: 'Fast & Slow Pointers on Lists: Middle, Cycle Intersection & Palindromes', type: 'project', desc: 'Solve LeetCode #142 (Linked List Cycle II), LeetCode #143 (Reorder List), LeetCode #234.' },
+        { topic: 'Designing O(1) Cache Architectures: LRU & LFU Cache Implementations', type: 'project', desc: 'Solve LeetCode #146 (LRU Cache), LeetCode #460 (LFU Cache).' },
+        { topic: 'Timed Assessment: Linked List Pointer Sprint', type: 'mock test', desc: 'Solve 3 linked list pointer problems in 45 minutes.' },
+        { topic: 'Weekly Revision: Pointer Manipulation Invariants & Memory Deallocation', type: 'revision', desc: 'Solidify sentinel head/tail wiring and cycle detection proofs.' }
       ],
       docs: 'https://leetcode.com/explore/learn/card/linked-list/',
       practice: 'https://leetcode.com/tag/linked-list/'
     },
     {
-      title: 'Stacks, Queues & Monotonic Data Structures',
-      milestone: 'Master LIFO/FIFO patterns, circular buffers, and monotonic stack optimizations',
+      title: 'Stacks, Queues, Monotonic Stacks & Deques',
+      milestone: 'Master LIFO/FIFO mechanics, expression evaluation, monotonic stack next-greater-element, and sliding window maximum',
       project: {
-        title: 'Stock Market Real-Time Price Trend & Daily Span Analyzer',
-        description: 'Financial market processing pipeline calculating next greater stock prices and daily price span using a Monotonic Stack in linear O(N) time.',
-        tech_stack: ['Monotonic Stack', 'Deque', 'ArrayDeque / Queue API'],
-        deliverables: ['Next Greater Element linear solver', 'Sliding Window Maximum using Deque', 'Expression parsing engine (RPN)']
+        title: 'Mathematical Expression Evaluator & Syntax AST Parser',
+        description: 'Shunting-yard algorithm and monotonic stack parser supporting multi-digit arithmetic, operator precedence, parentheses, and syntax linting.',
+        tech_stack: ['Stack Data Structures', 'Parsing Algorithms', 'Compiler Theory'],
+        deliverables: ['Shunting-yard infix to postfix converter', 'O(N) Monotonic histogram area calculator', 'Edge case test suite handling nested brackets and negative values']
       },
       days: [
-        'Stack Fundamentals: LIFO principles, array vs linked list stack implementations & Deque APIs',
-        'Classic Stack Problems: Valid Parentheses, Minimum Stack in O(1) time & space, Evaluation of RPN',
-        'Monotonic Stack: Next Greater Element (NGE), Next Smaller Element & Daily Temperatures pattern',
-        'Queues & Circular Buffers: FIFO mechanics, Circular Queue implementation & Queue via two Stacks',
-        'Monotonic Queue / Double-Ended Queue (Deque): Sliding Window Maximum in linear O(N) time',
-        'Milestone Lab: Build Real-time Stock Span & Max Moving Window Engine using Monotonic Deque'
+        { topic: 'Stack and Queue ADTs: Array vs Linked List Implementations', type: 'learn', desc: 'Understand amortized queue resizing, circular buffers, and call stack frames.' },
+        { topic: 'Parentheses Matching, Expression Parsing & Shunting Yard', type: 'practice', desc: 'Solve LeetCode #20 (Valid Parentheses), LeetCode #150 (Evaluate Reverse Polish Notation), LeetCode #224.' },
+        { topic: 'Monotonic Stack Fundamentals: Next Greater Element & Stock Spans', type: 'practice', desc: 'Solve LeetCode #739 (Daily Temperatures), LeetCode #496, LeetCode #503 (Next Greater II).' },
+        { topic: 'Advanced Monotonic Stacks: Largest Rectangle in Histogram & Maximal Rectangle', type: 'project', desc: 'Solve LeetCode #84 (Largest Rectangle in Histogram), LeetCode #85 (Maximal Rectangle).' },
+        { topic: 'Monotonic Double-Ended Queue (Deque): Sliding Window Maximum', type: 'project', desc: 'Solve LeetCode #239 (Sliding Window Maximum), LeetCode #862 (Shortest Subarray with Sum at Least K).' },
+        { topic: 'Timed Assessment: Monotonic Stack & Deque Challenge', type: 'mock test', desc: 'Solve 3 hard/medium stack problems in 45m.' },
+        { topic: 'Weekly Revision: Monotonic Invariants & When to Use Stacks vs Pointers', type: 'revision', desc: 'Document monotonic increasing vs decreasing stack triggers.' }
       ],
-      docs: 'https://leetcode.com/explore/learn/card/queue-stack/',
-      practice: 'https://leetcode.com/tag/stack/'
+      docs: 'https://leetcode.com/tag/stack/',
+      practice: 'https://leetcode.com/tag/monotonic-stack/'
     },
     {
-      title: 'Binary Trees, BSTs & Hierarchical Traversals',
-      milestone: 'Perform recursive and iterative tree traversals (DFS/BFS) and maintain BST ordering invariants',
+      title: 'Recursion, Backtracking & Combinatorial Search',
+      milestone: 'Master recursion trees, state pruning, subsets, permutations, combinations, and grid backtracking',
       project: {
-        title: 'Hierarchical File System & Organization Directory Engine',
-        description: 'In-memory virtual directory tree modeling folders and file size aggregations with breadth-first search and lowest common ancestor query support.',
-        tech_stack: ['Binary Trees', 'Level Order BFS', 'Binary Search Tree'],
-        deliverables: ['DFS Traversals (In/Pre/Post)', 'Iterative Level Order BFS using Queue', 'BST validate, search, and delete algorithms']
+        title: 'Automated Sudoku Solver & N-Queens Visualizer Engine',
+        description: 'Constraint satisfaction solver using backtracking with forward checking, state bitmasks, and recursion step visualization.',
+        tech_stack: ['Backtracking', 'Combinatorics', 'State Space Search'],
+        deliverables: ['Bitmask-optimized N-Queens solver', 'Backtracking 9x9 Sudoku solver (sub-10ms)', 'Visual search tree step log']
       },
       days: [
-        'Tree Concepts: Root, leaves, depth, height, diameter & Full/Complete/Balanced binary tree definitions',
-        'Tree Traversal DFS: Inorder, Preorder, Postorder (both recursive and iterative using Stack)',
-        'Level Order Traversal (BFS): Queue-based breadth traversal, Zigzag level order & Right view of tree',
-        'Binary Search Trees (BST): Properties, O(log N) lookup, insertion, deletion (inorder successor) & validation',
-        'Lowest Common Ancestor (LCA), Path Sum problems & Serialize/Deserialize Binary Tree',
-        'Milestone Lab: Implement Virtual File Directory Tree with LCA search & deep folder size aggregation'
+        { topic: 'Recursion Anatomy: Base Cases, Stack Unwinding & State Passing', type: 'learn', desc: 'Master tree recursion branches and pass-by-value vs pass-by-reference state mutation.' },
+        { topic: 'Combinatorial Search: Subsets & Combinations with Pruning', type: 'practice', desc: 'Solve LeetCode #78 (Subsets), LeetCode #90 (Subsets II), LeetCode #77 (Combinations).' },
+        { topic: 'Permutations & Permutations with Duplicates', type: 'practice', desc: 'Solve LeetCode #46 (Permutations), LeetCode #47 (Permutations II), LeetCode #39 (Combination Sum).' },
+        { topic: 'Grid Backtracking: Word Search & Maze Exploration', type: 'project', desc: 'Solve LeetCode #79 (Word Search), LeetCode #212 (Word Search II with Trie).' },
+        { topic: 'Constraint Satisfaction: N-Queens & Sudoku Solver', type: 'project', desc: 'Solve LeetCode #51 (N-Queens), LeetCode #37 (Sudoku Solver).' },
+        { topic: 'Timed Assessment: Backtracking & Pruning Speed Sprint', type: 'mock test', desc: 'Solve 3 backtracking problems under 45m timer.' },
+        { topic: 'Weekly Revision: Recursion Tree Optimization & Duplicate Pruning Strategies', type: 'revision', desc: 'Review sorting before backtracking and used[] array deduplication patterns.' }
       ],
-      docs: 'https://leetcode.com/explore/learn/card/data-structures-and-algorithms/133/trees-and-graphs/',
+      docs: 'https://leetcode.com/tag/backtracking/',
+      practice: 'https://leetcode.com/tag/recursion/'
+    },
+    {
+      title: 'Binary Trees, BSTs & Tree Traversal Algorithms',
+      milestone: 'Master DFS (pre/in/post), BFS level-order traversal, binary search tree properties, and Lowest Common Ancestor (LCA)',
+      project: {
+        title: 'Binary Search Tree Indexer & Expression Tree Evaluator',
+        description: 'In-memory BST with self-balancing verification, serialization/deserialization, and hierarchical expression tree calculation.',
+        tech_stack: ['Trees', 'Binary Search Trees', 'Recursive Algorithms'],
+        deliverables: ['Tree serialization & deserialization codec (LeetCode #297)', 'Lowest Common Ancestor and Diameter calculators', 'Recursive vs Iterative DFS benchmark suite']
+      },
+      days: [
+        { topic: 'Tree Representation: Nodes, Pointers, Depth, Height & Balanced Trees', type: 'learn', desc: 'Understand full, complete, and balanced tree definitions and recursion properties.' },
+        { topic: 'Tree Traversals: Preorder, Inorder, Postorder & Level-Order BFS', type: 'practice', desc: 'Solve LeetCode #102 (Binary Tree Level Order Traversal), LeetCode #144, LeetCode #145.' },
+        { topic: 'Tree Properties: Max Depth, Diameter & Invert Binary Tree', type: 'practice', desc: 'Solve LeetCode #104 (Max Depth), LeetCode #543 (Diameter of Binary Tree), LeetCode #226.' },
+        { topic: 'Binary Search Trees: Validation, Search, Insert & Delete Nodes', type: 'project', desc: 'Solve LeetCode #98 (Validate BST), LeetCode #450 (Delete Node in BST), LeetCode #230.' },
+        { topic: 'Tree Path & Ancestry Problems: Lowest Common Ancestor (LCA) & Path Sums', type: 'project', desc: 'Solve LeetCode #236 (Lowest Common Ancestor), LeetCode #124 (Binary Tree Max Path Sum).' },
+        { topic: 'Timed Assessment: Binary Tree & BST Problem Set', type: 'mock test', desc: 'Solve 3 tree problems under 45 minutes.' },
+        { topic: 'Weekly Revision: Bottom-Up vs Top-Down Tree Recursion Patterns', type: 'revision', desc: 'Review return value bubbling vs state parameter passing in tree traversals.' }
+      ],
+      docs: 'https://leetcode.com/explore/learn/card/data-structure-tree/',
       practice: 'https://leetcode.com/tag/tree/'
     },
     {
-      title: 'Heaps, Priority Queues & Greedy Strategies',
-      milestone: 'Construct array-based binary heaps and solve Top-K and Interval scheduling challenges',
+      title: 'Heaps, Priority Queues & Top-K Elements',
+      milestone: 'Master min-heaps/max-heaps, heapify in O(N), priority queue schedulers, and two-heap median finding',
       project: {
-        title: 'Distributed Job Scheduler with Priority Execution Queue',
-        description: 'Worker queue microservice that schedules asynchronous computational tasks based on priority tiers and deadlines using a Min-Heap.',
-        tech_stack: ['Binary Heap', 'PriorityQueue', 'Greedy Interval Scheduling'],
-        deliverables: ['Heapify array in O(N) time', 'Top-K elements streaming filter', 'Non-overlapping meeting room scheduler']
+        title: 'Real-Time Streaming Median & Top-K Event Frequency Engine',
+        description: 'Two-heap streaming engine maintaining running median of live data streams and tracking top-K trending items with sub-millisecond latency.',
+        tech_stack: ['Heaps', 'Priority Queues', 'Streaming Algorithms'],
+        deliverables: ['Two-heap MedianFinder implementation (LeetCode #295)', 'O(N log K) Top-K frequent elements aggregator', 'Memory-bounded streaming priority queue']
       },
       days: [
-        'Heap Internals: Complete Binary Tree representation in 1D array (2*i+1, 2*i+2), Max-Heap vs Min-Heap',
-        'Heap Operations: Sift-up (insert), Sift-down (extract-min), Build-Heap in O(N) time complexity',
-        'PriorityQueue: Natural ordering vs custom Comparator, handling custom objects',
-        'Top-K Elements: Kth largest element in an array, Top K frequent elements using min-heap of size K',
-        'Greedy Algorithms: Activity Selection, Meeting Rooms II, Huffman Coding & Gas Station cycle',
-        'Milestone Lab: Build Priority Job Scheduler with automated interval conflict resolver'
+        { topic: 'Heap Data Structure: Complete Binary Tree Array Representation & Heapify', type: 'learn', desc: 'Understand parent-child indexing, sift-up, sift-down, and O(N) build heap math.' },
+        { topic: 'Priority Queues for Top-K Problems: Min-Heap vs Max-Heap Sizing', type: 'practice', desc: 'Solve LeetCode #215 (Kth Largest Element in an Array), LeetCode #347 (Top K Frequent Elements).' },
+        { topic: 'K-Way Merging with Heaps: Merge Sorted Lists & Smallest Ranges', type: 'practice', desc: 'Solve LeetCode #23 (Merge k Sorted Lists), LeetCode #373 (Find K Pairs with Smallest Sums).' },
+        { topic: 'Two-Heap Pattern: Continuous Median in Data Stream', type: 'project', desc: 'Solve LeetCode #295 (Find Median from Data Stream), LeetCode #480 (Sliding Window Median).' },
+        { topic: 'Greedy Task Scheduling & Interval Merging with Priority Queues', type: 'project', desc: 'Solve LeetCode #621 (Task Scheduler), LeetCode #253 (Meeting Rooms II).' },
+        { topic: 'Timed Assessment: Priority Queue & Heap Speed Sprint', type: 'mock test', desc: 'Solve 3 heap problems in 45 minutes.' },
+        { topic: 'Weekly Revision: Heap Space Complexity & Custom Comparator Rules', type: 'revision', desc: 'Synthesize custom lambda comparators and bounded heap constraints.' }
       ],
-      docs: 'https://leetcode.com/explore/learn/card/heap/',
+      docs: 'https://leetcode.com/tag/heap-priority-queue/',
       practice: 'https://leetcode.com/tag/heap-priority-queue/'
     },
     {
-      title: 'Hashing, HashMaps & In-Memory LRU Cache',
-      milestone: 'Design collision-resistant hash functions and implement an O(1) LRU Cache architecture',
+      title: 'Graph Fundamentals: BFS, DFS, Connected Components & Topological Sort',
+      milestone: 'Master adjacency lists/matrices, cycle detection in directed/undirected graphs, Kahn\'s algorithm, and bipartition',
       project: {
-        title: 'Production In-Memory LRU Cache with TTL Eviction',
-        description: 'Thread-safe Least Recently Used (LRU) Cache utilizing a HashMap combined with a Doubly Linked List for strict O(1) lookups and evictions.',
-        tech_stack: ['HashMap Internals', 'Doubly Linked List', 'O(1) Eviction'],
-        deliverables: ['Collision resolution (Chaining vs Open Addressing)', 'O(1) get() and put() algorithms', 'Automated least-recently-used node eviction']
+        title: 'Package Dependency Resolver & Course Prerequisite DAG Engine',
+        description: 'Topological sort dependency engine detecting circular imports and resolving optimal build order for software packages.',
+        tech_stack: ['Graphs', 'Directed Acyclic Graphs (DAG)', 'Topological Sort'],
+        deliverables: ['Kahn\'s algorithm BFS topological order generator', 'DFS cycle detection in directed graphs', 'Multi-source BFS infection/distance calculator']
       },
       days: [
-        'Hashing Principles: Hash codes, distribution uniformity & hashCode() + equals() contract',
-        'Collision Resolution: Separate chaining (Linked List -> Balanced Tree) vs Open Addressing',
-        'HashMap & HashSet: Internal table sizing, load factor (0.75), rehashing & ConcurrentHashMap basics',
-        'Subarray Sum Problems: Prefix Sum + HashMap (Subarray sum equals K, Longest subarray with sum K)',
-        'LRU Cache Architecture: Coupling a HashMap with a Doubly Linked List for strict O(1) get/put operations',
-        'Milestone Lab: Code In-Memory LRU Cache from scratch with test suite verifying O(1) eviction'
-      ],
-      docs: 'https://leetcode.com/problems/lru-cache/',
-      practice: 'https://leetcode.com/tag/hash-table/'
-    },
-    {
-      title: 'Graphs: Traversals, Topological Sort & Shortest Path',
-      milestone: 'Model directed/undirected graphs, detect cycles, and implement Dijkstra & Kahn algorithms',
-      project: {
-        title: 'Package Dependency Resolver & Course Schedule Validator',
-        description: 'Build tool dependency manager (like Maven/npm) that detects circular imports and determines correct linear compilation order using Kahn\'s Algorithm.',
-        tech_stack: ['Adjacency List', 'Graph BFS/DFS', 'Kahn\'s Algorithm (Topological Sort)'],
-        deliverables: ['Adjacency List memory modeling', 'Cycle detection in directed & undirected graphs', 'Topological sort build planner']
-      },
-      days: [
-        'Graph Modeling: Adjacency Matrix vs Adjacency List, directed vs undirected, weighted vs unweighted',
-        'Breadth-First Search (BFS): Shortest path in unweighted graph, Rotting Oranges & Connected Components',
-        'Depth-First Search (DFS): Cycle detection in undirected graphs (parent pointer) and directed graphs (recursion stack)',
-        'Topological Sort: Directed Acyclic Graphs (DAG), DFS with Stack & Kahn\'s Algorithm (In-degree Queue)',
-        'Shortest Path: Dijkstra’s Algorithm using PriorityQueue & relaxation step',
-        'Milestone Lab: Build Package Dependency Resolver with circular reference detector'
+        { topic: 'Graph Representations: Adjacency List, Adjacency Matrix & Edge Lists', type: 'learn', desc: 'Understand sparse vs dense graphs, space trade-offs, and directed vs undirected edges.' },
+        { topic: 'Graph Traversals: BFS Shortest Path & DFS Connected Components', type: 'practice', desc: 'Solve LeetCode #200 (Number of Islands), LeetCode #133 (Clone Graph), LeetCode #695 (Max Area of Island).' },
+        { topic: 'Multi-Source BFS: Rotten Oranges & Matrix Distance Fields', type: 'practice', desc: 'Solve LeetCode #994 (Rotting Oranges), LeetCode #542 (01 Matrix), LeetCode #286 (Walls and Gates).' },
+        { topic: 'Directed Graphs & Topological Sort: Kahn\'s Algorithm (In-Degree) & DFS', type: 'project', desc: 'Solve LeetCode #207 (Course Schedule), LeetCode #210 (Course Schedule II), LeetCode #802.' },
+        { topic: 'Bipartite Graphs & Graph Coloring Algorithms', type: 'project', desc: 'Solve LeetCode #785 (Is Graph Bipartite?), LeetCode #886 (Possible Bipartition).' },
+        { topic: 'Timed Assessment: Graph Traversal & Topological Sort Sprint', type: 'mock test', desc: 'Solve 3 graph problems under 45m timer.' },
+        { topic: 'Weekly Revision: Visited State Tracking & Cycle Detection Invariants', type: 'revision', desc: 'Review 3-color cycle detection (white, gray, black) in directed graphs.' }
       ],
       docs: 'https://leetcode.com/explore/learn/card/graph/',
       practice: 'https://leetcode.com/tag/graph/'
     },
     {
-      title: 'Dynamic Programming (1D, 2D Grid & Knapsack DP)',
-      milestone: 'Transform brute-force recursive algorithms into optimal Memoized and Tabulated state machines',
+      title: 'Advanced Graphs: Dijkstra, Shortest Paths & Union-Find (Disjoint Set)',
+      milestone: 'Master Disjoint Set Union (DSU) with path compression, Kruskal\'s MST, Dijkstra\'s algorithm, and Bellman-Ford',
       project: {
-        title: 'Resource Allocation & Robot Pathfinding Cost Optimizer',
-        description: 'System optimizing budget expenditures across investment portfolios (0/1 Knapsack) and calculating minimum cost paths across dynamic grid terrains.',
-        tech_stack: ['Dynamic Programming', '1D/2D Tabulation', 'Space Optimization'],
-        deliverables: ['Memoization vs Tabulation benchmarking', '0/1 Knapsack optimal weight allocation', 'Space optimization from O(M*N) to O(N)']
+        title: 'Network Routing Protocol & Minimum Spanning Tree Simulator',
+        description: 'Simulation of OSPF shortest path routing using Dijkstra and redundant link elimination via Kruskal\'s Disjoint Set algorithm.',
+        tech_stack: ['Advanced Graphs', 'Dijkstra Algorithm', 'Disjoint Set Union'],
+        deliverables: ['DSU class with union-by-rank and path compression', 'PriorityQueue Dijkstra shortest path router', 'Network delay time optimization suite']
       },
       days: [
-        'DP Fundamentals: Overlapping subproblems, optimal substructure, Top-Down Memoization vs Bottom-Up Tabulation',
-        '1D DP Classic Problems: Climbing Stairs, Frog Jump, House Robber & Coin Change (unbounded)',
-        'Longest Increasing Subsequence (LIS): O(N^2) dynamic programming vs O(N log N) binary search approach',
-        '2D Grid DP: Unique Paths, Minimum Path Sum, Dungeon Game & state transition formulas',
-        'Knapsack Variants: 0/1 Knapsack, Subset Sum equals Target, Partition Equal Subset Sum',
-        'Milestone Lab: Implement Resource Allocation Engine with space-optimized 1D state vectors'
+        { topic: 'Disjoint Set Union (DSU): Find with Path Compression & Union by Rank', type: 'learn', desc: 'Understand near-constant amortized time complexity O(alpha(N)) of DSU operations.' },
+        { topic: 'DSU Applications: Redundant Connections & Dynamic Connectivity', type: 'practice', desc: 'Solve LeetCode #684 (Redundant Connection), LeetCode #547 (Number of Provinces), LeetCode #323.' },
+        { topic: 'Dijkstra\'s Algorithm: Single-Source Shortest Paths with Non-Negative Weights', type: 'practice', desc: 'Solve LeetCode #743 (Network Delay Time), LeetCode #787 (Cheapest Flights Within K Stops).' },
+        { topic: 'Minimum Spanning Trees (MST): Kruskal\'s & Prim\'s Algorithms', type: 'project', desc: 'Solve LeetCode #1584 (Min Cost to Connect All Points), LeetCode #1135.' },
+        { topic: 'Shortest Path Variations: 0-1 BFS & Bellman-Ford with Negative Weights', type: 'project', desc: 'Solve LeetCode #1368 (Min Cost to Make at Least One Valid Path in a Grid).' },
+        { topic: 'Timed Assessment: DSU & Dijkstra Shortest Path Challenge', type: 'mock test', desc: 'Solve 3 weighted graph problems under 45m.' },
+        { topic: 'Weekly Revision: When to Use BFS vs Dijkstra vs Bellman-Ford vs DSU', type: 'revision', desc: 'Synthesize graph algorithm selection matrix based on edge weights and constraints.' }
+      ],
+      docs: 'https://leetcode.com/tag/shortest-path/',
+      practice: 'https://leetcode.com/tag/union-find/'
+    },
+    {
+      title: 'Dynamic Programming I: 1D DP, Grid DP & Knapsack Patterns',
+      milestone: 'Master overlapping subproblems, optimal substructure, memoization, tabulation, 0/1 Knapsack, and Unbounded Knapsack',
+      project: {
+        title: 'Dynamic Resource Allocation & Portfolio Optimization Engine',
+        description: 'DP engine computing optimal resource distribution under budget constraints using 0/1 and unbounded knapsack algorithms.',
+        tech_stack: ['Dynamic Programming', 'Optimization Algorithms', 'Space Optimization'],
+        deliverables: ['1D memory-optimized knapsack solver', 'Grid minimum path cost calculator', 'Top-down memoization vs bottom-up tabulation benchmark']
+      },
+      days: [
+        { topic: 'DP Foundations: Memoization vs Tabulation & State Transition Formulation', type: 'learn', desc: 'Identify state variables, base conditions, and recursive recurrence relations.' },
+        { topic: '1D Dynamic Programming: Climbing Stairs, House Robber & Coin Change', type: 'practice', desc: 'Solve LeetCode #70 (Climbing Stairs), LeetCode #198 (House Robber), LeetCode #322 (Coin Change).' },
+        { topic: '2D Grid DP: Unique Paths & Minimum Path Sum', type: 'practice', desc: 'Solve LeetCode #62 (Unique Paths), LeetCode #63 (Unique Paths II), LeetCode #64 (Min Path Sum).' },
+        { topic: '0/1 Knapsack & Subset Sum Partition Patterns', type: 'project', desc: 'Solve LeetCode #416 (Partition Equal Subset Sum), LeetCode #494 (Target Sum).' },
+        { topic: 'Unbounded Knapsack & Coin Change II Variations', type: 'project', desc: 'Solve LeetCode #518 (Coin Change II), LeetCode #279 (Perfect Squares).' },
+        { topic: 'Timed Assessment: 1D & Knapsack DP Problem Sprint', type: 'mock test', desc: 'Solve 3 dynamic programming problems in 45 minutes.' },
+        { topic: 'Weekly Revision: State Space Compression from O(N^2) to O(N)', type: 'revision', desc: 'Review rolling array techniques and 1D buffer rewrites.' }
       ],
       docs: 'https://leetcode.com/explore/learn/card/dynamic-programming/',
       practice: 'https://leetcode.com/tag/dynamic-programming/'
+    },
+    {
+      title: 'Dynamic Programming II: Strings (LCS/Edit Distance), LIS, Intervals & Mock Interview',
+      milestone: 'Master Longest Common Subsequence, Edit Distance, Longest Increasing Subsequence, and Interval DP',
+      project: {
+        title: 'Text Diff Engine & Sequence Alignment Genomic Analyzer',
+        description: 'Bioinformatics DNA alignment and file comparison engine using Hirschberg/Wagner-Fischer Edit Distance and LCS algorithms.',
+        tech_stack: ['Advanced DP', 'String Algorithms', 'Interview Prep'],
+        deliverables: ['Wagner-Fischer Edit Distance matrix calculator', 'O(N log N) patience sorting LIS engine', 'Comprehensive FAANG technical interview prep document']
+      },
+      days: [
+        { topic: 'Longest Increasing Subsequence (LIS): O(N^2) DP vs O(N log N) Patience Sorting', type: 'learn', desc: 'Master binary search with DP tails array for optimal LIS computation.' },
+        { topic: 'String DP: Longest Common Subsequence & Longest Palindromic Subsequence', type: 'practice', desc: 'Solve LeetCode #1143 (Longest Common Subsequence), LeetCode #516 (Longest Palindromic Subsequence).' },
+        { topic: 'String Transformation: Edit Distance & Distinct Subsequences', type: 'practice', desc: 'Solve LeetCode #72 (Edit Distance), LeetCode #115 (Distinct Subsequences).' },
+        { topic: 'Interval & Partition DP: Matrix Chain Multiplication & Burst Balloons', type: 'project', desc: 'Solve LeetCode #312 (Burst Balloons), LeetCode #1000 (Min Cost to Merge Stones).' },
+        { topic: 'State Machine DP: Best Time to Buy and Sell Stock with Cooldown/Fees', type: 'project', desc: 'Solve LeetCode #121, LeetCode #122, LeetCode #309 (Stock with Cooldown), LeetCode #714.' },
+        { topic: 'Timed Assessment: Full FAANG DSA Technical Mock Interview', type: 'mock test', desc: 'Complete 2 unseen Medium/Hard algorithmic challenges under strict 60m clock.' },
+        { topic: 'Weekly Revision: Comprehensive Algorithmic Pattern Map & Cheat Sheet', type: 'revision', desc: 'Finalize master pattern map linking problem types to optimal data structures.' }
+      ],
+      docs: 'https://leetcode.com/tag/dynamic-programming/',
+      practice: 'https://leetcode.com/explore/interview/card/top-interview-questions-hard/'
     }
   ];
 
-  // 3. PYTHON, AI, MACHINE LEARNING & DATA SCIENCE (12 Non-Repetitive Weeks)
-  const pythonAICatalog = [
+  // 3. DATA ANALYST & BUSINESS INTELLIGENCE (12 Non-Repetitive Weeks)
+  const dataAnalystCatalog = [
     {
-      title: 'Python Mastery, Memory Model & Vectorized NumPy Computing',
-      milestone: 'Master Python internals, generators, list comprehensions, and vectorized linear algebra in NumPy',
+      title: 'Advanced Excel, Business Formulas, Power Query & Data Cleansing',
+      milestone: 'Master XLOOKUP, INDEX/MATCH, nested IF/IFS, dynamic array formulas, and Power Query ETL',
       project: {
-        title: 'High-Performance Matrix Math & Gradient Descent Engine',
-        description: 'Mathematical engine computing vector transformations, dot products, eigenvalues, and gradient descents using pure Python and NumPy vectorization.',
-        tech_stack: ['Python 3.12', 'NumPy', 'Math / Linear Algebra', 'PyTest'],
-        deliverables: ['Vectorized operations without Python loops', 'Linear transformation visualizer', 'Unit-tested mathematical operations']
+        title: 'Executive Financial & Sales Analysis Dashboard in Excel',
+        description: 'Dynamic multi-sheet financial model featuring automated Power Query data ingestion, KPI metric cards, and scenario sensitivity tables.',
+        tech_stack: ['Microsoft Excel', 'Power Query', 'Data Cleansing', 'Financial Modeling'],
+        deliverables: ['Automated Power Query cleansing pipeline', 'Dynamic KPI dashboard with form controls and slicers', 'What-if scenario analysis data model']
       },
       days: [
-        'Python Internals: Memory model, references vs mutability, GIL (Global Interpreter Lock) & dunder methods',
-        'Functional Programming: List/Dict/Set comprehensions, map/filter/reduce, lambda expressions & generators (yield)',
-        'Decorators & Context Managers: Function and class decorators, functools.wraps & __enter__ / __exit__ protocols',
-        'NumPy Array Computing: Broadcasting rules, multidimensional indexing, matrix multiplications & vectorized operations',
-        'Essential Math for ML: Vectors, matrices, dot products, eigenvalues, partial derivatives & gradient descent intuition',
-        'Milestone Lab: Build Vector Math Library with NumPy vectorization and automated PyTest test suite'
+        { topic: 'Advanced Excel Formulas: XLOOKUP, INDEX/MATCH, Dynamic Arrays (FILTER, UNIQUE, SORT)', type: 'learn', desc: 'Master modern dynamic spill formulas and complex two-way matrix lookups.' },
+        { topic: 'Logical & Aggregation Functions: SUMIFS, COUNTIFS, AVERAGEIFS, LET, LAMBDA', type: 'practice', desc: 'Build modular, readable formulas and eliminate redundant calculations.' },
+        { topic: 'Data Transformation with Power Query: Unpivoting, Merging & Appending', type: 'practice', desc: 'Automate messy CSV/Excel imports, handle date anomalies, and fill null values.' },
+        { topic: 'Pivot Tables, Calculated Fields, Slicers & Dynamic Timelines', type: 'project', desc: 'Construct interactive pivot models analyzing sales by region, product, and channel.' },
+        { topic: 'What-If Analysis, Data Tables, Goal Seek & Scenario Manager', type: 'project', desc: 'Model business sensitivity forecasts under varying pricing and cost assumptions.' },
+        { topic: 'Timed Assessment: Build Financial Model & Clean Messy Dataset in Excel', type: 'mock test', desc: 'Transform raw data into a clean executive KPI report in 45m.' },
+        { topic: 'Weekly Revision: Excel Keyboard Shortcuts & Data Validation Rules', type: 'revision', desc: 'Review lookup error handling (IFERROR) and build foolproof data validation dropdowns.' }
       ],
-      docs: 'https://docs.python.org/3/',
-      practice: 'https://numpy.org/doc/stable/user/quickstart.html'
+      docs: 'https://support.microsoft.com/en-us/excel',
+      practice: 'https://www.excel-easy.com/data-analysis.html'
     },
     {
-      title: 'Exploratory Data Analysis (EDA) & Feature Engineering with Pandas',
-      milestone: 'Clean messy real-world datasets, impute missing values, and engineer predictive feature sets',
+      title: 'Relational Databases & Core SQL Querying (SELECT, WHERE, GROUP BY)',
+      milestone: 'Master SQL relational structure, multi-table joins, aggregate queries, and date manipulations',
       project: {
-        title: 'Predictive Real Estate Housing Market & Pricing Analyzer',
-        description: 'Comprehensive data analysis pipeline cleaning 50,000+ housing records, handling outliers, and building interactive charts.',
-        tech_stack: ['Pandas', 'Matplotlib', 'Seaborn', 'Scipy'],
-        deliverables: ['Automated data cleaning & imputation pipeline', 'Correlation heatmaps & distribution plots', 'Categorical encoding (One-Hot, Target Encoding)']
+        title: 'E-Commerce Transactional SQL Query & Cohort Analysis Suite',
+        description: 'Comprehensive SQL query repository analyzing customer order trends, repeat purchasing rates, and revenue distributions.',
+        tech_stack: ['PostgreSQL / MySQL', 'DBeaver', 'Relational SQL'],
+        deliverables: ['Documented SQL query script with comments', 'Multi-table join audit report', 'Customer purchasing frequency summary table']
       },
       days: [
-        'Pandas Core: Series, DataFrames, multi-indexing, indexing with .loc/.iloc & memory optimization',
-        'Data Cleaning: Handling nulls (imputation vs drop), duplicate detection & regex text normalization',
-        'Data Transformations: groupby, pivot_table, melt, merge, concatenate & apply lambda pipelines',
-        'Statistical Visualization: Matplotlib subplots, Seaborn distribution plots, pairplots & correlation heatmaps',
-        'Feature Engineering: Log transformations, outlier detection (IQR, Z-Score), One-Hot vs Label Encoding & Scaling',
-        'Milestone Lab: Perform complete EDA on dataset and generate comprehensive analytical report'
+        { topic: 'Relational Database Architecture: Tables, Keys, Data Types & Normalization', type: 'learn', desc: 'Understand primary/foreign keys, schema diagrams, and data integrity constraints.' },
+        { topic: 'Core SQL Queries: SELECT, DISTINCT, WHERE, IN, BETWEEN, LIKE & NULLs', type: 'practice', desc: 'Filter customer transactions accurately and eliminate null value pitfalls.' },
+        { topic: 'SQL Aggregations: GROUP BY, HAVING, COUNT, SUM, AVG, MIN, MAX', type: 'practice', desc: 'Aggregate sales by category and filter grouped metrics with HAVING clauses.' },
+        { topic: 'Multi-Table SQL Joins: INNER, LEFT, RIGHT, FULL OUTER & Cross Joins', type: 'project', desc: 'Combine customer, order, and product tables while preserving unfulfilled orders.' },
+        { topic: 'Date and Time Manipulations: DATE_TRUNC, EXTRACT, INTERVAL & DATEDIFF', type: 'project', desc: 'Group transactional revenue by month, quarter, and day of the week.' },
+        { topic: 'Timed Assessment: Solve 5 Relational SQL Query Challenges', type: 'mock test', desc: 'Write accurate SQL queries under a 45-minute countdown.' },
+        { topic: 'Weekly Revision: SQL Execution Order (FROM -> WHERE -> GROUP BY -> HAVING -> SELECT)', type: 'revision', desc: 'Solidify mental model of SQL query processing order to prevent syntax mistakes.' }
+      ],
+      docs: 'https://mode.com/sql-tutorial/',
+      practice: 'https://sqlzoo.net/'
+    },
+    {
+      title: 'Intermediate SQL: Subqueries, CTEs (Common Table Expressions) & Window Functions',
+      milestone: 'Master CTEs, subqueries, RANK, DENSE_RANK, ROW_NUMBER, LAG, LEAD, and running totals',
+      project: {
+        title: 'Financial SaaS Subscription MRR & Customer Churn SQL Pipeline',
+        description: 'Advanced SQL pipeline using CTEs and window functions to compute Month-over-Month (MoM) MRR growth, retention cohorts, and user rankings.',
+        tech_stack: ['SQL Window Functions', 'CTEs', 'Financial Analytics'],
+        deliverables: ['Window function SQL script with running totals and MoM growth', 'Customer retention cohort query matrix', 'Top-performing sales rep ranking queries']
+      },
+      days: [
+        { topic: 'Common Table Expressions (WITH CTE) vs Inline Subqueries', type: 'learn', desc: 'Structure readable multi-step queries and eliminate nested subquery complexity.' },
+        { topic: 'Ranking Window Functions: ROW_NUMBER(), RANK(), DENSE_RANK(), NTILE()', type: 'practice', desc: 'Rank top-selling products per category and identify top 10% customers.' },
+        { topic: 'Value Window Functions: LAG(), LEAD(), FIRST_VALUE(), LAST_VALUE()', type: 'practice', desc: 'Calculate time between consecutive user visits and compute revenue deltas.' },
+        { topic: 'Aggregate Window Functions: SUM() OVER(PARTITION BY ... ORDER BY ...)', type: 'project', desc: 'Calculate cumulative running totals and 7-day moving averages.' },
+        { topic: 'Conditional Aggregations: CASE WHEN combined with Window Functions', type: 'project', desc: 'Pivot categorical rows into columns and build custom conditional KPIs.' },
+        { topic: 'Timed Assessment: Advanced SQL Window Function & CTE Sprint', type: 'mock test', desc: 'Solve 4 complex window function business problems in 45m.' },
+        { topic: 'Weekly Revision: Window Frames (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)', type: 'revision', desc: 'Clarify default window frame behaviors and avoid silent calculation errors.' }
+      ],
+      docs: 'https://mode.com/sql-tutorial/sql-window-functions/',
+      practice: 'https://www.stratascratch.com/'
+    },
+    {
+      title: 'Python for Data Analysis: NumPy Arrays, Vectorization & Performance',
+      milestone: 'Master Python data structures, NumPy ndarray operations, broadcasting, and vectorization',
+      project: {
+        title: 'Algorithmic Financial Simulation & Statistical Matrix Engine',
+        description: 'Python statistical engine simulating 10,000 Monte Carlo asset paths using vectorized NumPy operations for high-speed computation.',
+        tech_stack: ['Python 3', 'NumPy', 'Jupyter Notebook'],
+        deliverables: ['Vectorized NumPy simulation notebook', 'Statistical summary matrix (mean, variance, percentiles)', 'Performance benchmark vs raw Python loops']
+      },
+      days: [
+        { topic: 'Python Data Essentials: Lists, Dicts, Sets, List Comprehensions & Functions', type: 'learn', desc: 'Review core Python constructs optimized for data transformation tasks.' },
+        { topic: 'NumPy ndarray Basics: Creation, Indexing, Slicing & Boolean Masking', type: 'practice', desc: 'Filter multi-dimensional matrices efficiently without for-loops.' },
+        { topic: 'Vectorized Arithmetic & Universal Functions (ufuncs)', type: 'practice', desc: 'Execute element-wise operations with C-speed underlying performance.' },
+        { topic: 'NumPy Broadcasting Rules & Dimension Reshaping', type: 'project', desc: 'Combine arrays of differing dimensions following NumPy broadcasting axioms.' },
+        { topic: 'Statistical Computing: Mean, Std, Correlation Matrices & Linear Algebra', type: 'project', desc: 'Compute covariance matrices, dot products, and percentile distributions.' },
+        { topic: 'Timed Assessment: NumPy Vectorized Calculation Challenges', type: 'mock test', desc: 'Solve 4 data transformation challenges purely using NumPy in 45m.' },
+        { topic: 'Weekly Revision: Vectorization vs Loop Benchmarks & Memory Profiling', type: 'revision', desc: 'Verify memory footprints and avoid unnecessary array copies.' }
+      ],
+      docs: 'https://numpy.org/doc/stable/',
+      practice: 'https://www.kaggle.com/learn/python'
+    },
+    {
+      title: 'Data Wrangling with Pandas: Series, DataFrames & Cleansing Pipelines',
+      milestone: 'Master Pandas DataFrames, indexing, handling missing values, dtype casting, and string/date wrangling',
+      project: {
+        title: 'Global Healthcare Patient & Clinical Trial Data Cleaning Pipeline',
+        description: 'End-to-end automated Pandas data preparation pipeline resolving missing data, duplicate records, non-standard dates, and outlier entries.',
+        tech_stack: ['Python', 'Pandas', 'Data Cleansing'],
+        deliverables: ['Documented Jupyter cleaning pipeline', 'Cleaned Parquet/CSV dataset export', 'Automated data quality validation report']
+      },
+      days: [
+        { topic: 'Pandas Data Structures: Series vs DataFrame & Index Alignment', type: 'learn', desc: 'Understand index-driven operations, loc vs iloc selection semantics.' },
+        { topic: 'Handling Missing Data: isna(), dropna(), fillna(), Interpolation', type: 'practice', desc: 'Impute missing numerical and categorical values with statistical medians.' },
+        { topic: 'Data Type Conversions & Memory Optimization (Categorical dtypes)', type: 'practice', desc: 'Downcast integers and cast high-cardinality strings to categories to cut RAM.' },
+        { topic: 'String Manipulation & Regex Extraction with .str Accessor', type: 'project', desc: 'Parse unformatted addresses, phone numbers, and product codes into clean columns.' },
+        { topic: 'Datetime Processing with .dt Accessor & Time Zone Normalization', type: 'project', desc: 'Parse timestamps, compute elapsed durations, and aggregate by business fiscal periods.' },
+        { topic: 'Timed Assessment: Pandas Raw Data Wrangling Challenge', type: 'mock test', desc: 'Clean a dirty CSV with 10 deliberate anomalies under 45m timer.' },
+        { topic: 'Weekly Revision: Inplace vs Copy Operations & SettingWithCopyWarning', type: 'revision', desc: 'Eliminate SettingWithCopy warnings and master explicit .copy() assignments.' }
       ],
       docs: 'https://pandas.pydata.org/docs/',
       practice: 'https://www.kaggle.com/learn/pandas'
     },
     {
-      title: 'Supervised & Unsupervised Machine Learning with Scikit-Learn',
-      milestone: 'Train regression, classification, and clustering models with cross-validation and hyperparameter tuning',
+      title: 'Advanced Pandas: GroupBy, Aggregation, Pivots & Multi-Table Merging',
+      milestone: 'Master GroupBy aggregations, transform, filter, merge/join paradigms, pivot tables, and melt',
       project: {
-        title: 'Customer Churn & Credit Risk Prediction Pipeline',
-        description: 'End-to-end ML model classifying loan defaults using Random Forests, XGBoost, and hyperparameter optimization via GridSearchCV.',
-        tech_stack: ['Scikit-Learn', 'XGBoost', 'LightGBM', 'Imbalanced-Learn'],
-        deliverables: ['Stratified K-Fold cross validation pipeline', 'ROC-AUC, Precision-Recall & Confusion Matrix evaluation', 'Model serialization with Joblib']
+        title: 'E-Commerce Customer Lifetime Value (LTV) & Churn Analysis in Pandas',
+        description: 'Advanced data aggregation pipeline computing RFM (Recency, Frequency, Monetary) metrics, cohort retention, and pivot summaries.',
+        tech_stack: ['Python', 'Pandas', 'Business Analytics'],
+        deliverables: ['Customer RFM scoring dataframe', 'Monthly retention cohort heat matrix', 'Executive summary pivot table export']
       },
       days: [
-        'Classical ML Algorithms: Linear Regression, Logistic Regression (Odds ratio & Sigmoid), Decision Trees & Overfitting',
-        'Ensemble Methods: Random Forests (Bagging), Gradient Boosting (XGBoost, LightGBM) & feature importance analysis',
-        'Evaluation Metrics: Precision, Recall, F1-Score, ROC-AUC curve & handling imbalanced datasets (SMOTE)',
-        'Hyperparameter Optimization: GridSearchCV vs RandomizedSearchCV, pipeline creation & data leakage prevention',
-        'Unsupervised Learning: K-Means clustering, Elbow method, Silhouette score & PCA dimensionality reduction',
-        'Milestone Lab: Train and evaluate Credit Default Prediction Model with exported Scikit-Learn pipeline'
+        { topic: 'Pandas GroupBy Mechanics: Split-Apply-Combine Framework', type: 'learn', desc: 'Understand custom aggregation functions and multi-index grouping.' },
+        { topic: 'GroupBy Aggregations: Named Aggs, transform(), and filter()', type: 'practice', desc: 'Calculate percentage of group totals and filter groups meeting dynamic criteria.' },
+        { topic: 'Merging & Joining: pd.merge(), concat(), How = inner/outer/left/right', type: 'practice', desc: 'Combine disparate customer, transaction, and marketing campaign dataframes.' },
+        { topic: 'Reshaping Data: pivot_table(), melt(), stack(), and unstack()', type: 'project', desc: 'Transform wide-format survey data into tidy long-format analytical dataframes.' },
+        { topic: 'Time-Series Resampling & Rolling Windows with .resample() and .rolling()', type: 'project', desc: 'Calculate 30-day moving averages and weekly revenue trends.' },
+        { topic: 'Timed Assessment: Advanced Pandas Transformation Drill', type: 'mock test', desc: 'Construct multi-table RFM dataset from raw transactions in 45m.' },
+        { topic: 'Weekly Revision: MultiIndex Flattening & Performance Best Practices', type: 'revision', desc: 'Review index reset strategies and avoid slow iterrows() iterations.' }
+      ],
+      docs: 'https://pandas.pydata.org/docs/user_guide/groupby.html',
+      practice: 'https://github.com/guipsamora/pandas_exercises'
+    },
+    {
+      title: 'Exploratory Data Analysis (EDA) & Visualization (Matplotlib / Seaborn)',
+      milestone: 'Master statistical charting, distributions, correlation heatmaps, box plots, and storytelling visuals',
+      project: {
+        title: 'Comprehensive Real Estate Market EDA & Valuation Study',
+        description: 'In-depth EDA notebook exploring housing price distributions, geospatial variations, correlation heatmaps, and outlier detection.',
+        tech_stack: ['Python', 'Matplotlib', 'Seaborn', 'EDA'],
+        deliverables: ['Published Jupyter EDA notebook with executive commentary', 'Publication-quality statistical visualizations', 'Identified key drivers of property price appreciation']
+      },
+      days: [
+        { topic: 'Visual Storytelling Principles: Chart Selection, Color Theory & Cognitive Load', type: 'learn', desc: 'Select optimal charts (histograms, box plots, scatter, bar) for target insights.' },
+        { topic: 'Distribution Analysis: Histograms, KDE Plots & Q-Q Plots in Seaborn', type: 'practice', desc: 'Examine skewness, kurtosis, and test normality of business metrics.' },
+        { topic: 'Categorical & Relationship Plots: Box Plots, Violin Plots & Scatter Plots', type: 'practice', desc: 'Detect outliers and analyze variance across demographic and pricing segments.' },
+        { topic: 'Correlation Analysis & Annotated Heatmaps', type: 'project', desc: 'Compute Pearson and Spearman correlation matrices to identify colinearity.' },
+        { topic: 'Customizing Figures: Subplots, Layouts, Annotations & Styling', type: 'project', desc: 'Format publication-ready visualizations with clear titles and metric annotations.' },
+        { topic: 'Timed Assessment: Full EDA & Insight Delivery Challenge', type: 'mock test', desc: 'Explore new dataset and generate 3 key business insights with charts in 45m.' },
+        { topic: 'Weekly Revision: Outlier Treatment Techniques (IQR vs Z-Score)', type: 'revision', desc: 'Review trimming, capping, and winsorization strategies for skewed data.' }
+      ],
+      docs: 'https://seaborn.pydata.org/',
+      practice: 'https://www.kaggle.com/learn/data-visualization'
+    },
+    {
+      title: 'Business Intelligence with Power BI: DAX, Data Modeling & Dashboards',
+      milestone: 'Master Power BI Star Schema data modeling, DAX calculated measures, time intelligence, and interactive dashboards',
+      project: {
+        title: 'Enterprise Executive Sales & Operations Power BI Dashboard',
+        description: 'Multi-page Power BI analytical report featuring Star Schema data modeling, DAX time-intelligence calculations, and drill-through KPIs.',
+        tech_stack: ['Power BI Desktop', 'DAX', 'Star Schema Data Modeling'],
+        deliverables: ['Star Schema data model (.pbix)', 'YOY and MOM DAX measures', 'Interactive executive dashboard']
+      },
+      days: [
+        { topic: 'Dimensional Data Modeling: Facts vs Dimensions & Star Schemas', type: 'learn', desc: 'Design star schemas eliminating circular relationships and many-to-many ambiguity.' },
+        { topic: 'Power BI Power Query Transformations & Relationship Management', type: 'practice', desc: 'Configure 1-to-many single-direction relationships between facts and dimensions.' },
+        { topic: 'DAX Basics: Calculated Columns vs Measures, SUM(), COUNTROWS(), DIVIDE()', type: 'practice', desc: 'Write efficient aggregate measures adhering to filter context rules.' },
+        { topic: 'Advanced DAX: CALCULATE(), FILTER(), ALL(), RELATED() & Evaluation Context', type: 'project', desc: 'Override default filter context to calculate market share and benchmark ratios.' },
+        { topic: 'DAX Time Intelligence: TOTALYTD(), SAMEPERIODLASTYEAR(), DATEADD()', type: 'project', desc: 'Compute Year-over-Year (YoY) and Month-over-Month (MoM) revenue changes.' },
+        { topic: 'Timed Assessment: Build Power BI Executive KPI Dashboard', type: 'mock test', desc: 'Assemble an interactive 3-card, 2-chart dashboard from raw data in 45m.' },
+        { topic: 'Weekly Revision: DAX Context Transition & Performance Best Practices', type: 'revision', desc: 'Review row context vs filter context and performance analyzer tuning.' }
+      ],
+      docs: 'https://learn.microsoft.com/en-us/power-bi/',
+      practice: 'https://www.daxpatterns.com/'
+    },
+    {
+      title: 'Business Intelligence with Tableau & Visual Analytics',
+      milestone: 'Build professional Tableau visualizations, parameters, calculated fields, and Level of Detail (LOD) expressions',
+      project: {
+        title: 'Global Supply Chain & Logistics Tableau Dashboard',
+        description: 'Interactive Tableau workbook analyzing shipping delays, carrier performance, and regional fulfillment bottlenecks.',
+        tech_stack: ['Tableau Desktop / Public', 'LOD Expressions', 'Data Viz'],
+        deliverables: ['Published Tableau Public dashboard', 'FIXED LOD calculations', 'Interactive geographic map with tooltips']
+      },
+      days: [
+        { topic: 'Tableau Architecture: Dimensions vs Measures, Discrete (Blue) vs Continuous (Green)', type: 'learn', desc: 'Understand pill colors, shelf placements, and visual rendering rules.' },
+        { topic: 'Calculated Fields, Table Calculations & Quick Table Calcs', type: 'practice', desc: 'Compute percent of total, running sums, and rank across table panes.' },
+        { topic: 'Tableau Parameters, Set Actions & Dynamic Metric Selectors', type: 'practice', desc: 'Allow dashboard users to switch metrics and top-N filters on the fly.' },
+        { topic: 'Level of Detail (LOD) Expressions: FIXED, INCLUDE & EXCLUDE', type: 'project', desc: 'Calculate cohort averages regardless of visualization dimension granularity.' },
+        { topic: 'Dashboard Design: Tiled vs Floating Layouts, Actions & Device Formats', type: 'project', desc: 'Build responsive executive dashboards with URL and filter actions.' },
+        { topic: 'Timed Assessment: Build Tableau Storyboard Dashboard', type: 'mock test', desc: 'Design interactive 3-view dashboard with synchronized filters in 45m.' },
+        { topic: 'Weekly Revision: Tableau Order of Operations & LOD Cheatsheet', type: 'revision', desc: 'Review Extract Filters -> Data Source -> Context -> FIXED LOD -> Dimension filters.' }
+      ],
+      docs: 'https://help.tableau.com/current/pro/desktop/en-us/default.htm',
+      practice: 'https://public.tableau.com/app/discover'
+    },
+    {
+      title: 'A/B Testing, Experimentation & Product Funnel Analytics',
+      milestone: 'Design end-to-end A/B tests, calculate required sample sizes, and evaluate conversion funnels',
+      project: {
+        title: 'Checkout Flow Redesign A/B Test & Funnel Conversion Audit',
+        description: 'Statistical evaluation of a website checkout redesign experiment analyzing bounce rate, drop-off stages, and revenue lift.',
+        tech_stack: ['A/B Testing', 'Funnel Analytics', 'Python Stats'],
+        deliverables: ['Sample size power calculation', 'Conversion funnel drop-off audit', 'Experiment recommendation memo']
+      },
+      days: [
+        { topic: 'A/B Testing Lifecycle: Hypothesis, Variant Design & Randomization Units', type: 'learn', desc: 'Understand user-level randomization, cookie tracking, and dilution risks.' },
+        { topic: 'Sample Size Estimation & Power Analysis (Minimum Detectable Effect MDE)', type: 'practice', desc: 'Calculate required sample size and test duration to avoid underpowered tests.' },
+        { topic: 'Conversion Funnel Analysis: Drop-Off Rates & Friction Points', type: 'practice', desc: 'Map user journey from Landing -> Add to Cart -> Checkout -> Purchase.' },
+        { topic: 'Experiment Evaluation: Two-Proportion Z-Test & Guardrail Metrics', type: 'project', desc: 'Verify conversion rate statistical significance while monitoring page speed.' },
+        { topic: 'Common Experimentation Pitfalls: Peeking Problem, Network Effects & Simpson\'s Paradox', type: 'project', desc: 'Avoid false discoveries caused by continuous monitoring without corrections.' },
+        { topic: 'Timed Assessment: Analyze Live A/B Experiment Results Dataset', type: 'mock test', desc: 'Calculate p-value and deliver executive Go/No-Go decision in 45m.' },
+        { topic: 'Weekly Revision: Experimentation Framework & Product Metric Tree', type: 'revision', desc: 'Review North Star metrics, input metrics, and experiment scorecard templates.' }
+      ],
+      docs: 'https://www.evanmiller.org/ab-testing/',
+      practice: 'https://towardsdatascience.com/a-b-testing-a-complete-guide-to-statistical-testing-e3f1db140499'
+    },
+    {
+      title: 'Predictive Analytics & Customer Segmentation with Machine Learning',
+      milestone: 'Build predictive baseline models and customer segmentation clusters with Scikit-Learn',
+      project: {
+        title: 'Customer Lifetime Value Prediction & RFM Segmentation Engine',
+        description: 'Predictive analytics pipeline performing RFM (Recency, Frequency, Monetary) segmentation and customer churn prediction.',
+        tech_stack: ['Python Scikit-Learn', 'K-Means Clustering', 'Logistic Regression'],
+        deliverables: ['RFM customer segments', 'Churn prediction classifier (>80% accuracy)', 'Actionable marketing retention strategy']
+      },
+      days: [
+        { topic: 'Machine Learning for Analysts: Supervised vs Unsupervised Use Cases', type: 'learn', desc: 'Distinguish between classification, regression, and clustering business problems.' },
+        { topic: 'Feature Scaling & Standardization with Scikit-Learn StandardScaler', type: 'practice', desc: 'Prepare numerical and categorical features for distance-based algorithms.' },
+        { topic: 'Customer Segmentation with K-Means Clustering & Elbow Method', type: 'practice', desc: 'Group customers into VIP, At-Risk, and Occasional clusters based on RFM.' },
+        { topic: 'Customer Churn Prediction with Logistic Regression & Decision Trees', type: 'project', desc: 'Train binary classification models predicting customer cancellation probability.' },
+        { topic: 'Model Evaluation: Accuracy, Precision, Recall, F1-Score & ROC-AUC', type: 'project', desc: 'Evaluate class-imbalanced datasets with confusion matrices and PR curves.' },
+        { topic: 'Timed Assessment: Train & Evaluate Churn Prediction Classifier', type: 'mock test', desc: 'Fit Scikit-Learn model and output feature importances in 45 minutes.' },
+        { topic: 'Weekly Revision: Machine Learning Interpretability & Business Integration', type: 'revision', desc: 'Review how to translate model coefficients into actionable business recommendations.' }
       ],
       docs: 'https://scikit-learn.org/stable/',
       practice: 'https://www.kaggle.com/learn/intro-to-machine-learning'
     },
     {
-      title: 'Deep Learning Foundations with PyTorch & Neural Networks',
-      milestone: 'Construct multi-layer perceptrons from scratch and train deep models using backpropagation in PyTorch',
+      title: 'End-to-End Enterprise Analytics Capstone & Executive Presentation',
+      milestone: 'Deliver a complete, boardroom-ready analytics capstone combining SQL, Python, BI dashboards, and strategic recommendations',
       project: {
-        title: 'Computer Vision Image Classification Pipeline (CIFAR-10)',
-        description: 'Convolutional Neural Network (CNN) trained in PyTorch with data augmentation, learning rate scheduling, and GPU acceleration.',
-        tech_stack: ['PyTorch', 'Torchvision', 'CUDA / GPU', 'TensorBoard'],
-        deliverables: ['Custom PyTorch Dataset and DataLoader', 'CNN architecture (Conv2D, BatchNorm, MaxPool, Dropout)', 'Training loop with loss/accuracy logging']
+        title: 'Enterprise Business Intelligence & Growth Capstone Portfolio',
+        description: 'Comprehensive data analytics portfolio project featuring relational SQL data extraction, exploratory Python modeling, and an interactive BI dashboard.',
+        tech_stack: ['SQL', 'Python / Pandas', 'Power BI / Tableau', 'Executive Reporting'],
+        deliverables: ['Live interactive BI dashboard link', 'Documented SQL repository & Python notebook', 'Executive 5-minute video walkthrough script']
       },
       days: [
-        'Neural Network Foundations: Neurons, weights, biases, activation functions (ReLU, GELU, Softmax) & loss functions',
-        'PyTorch Tensors: Autograd (automatic differentiation), computational graphs & tensor GPU memory transfers',
-        'Building Custom Models: torch.nn.Module, forward pass, optimizers (AdamW, SGD with momentum) & learning rate schedulers',
-        'Convolutional Neural Networks (CNNs): Kernels, strides, padding, feature map extraction & transfer learning (ResNet)',
-        'Regularization Techniques: Dropout, Batch Normalization, Weight Decay (L2) & Data Augmentation',
-        'Milestone Lab: Train CIFAR-10 image classifier in PyTorch reaching >85% validation accuracy'
+        { topic: 'Executive Communication: Structuring Data Findings with the Pyramid Principle', type: 'learn', desc: 'Lead with conclusions, summarize supporting evidence, and provide clear next steps.' },
+        { topic: 'Building End-to-End Pipeline: Raw Data -> SQL -> Python -> BI Dashboard', type: 'practice', desc: 'Connect all stages of data analysis into a reproducible workflow.' },
+        { topic: 'Polishing Interactive BI Dashboard: Usability, Design & Color Hierarchy', type: 'practice', desc: 'Refine visual spacing, typography, and tooltips for executive viewers.' },
+        { topic: 'Authoring Technical Documentation & Public GitHub Repository', type: 'project', desc: 'Write comprehensive README with data dictionary, schema diagrams, and methodology.' },
+        { topic: 'Crafting the 1-Page Executive Summary & Recommendation Deck', type: 'project', desc: 'Condense complex statistical findings into 3 actionable growth initiatives.' },
+        { topic: 'Timed Assessment: Live Analytical Case Study Interview Presentation', type: 'mock test', desc: 'Present capstone findings and answer business stakeholder challenge questions in 45m.' },
+        { topic: 'Weekly Revision: Data Analyst Resume, Portfolio & Interview Showcase', type: 'revision', desc: 'Finalize portfolio links, resume bullet points with quantified business metrics.' }
       ],
-      docs: 'https://pytorch.org/tutorials/',
-      practice: 'https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html'
-    },
-    {
-      title: 'Natural Language Processing (NLP) & Transformer Architectures',
-      milestone: 'Master word embeddings, self-attention mechanisms, and HuggingFace Transformers',
-      project: {
-        title: 'Financial Sentiment & News Entity Extraction System',
-        description: 'NLP application fine-tuning a BERT transformer model to classify financial earnings sentiment with named entity recognition.',
-        tech_stack: ['HuggingFace Transformers', 'BERT / RoBERTa', 'Tokenizers', 'PyTorch'],
-        deliverables: ['Subword tokenization pipeline', 'Fine-tuned HuggingFace Transformer model', 'Confusion matrix and F1 score evaluation']
-      },
-      days: [
-        'NLP Foundations: Tokenization (WordPiece, BPE), TF-IDF, Word2Vec embeddings & cosine similarity',
-        'Recurrent Architectures vs Transformers: Limitations of RNN/LSTM & the "Attention Is All You Need" revolution',
-        'Self-Attention Mechanism: Query, Key, Value matrix math, Scaled Dot-Product Attention & Multi-Head Attention',
-        'Transformer Architecture: Positional Encoding, Encoder-Decoder stacks, BERT (Masked LM) vs GPT (Autoregressive)',
-        'HuggingFace Ecosystem: AutoTokenizer, AutoModelForSequenceClassification & Trainer API fine-tuning',
-        'Milestone Lab: Fine-tune BERT model for domain sentiment analysis and export model weights'
-      ],
-      docs: 'https://huggingface.co/docs/transformers',
-      practice: 'https://huggingface.co/learn'
-    },
-    {
-      title: 'Generative AI, Large Language Models (LLMs) & RAG Systems',
-      milestone: 'Build production Retrieval-Augmented Generation (RAG) applications with Vector Databases and FastAPI',
-      project: {
-        title: 'Enterprise Technical Documentation AI Assistant (RAG Pipeline)',
-        description: 'Full-stack AI assistant that indexes PDF manuals into a Vector Database and generates grounded responses using LangChain and FastAPI.',
-        tech_stack: ['FastAPI', 'LangChain / LlamaIndex', 'ChromaDB / Qdrant', 'OpenAI / Gemini API'],
-        deliverables: ['Chunking & embedding pipeline', 'Vector similarity search with metadata filtering', 'Grounded conversational memory API']
-      },
-      days: [
-        'LLM Fundamentals: Prompt Engineering, few-shot reasoning, temperature & hallucination mitigation strategies',
-        'Vector Databases: Dense embeddings, cosine distance, HNSW indexing & ChromaDB / Pinecone / Qdrant setup',
-        'Retrieval-Augmented Generation (RAG): Document parsing, recursive character chunking & semantic retrieval',
-        'LangChain & LlamaIndex: Chains, prompt templates, conversational memory & agentic tool-use loops',
-        'Production Deployment: Wrapping AI pipelines in FastAPI with streaming responses (Server-Sent Events) & Docker',
-        'Milestone Lab: Build and test end-to-end RAG AI Assistant indexing custom technical documentation'
-      ],
-      docs: 'https://python.langchain.com/docs/get_started/introduction',
-      practice: 'https://docs.trychroma.com/'
+      docs: 'https://github.com/data-analyst-portfolio',
+      practice: 'https://www.stratascratch.com/'
     }
   ];
 
-  // 4. CLOUD & DEVOPS (12 Non-Repetitive Weeks)
-  const devOpsCloudCatalog = [
+  // 4. PYTHON, AI & MACHINE LEARNING (12 Non-Repetitive Weeks)
+  const pythonAICatalog = [
     {
-      title: 'Linux Systems Administration, Shell Scripting & Networking',
-      milestone: 'Master Linux kernel concepts, process management, bash automation, and networking commands',
+      title: 'Python Programming, OOP, Decorators, Generators & Package Ecosystem',
+      milestone: 'Master advanced Python paradigms, OOP design patterns, decorators, generators, and type annotations',
       project: {
-        title: 'Automated Linux Server Health & Security Hardening Script',
-        description: 'Bash utility auditing user permissions, monitoring CPU/RAM thresholds, rotating logs, and configuring firewall rules.',
-        tech_stack: ['Bash / Shell Scripting', 'Linux (Ubuntu/Debian)', 'Systemd', 'UFW / Iptables'],
-        deliverables: ['Automated cron backup script', 'Systemd daemon service configuration', 'Firewall and SSH security hardening']
+        title: 'Modular Machine Learning Pipeline & Metric Logger Framework',
+        description: 'Object-oriented Python library with custom timing decorators, memory generators for large datasets, and structured JSON logging.',
+        tech_stack: ['Python 3.12', 'OOP Design Patterns', 'PyTest'],
+        deliverables: ['Clean OOP pipeline architecture', 'Custom logging & execution timer decorators', '100% test coverage with PyTest']
       },
       days: [
-        'Linux Architecture: Kernel, Filesystem Hierarchy (FHS), permissions (chmod, chown, SUID/SGID) & environment variables',
-        'Process Management: PID, signals (SIGTERM, SIGKILL), top/htop, ps, systemd unit files & journalctl logging',
-        'Shell Scripting (Bash): Variables, conditional logic, loops, pipes (|), redirects (>, >>), awk, sed & grep regex',
-        'Linux Networking: IP addressing, subnetting, netstat/ss, curl, iptables, DNS resolution (/etc/resolv.conf) & SSH key security',
-        'Automation & Scheduling: Crontab syntax, systemd timers, logrotate configuration & disk space auditing (df, du)',
-        'Milestone Lab: Write complete Server Hardening Bash Script and test on an isolated Linux VM'
+        { topic: 'Advanced Python Syntax: Type Hints, Dataclasses & Memory Optimization', type: 'learn', desc: 'Master PEP 484 type annotations, slots dataclasses, and reference counting.' },
+        { topic: 'Object-Oriented Design: Inheritance, Abstract Base Classes & Dunder Methods', type: 'practice', desc: 'Implement custom container classes overriding __getitem__, __len__, and __repr__.' },
+        { topic: 'Decorators, Closures & Context Managers (with statement)', type: 'practice', desc: 'Build parameterized performance decorators and resource management contexts.' },
+        { topic: 'Generators, Iterators & Memory-Efficient Streaming Pipelines', type: 'project', desc: 'Stream gigabyte datasets using yield generators without memory spikes.' },
+        { topic: 'Asynchronous Python: Asyncio, Coroutines & Task Concurrency', type: 'project', desc: 'Execute parallel API and IO calls using asyncio.gather and semaphore limits.' },
+        { topic: 'Timed Assessment: Python Advanced Design Challenge', type: 'mock test', desc: 'Implement generic streaming pipeline with decorators under 45m.' },
+        { topic: 'Weekly Revision: Python GIL, Multiprocessing vs Multithreading', type: 'revision', desc: 'Review CPU-bound vs IO-bound optimization and Python GIL constraints.' }
       ],
-      docs: 'https://ubuntu.com/server/docs',
-      practice: 'https://github.com/bregman-arie/devops-exercises'
+      docs: 'https://docs.python.org/3/',
+      practice: 'https://github.com/faif/python-patterns'
     },
     {
-      title: 'Containerization with Docker & Multi-Stage Production Builds',
-      milestone: 'Package microservices into minimal, secure Docker container images with Docker Compose',
+      title: 'Numerical Computing, Vectorization & Data Wrangling (NumPy & Pandas)',
+      milestone: 'Master NumPy multidimensional array vectorization, broadcasting, and Pandas time-series wrangling',
       project: {
-        title: 'Multi-Service Containerized Application Architecture',
-        description: 'Production container setup running a React frontend, Node.js API, PostgreSQL database, and Redis cache with health checks.',
-        tech_stack: ['Docker', 'Dockerfile Multi-Stage', 'Docker Compose', 'Alpine Linux'],
-        deliverables: ['Multi-stage Dockerfile (<50MB image size)', 'Docker Compose service orchestration', 'Persistent named volume storage']
+        title: 'High-Speed Financial Alpha Factor & Technical Indicator Library',
+        description: 'Vectorized financial feature engineering engine computing moving averages, RSI, and MACD across millions of ticker points.',
+        tech_stack: ['Python', 'NumPy', 'Pandas', 'Financial Data'],
+        deliverables: ['Zero-loop vectorized indicator calculations', 'Clean handling of time-series lookahead bias', 'Benchmark report comparing vectorization vs loops']
       },
       days: [
-        'Container Fundamentals: Namespaces (PID, Mount, Net), cgroups & Containers vs Virtual Machines',
-        'Dockerfile Optimization: Layer caching, multi-stage builds, non-root user security & minimizing image size',
-        'Docker Storage & Networking: Bridge networks, host networks, bind mounts vs named volumes',
-        'Docker Compose: Orchestrating multi-container services, environment variable files, depends_on & health checks',
-        'Container Security: Scanning images for vulnerabilities (Trivy), avoiding root execution & secret management',
-        'Milestone Lab: Dockerize a full-stack web application with multi-stage build and Docker Compose orchestration'
+        { topic: 'NumPy Memory Layout: Strides, C-Contiguous vs Fortran, and Broadcasting', type: 'learn', desc: 'Understand array memory strides and zero-copy slicing mechanics.' },
+        { topic: 'Vectorized Array Computations & Universal Functions (Ufuncs)', type: 'practice', desc: 'Implement linear algebra transformations and matrix multiplication.' },
+        { topic: 'Pandas DataFrames: Advanced Indexing, MultiIndex & Memory Reduction', type: 'practice', desc: 'Optimize DataFrame memory usage by 70% with category and downcasted dtypes.' },
+        { topic: 'Time-Series Analysis: Window Rolling, Resampling & Lag Features', type: 'project', desc: 'Engineer predictive lag features and exponential moving averages.' },
+        { topic: 'Data Transformation: Pivot Tables, Melts & Complex Multi-Table Merges', type: 'project', desc: 'Join disparate datasets and resolve missing data with forward fills.' },
+        { topic: 'Timed Assessment: High-Performance Data Transformation Drill', type: 'mock test', desc: 'Process and clean 1M row dataset in under 45 minutes.' },
+        { topic: 'Weekly Revision: Vectorization Best Practices & Profiling (cProfile)', type: 'revision', desc: 'Identify compute bottlenecks using cProfile and line_profiler.' }
+      ],
+      docs: 'https://numpy.org/doc/stable/',
+      practice: 'https://www.kaggle.com/learn/pandas'
+    },
+    {
+      title: 'Statistical Learning, Exploratory Analysis & Hypothesis Testing',
+      milestone: 'Master probability distributions, hypothesis testing, correlation analysis, and feature relationships',
+      project: {
+        title: 'Biomedical Clinical Trial Statistical Significance & EDA Study',
+        description: 'Comprehensive statistical evaluation analyzing treatment efficacy, normality tests, p-values, and statistical power.',
+        tech_stack: ['Python', 'SciPy', 'Statsmodels', 'Seaborn'],
+        deliverables: ['Statistical hypothesis testing report (t-test, ANOVA, Chi-Square)', 'Seaborn publication-grade charts', 'Executive conclusion summary']
+      },
+      days: [
+        { topic: 'Probability Distributions: Gaussian, Binomial, Poisson & Central Limit Theorem', type: 'learn', desc: 'Understand probability density functions, standard deviations, and CLT sampling.' },
+        { topic: 'Descriptive Statistics, Skewness, Kurtosis & Outlier Detection (IQR / Z-Score)', type: 'practice', desc: 'Quantify data asymmetry and isolate anomalous distributions.' },
+        { topic: 'Parametric Hypothesis Testing: One/Two-Sample T-Tests, Paired T-Tests & ANOVA', type: 'practice', desc: 'Formulate null hypotheses and verify variance homogeneity with Levene tests.' },
+        { topic: 'Non-Parametric Tests: Mann-Whitney U, Wilcoxon & Chi-Square Independence', type: 'project', desc: 'Evaluate non-normal distributions and categorical contingency tables.' },
+        { topic: 'Exploratory Data Analysis: Correlation, Pairplots & Violin Distributions', type: 'project', desc: 'Discover hidden feature relationships with Seaborn visualizations.' },
+        { topic: 'Timed Assessment: Statistical Analysis & Hypothesis Evaluation', type: 'mock test', desc: 'Perform end-to-end hypothesis test on experimental dataset in 45m.' },
+        { topic: 'Weekly Revision: Type I & Type II Errors, Power Analysis & P-Hacking', type: 'revision', desc: 'Understand alpha thresholds, statistical power (1-beta), and Bonferroni corrections.' }
+      ],
+      docs: 'https://docs.scipy.org/doc/scipy/reference/stats.html',
+      practice: 'https://www.kaggle.com/learn/data-visualization'
+    },
+    {
+      title: 'Classical Machine Learning: Supervised Regression & Classification',
+      milestone: 'Master Linear/Logistic Regression, Decision Trees, SVMs, and Scikit-Learn pipeline architecture',
+      project: {
+        title: 'Real Estate Price Prediction & Loan Default Risk Classifier',
+        description: 'End-to-end ML pipeline with cross-validation, feature encoding, scaling, and regularization predicting real estate valuation and default risk.',
+        tech_stack: ['Scikit-Learn', 'Python', 'Regression', 'Classification'],
+        deliverables: ['Scikit-Learn Pipeline with ColumnTransformer', 'Regularized Ridge/Lasso models', 'Classification ROC-AUC curves & Confusion Matrix']
+      },
+      days: [
+        { topic: 'Supervised Learning Theory: Cost Functions, Gradient Descent & Bias-Variance Tradeoff', type: 'learn', desc: 'Understand loss function minimization, learning rates, and underfitting vs overfitting.' },
+        { topic: 'Linear & Polynomial Regression: Ordinary Least Squares (OLS), Ridge (L2), Lasso (L1)', type: 'practice', desc: 'Implement regularized regression preventing collinear feature explosion.' },
+        { topic: 'Binary & Multi-Class Logistic Regression: Sigmoid, Softmax & Log-Loss', type: 'practice', desc: 'Calculate class probabilities and decision thresholds for binary tasks.' },
+        { topic: 'Support Vector Machines (SVM) & Kernel Tricks (RBF, Polynomial)', type: 'project', desc: 'Optimize maximum-margin hyperplanes in high-dimensional spaces.' },
+        { topic: 'Scikit-Learn Pipelines, Feature Preprocessing & K-Fold Cross-Validation', type: 'project', desc: 'Build reproducible pipelines preventing data leakage between train/val splits.' },
+        { topic: 'Timed Assessment: Train & Evaluate Regression & Classification Models', type: 'mock test', desc: 'Fit baseline models, tune hyperparameters, and report test metrics in 45m.' },
+        { topic: 'Weekly Revision: Evaluation Metrics (Precision, Recall, F1, ROC-AUC, RMSE, MAE)', type: 'revision', desc: 'Select appropriate metric tradeoffs for imbalanced classification.' }
+      ],
+      docs: 'https://scikit-learn.org/stable/',
+      practice: 'https://www.kaggle.com/learn/intro-to-machine-learning'
+    },
+    {
+      title: 'Ensemble Learning: Random Forests, Gradient Boosting (XGBoost, LightGBM)',
+      milestone: 'Master Bagging, Boosting, Random Forests, XGBoost, LightGBM, and feature importance analysis',
+      project: {
+        title: 'Kaggle Competition Winning Fraud Detection & Churn Engine',
+        description: 'High-performance ensemble model combining Random Forests and tuned XGBoost/LightGBM classifiers with hyperparameter optimization.',
+        tech_stack: ['XGBoost', 'LightGBM', 'Optuna', 'Scikit-Learn'],
+        deliverables: ['Tuned LightGBM model with >0.92 ROC-AUC', 'Optuna Bayesian hyperparameter search script', 'SHAP feature importance interpretability plots']
+      },
+      days: [
+        { topic: 'Tree Foundations: Information Gain, Gini Impurity & Decision Tree Pruning', type: 'learn', desc: 'Understand recursive binary splitting and tree depth constraints.' },
+        { topic: 'Bagging & Random Forests: Bootstrap Aggregation & Out-of-Bag (OOB) Score', type: 'practice', desc: 'Train parallel decision tree ensembles reducing model variance.' },
+        { topic: 'Gradient Boosting Theory: Residual Learning, Shrinkage & Loss Gradients', type: 'practice', desc: 'Understand sequential additive modeling minimizing residual errors.' },
+        { topic: 'Production Gradient Boosters: XGBoost, LightGBM & CatBoost Tuning', type: 'project', desc: 'Configure histogram-based splits, early stopping, and categorical handling.' },
+        { topic: 'Automated Hyperparameter Optimization with Optuna & Bayesian Search', type: 'project', desc: 'Optimize tree depth, subsample ratios, and learning rates with Optuna trials.' },
+        { topic: 'Timed Assessment: Optimize XGBoost Classifier Under 45m Clock', type: 'mock test', desc: 'Build and tune boosting model achieving benchmark metric score.' },
+        { topic: 'Weekly Revision: Model Interpretability with SHAP (Shapley Values) & Partial Dependence', type: 'revision', desc: 'Explain global and local model predictions to non-technical stakeholders.' }
+      ],
+      docs: 'https://xgboost.readthedocs.io/',
+      practice: 'https://www.kaggle.com/learn/intermediate-machine-learning'
+    },
+    {
+      title: 'Unsupervised Learning: Clustering, Dimensionality Reduction & PCA',
+      milestone: 'Master K-Means, Hierarchical Clustering, DBSCAN, PCA, and t-SNE / UMAP dimensionality reduction',
+      project: {
+        title: 'Customer Segmentation & High-Dimensional Gene Expression Clustering',
+        description: 'Unsupervised clustering pipeline extracting latent customer archetypes and visualizing high-dimensional embeddings using PCA and UMAP.',
+        tech_stack: ['Scikit-Learn', 'K-Means', 'PCA', 'UMAP', 'Matplotlib'],
+        deliverables: ['Optimal cluster analysis using Silhouette & Elbow methods', '2D/3D PCA variance projection plot', 'Identified customer persona profiles']
+      },
+      days: [
+        { topic: 'Unsupervised Learning Principles & Distance Metrics (Euclidean, Cosine, Manhattan)', type: 'learn', desc: 'Understand distance space geometry and curse of dimensionality.' },
+        { topic: 'K-Means Clustering: Centroid Initialization (K-Means++), Elbow Method & Silhouette Scores', type: 'practice', desc: 'Cluster unlabeled data and evaluate cluster compactness and separation.' },
+        { topic: 'Density-Based Clustering: DBSCAN & Handling Noise / Arbitrary Shapes', type: 'practice', desc: 'Isolate spatial outliers and detect non-spherical geographic clusters.' },
+        { topic: 'Principal Component Analysis (PCA): Eigenvectors, Eigenvalues & Explained Variance', type: 'project', desc: 'Project 100+ feature dimensions onto orthogonal components preserving 95% variance.' },
+        { topic: 'Non-Linear Manifold Learning: t-SNE & UMAP for High-Dimensional Embeddings', type: 'project', desc: 'Visualize high-dimensional data clusters in 2D interactive scatterplots.' },
+        { topic: 'Timed Assessment: Dimensionality Reduction & Customer Segmentation', type: 'mock test', desc: 'Perform PCA and K-Means segmentation on raw dataset in 45m.' },
+        { topic: 'Weekly Revision: When to Choose PCA vs Autoencoders vs UMAP', type: 'revision', desc: 'Review linear vs non-linear projection limits and reconstructive loss.' }
+      ],
+      docs: 'https://scikit-learn.org/stable/modules/clustering.html',
+      practice: 'https://www.kaggle.com/code'
+    },
+    {
+      title: 'Deep Learning Foundations: Neural Networks & PyTorch Architecture',
+      milestone: 'Master artificial neural networks, backpropagation, activation functions, optimizers, and PyTorch tensors',
+      project: {
+        title: 'Custom Deep Neural Network & PyTorch Training Engine from Scratch',
+        description: 'Handcrafted Multi-Layer Perceptron (MLP) built in pure PyTorch with custom datasets, dataloaders, learning rate schedulers, and checkpoints.',
+        tech_stack: ['PyTorch 2.0', 'Deep Learning', 'Tensors', 'CUDA/MPS'],
+        deliverables: ['PyTorch nn.Module architecture with Dropout & BatchNorm', 'Custom Dataset & DataLoader pipeline', 'Training loop with validation loss early stopping']
+      },
+      days: [
+        { topic: 'Neural Network Architecture: Perceptrons, Forward Pass, Loss Functions & Backprop', type: 'learn', desc: 'Understand computational graphs, chain rule derivatives, and gradient flow.' },
+        { topic: 'PyTorch Tensors, Autograd Mechanics & GPU/CUDA Acceleration', type: 'practice', desc: 'Master tensor shapes, autograd.grad, and device-agnostic torch tensor allocation.' },
+        { topic: 'Building Neural Networks with torch.nn.Module, Linear Layers & Activations (ReLU, GELU)', type: 'practice', desc: 'Construct multi-layer architectures with non-linear activation layers.' },
+        { topic: 'Optimizers & Loss Functions: SGD, AdamW, CrossEntropyLoss & Learning Rate Schedulers', type: 'project', desc: 'Train deep networks avoiding gradient vanishing or exploding with AdamW.' },
+        { topic: 'Data Pipelines: torch.utils.data.Dataset, DataLoader, Batching & Transforms', type: 'project', desc: 'Implement memory-efficient batching and on-the-fly data augmentation.' },
+        { topic: 'Timed Assessment: Build & Train PyTorch Classifier Under 45m Clock', type: 'mock test', desc: 'Construct PyTorch training loop and achieve target test accuracy.' },
+        { topic: 'Weekly Revision: Weight Initialization (He/Xavier), Dropout & Batch Normalization', type: 'revision', desc: 'Solidify internal covariate shift reduction and regularization mechanics.' }
+      ],
+      docs: 'https://pytorch.org/docs/stable/index.html',
+      practice: 'https://pytorch.org/tutorials/'
+    },
+    {
+      title: 'Computer Vision: Convolutional Neural Networks (CNNs) & Transfer Learning',
+      milestone: 'Master Convolutions, Pooling, ResNet architectures, and Transfer Learning with PyTorch torchvision',
+      project: {
+        title: 'Automated Medical Imaging & Defect Detection Classifier',
+        description: 'Production computer vision model using transfer learning (ResNet50 / EfficientNet) to classify image anomalies with Grad-CAM visual explanations.',
+        tech_stack: ['PyTorch', 'Torchvision', 'Transfer Learning', 'Computer Vision'],
+        deliverables: ['Fine-tuned ResNet image classifier (>94% accuracy)', 'Data augmentation pipeline (flips, crops, color jitter)', 'Grad-CAM heatmaps visualizing model attention']
+      },
+      days: [
+        { topic: 'Convolution Mechanics: Kernels, Stride, Padding & Feature Maps', type: 'learn', desc: 'Understand spatial invariance, receptive fields, and pooling layers.' },
+        { topic: 'Classic CNN Architectures: AlexNet, VGG & Residual Connections (ResNet)', type: 'practice', desc: 'Understand why skip connections eliminate vanishing gradients in deep networks.' },
+        { topic: 'Transfer Learning & Fine-Tuning with Pretrained Models in Torchvision', type: 'practice', desc: 'Freeze backbone weights and train custom classification heads on specialized data.' },
+        { topic: 'Data Augmentation Strategies: Albumentations & Random Spatial Warping', type: 'project', desc: 'Expand training distribution and prevent model overfitting on small image sets.' },
+        { topic: 'Model Interpretability in Vision: Grad-CAM Saliency Maps', type: 'project', desc: 'Generate visual heatmaps showing image regions triggering classification.' },
+        { topic: 'Timed Assessment: Fine-Tune Vision Model Under 45m Timer', type: 'mock test', desc: 'Implement complete torchvision transfer learning pipeline.' },
+        { topic: 'Weekly Revision: Object Detection (YOLO) & Segmentation (U-Net) Overview', type: 'revision', desc: 'Review bounding box regression, IoU metric, and anchor box concepts.' }
+      ],
+      docs: 'https://pytorch.org/vision/stable/index.html',
+      practice: 'https://github.com/pytorch/vision'
+    },
+    {
+      title: 'Natural Language Processing (NLP) & Recurrent Architectures (RNN/LSTM)',
+      milestone: 'Master text preprocessing, tokenization, word embeddings (Word2Vec), and sequence modeling with LSTMs',
+      project: {
+        title: 'Financial Sentiment Analyzer & Sequence Tagging Engine',
+        description: 'Bidirectional LSTM sequence model with pretrained GloVe embeddings classifying financial news sentiment and extracting named entities.',
+        tech_stack: ['PyTorch', 'NLP', 'Word Embeddings', 'LSTMs'],
+        deliverables: ['Text vocabulary tokenizer & padding pipeline', 'Bidirectional LSTM PyTorch architecture', 'Sentiment classification benchmark report']
+      },
+      days: [
+        { topic: 'NLP Fundamentals: Tokenization, Stemming, Lemmatization & Stop Words', type: 'learn', desc: 'Understand text normalization and subword tokenization (BPE, WordPiece).' },
+        { topic: 'Vector Space Models: Bag-of-Words, TF-IDF & Cosine Similarity', type: 'practice', desc: 'Transform raw document corpora into sparse feature vectors.' },
+        { topic: 'Distributed Word Embeddings: Word2Vec (Skip-Gram/CBOW), GloVe & FastText', type: 'practice', desc: 'Map semantic relationships into dense continuous embedding spaces.' },
+        { topic: 'Sequential Deep Learning: Recurrent Neural Networks (RNN) & Vanishing Gradients', type: 'project', desc: 'Understand hidden state recurrence and BPTT (Backpropagation Through Time).' },
+        { topic: 'Gated Architectures: Long Short-Term Memory (LSTM) & GRU Networks', type: 'project', desc: 'Implement forget, input, and output gates for long-term sequence memory.' },
+        { topic: 'Timed Assessment: Build Bidirectional LSTM Sentiment Classifier', type: 'mock test', desc: 'Train sequence model on text review dataset in 45m.' },
+        { topic: 'Weekly Revision: Attention Mechanism Intuition (Bahdanau Attention)', type: 'revision', desc: 'Review transition from bottleneck hidden states to dynamic attention scoring.' }
+      ],
+      docs: 'https://spacy.io/usage',
+      practice: 'https://www.kaggle.com/learn/natural-language-processing'
+    },
+    {
+      title: 'Transformers, Self-Attention & Hugging Face Ecosystem',
+      milestone: 'Master Transformer architecture (Attention Is All You Need), BERT, GPT, and Hugging Face Transformers',
+      project: {
+        title: 'Enterprise Document Intelligence & Semantic Search Engine',
+        description: 'Fine-tuned Transformer pipeline for domain-specific classification and vector embeddings using Hugging Face transformers.',
+        tech_stack: ['Hugging Face Transformers', 'PyTorch', 'BERT', 'Datasets'],
+        deliverables: ['Fine-tuned BERT classification model', 'Hugging Face Trainer API script', 'Model evaluation metrics on held-out test split']
+      },
+      days: [
+        { topic: 'The Transformer Architecture: Scaled Dot-Product & Multi-Head Self-Attention', type: 'learn', desc: 'Understand Query, Key, Value matrices, positional encodings, and feed-forward layers.' },
+        { topic: 'Encoder vs Decoder Architectures: BERT (Masked LM) vs GPT (Autoregressive)', type: 'practice', desc: 'Distinguish bidirectional context understanding from causal generative modeling.' },
+        { topic: 'Hugging Face Transformers & Datasets Library Mastery', type: 'practice', desc: 'Load pretrained tokenizers, tokenize batches, and manage Hugging Face datasets.' },
+        { topic: 'Fine-Tuning BERT for Sequence Classification with Hugging Face Trainer API', type: 'project', desc: 'Configure TrainingArguments, compute_metrics callbacks, and model evaluation.' },
+        { topic: 'Parameter-Efficient Fine-Tuning (PEFT): LoRA (Low-Rank Adaptation) & QLoRA', type: 'project', desc: 'Fine-tune large language models on consumer hardware by freezing base matrices.' },
+        { topic: 'Timed Assessment: Fine-Tune Hugging Face Model Under 45m Clock', type: 'mock test', desc: 'Load pretrained Transformer and fine-tune on custom dataset.' },
+        { topic: 'Weekly Revision: Tokenizer Types (Byte-Pair Encoding, SentencePiece) & Special Tokens', type: 'revision', desc: 'Review [CLS], [SEP], [PAD] handling and attention mask importance.' }
+      ],
+      docs: 'https://huggingface.co/docs/transformers/index',
+      practice: 'https://huggingface.co/learn/nlp-course/'
+    },
+    {
+      title: 'Generative AI, Large Language Models (LLMs) & RAG (Retrieval-Augmented Generation)',
+      milestone: 'Master LLM prompting, vector databases (Chroma/Pinecone), LangChain / LlamaIndex, and RAG pipelines',
+      project: {
+        title: 'Production Multi-Document RAG Knowledge Assistant',
+        description: 'End-to-end RAG application ingesting PDFs, generating vector embeddings, storing in ChromaDB, and executing contextual Q&A with source citations.',
+        tech_stack: ['LangChain / LlamaIndex', 'ChromaDB / FAISS', 'OpenAI / Gemini API', 'Python'],
+        deliverables: ['Document chunking & embedding pipeline', 'Vector database retriever with hybrid search', 'Contextual response generator with source verification']
+      },
+      days: [
+        { topic: 'Generative AI Architecture: Prompt Engineering, Temperature, Top-P & Context Windows', type: 'learn', desc: 'Understand sampling strategies, token economics, and hallucination reduction.' },
+        { topic: 'Document Ingestion & Text Chunking Strategies (Recursive Character, Semantic)', type: 'practice', desc: 'Chunk complex documents without splitting semantic thoughts or tables.' },
+        { topic: 'Dense Vector Embeddings & Vector Databases (ChromaDB, Pinecone, FAISS)', type: 'practice', desc: 'Store and perform sub-second nearest-neighbor similarity searches using HNSW.' },
+        { topic: 'Building RAG Pipelines with LangChain / LlamaIndex & Context Injection', type: 'project', desc: 'Construct retrieval chains passing top-K document chunks into LLM prompt templates.' },
+        { topic: 'Advanced RAG: Re-Ranking (Cohere), Query Decomposition & Hybrid Search', type: 'project', desc: 'Combine dense vector search with sparse BM25 keyword matching and cross-encoders.' },
+        { topic: 'Timed Assessment: Build Production RAG Endpoint Under 45m Clock', type: 'mock test', desc: 'Construct working document question-answering pipeline.' },
+        { topic: 'Weekly Revision: RAG Evaluation Frameworks (RAGAS: Faithfulness, Answer Relevance)', type: 'revision', desc: 'Quantify retrieval precision and model hallucination rates systematically.' }
+      ],
+      docs: 'https://python.langchain.com/docs/get_started/introduction',
+      practice: 'https://github.com/langchain-ai/langchain'
+    },
+    {
+      title: 'MLOps, Model Deployment, FastAPIs & Capstone Showcase',
+      milestone: 'Deploy machine learning models as production REST APIs with FastAPI, Docker, and model monitoring',
+      project: {
+        title: 'Enterprise AI Microservice & Automated Inference API (Capstone)',
+        description: 'Production-ready AI service packaging ML/LLM models inside Docker with FastAPI endpoints, asynchronous workers, and Prometheus metrics.',
+        tech_stack: ['FastAPI', 'Docker', 'MLflow / WandB', 'Uvicorn', 'Pydantic'],
+        deliverables: ['High-throughput FastAPI inference server', 'Docker container with optimized inference runtime (ONNX)', 'Comprehensive API documentation with Swagger UI']
+      },
+      days: [
+        { topic: 'Model Serialization: Pickle, Joblib, ONNX Runtime & TorchScript', type: 'learn', desc: 'Export models into cross-platform optimized formats for high-throughput execution.' },
+        { topic: 'Building High-Performance ML APIs with FastAPI & Pydantic Validation', type: 'practice', desc: 'Structure async endpoints validating incoming JSON feature payloads.' },
+        { topic: 'Containerizing ML Applications with Multi-Stage Dockerfiles', type: 'practice', desc: 'Package model weights and dependencies into lightweight production containers.' },
+        { topic: 'Experiment Tracking & Model Registry with MLflow / Weights & Biases', type: 'project', desc: 'Log hyperparameters, training curves, and manage staging/production model versions.' },
+        { topic: 'Monitoring ML in Production: Data Drift, Concept Drift & Prometheus Metrics', type: 'project', desc: 'Track inference latency, error rates, and input distribution shifts.' },
+        { topic: 'Timed Assessment: End-to-End AI System Design & Live Mock Interview', type: 'mock test', desc: 'Present capstone architecture and solve AI system design challenge in 60m.' },
+        { topic: 'Weekly Revision: Machine Learning Engineer Portfolio & Career Strategy', type: 'revision', desc: 'Finalize GitHub portfolio, technical documentation, and interview showcase.' }
+      ],
+      docs: 'https://fastapi.tiangolo.com/',
+      practice: 'https://github.com/GokuMohandas/Made-With-ML'
+    }
+  ];
+
+  // 5. CLOUD & DEVOPS ENGINEERING (12 Non-Repetitive Weeks)
+  const devOpsCloudCatalog = [
+    {
+      title: 'Linux Systems Administration, Bash Scripting & Networking Fundamentals',
+      milestone: 'Master Linux kernel basics, filesystem permissions, Bash automation, systemd, and TCP/IP networking',
+      project: {
+        title: 'Automated Linux Server Hardening & System Health Monitoring Daemon',
+        description: 'Modular Bash automation suite configuring firewall rules, SSH keys, automated security patching, and periodic system health metrics.',
+        tech_stack: ['Linux (Ubuntu/Debian)', 'Bash Scripting', 'systemd', 'UFW / Iptables'],
+        deliverables: ['Idempotent Bash hardening script', 'Custom systemd service and timer unit', 'Automated system metrics report emailed to admin']
+      },
+      days: [
+        { topic: 'Linux Filesystem Hierarchy, Permissions (chmod/chown) & Process Management (ps, top, kill)', type: 'learn', desc: 'Understand POSIX permissions, user/group management, and process lifecycle.' },
+        { topic: 'Bash Scripting: Variables, Conditionals, Loops, Functions & Error Handling (set -euo pipefail)', type: 'practice', desc: 'Write robust automation scripts with strict error exits and input validation.' },
+        { topic: 'Text Processing Tools: grep, sed, awk, cut, and sort for Log Analysis', type: 'practice', desc: 'Parse server access logs, isolate high-frequency IP addresses, and extract HTTP status codes.' },
+        { topic: 'Linux Service Management with systemd: Services, Targets & Timers (Cron Alternative)', type: 'project', desc: 'Create background daemons with automatic restart policies on failure.' },
+        { topic: 'Networking Essentials: TCP/IP, DNS Resolution, CIDR Subnetting & SSH Key Hardening', type: 'project', desc: 'Configure SSH non-root access, disable password auth, and configure UFW firewall.' },
+        { topic: 'Timed Assessment: Linux Admin & Bash Automation Sprint', type: 'mock test', desc: 'Write a bash log aggregator and service unit under 45m timer.' },
+        { topic: 'Weekly Revision: Linux Troubleshooting & Performance Metrics (loadavg, iostat, vmstat)', type: 'revision', desc: 'Diagnose CPU saturation, disk I/O bottlenecks, and memory exhaustion.' }
+      ],
+      docs: 'https://ubuntu.com/server/docs',
+      practice: 'https://linuxjourney.com/'
+    },
+    {
+      title: 'Docker Containerization, Image Optimization & Docker Compose',
+      milestone: 'Master Docker container architecture, namespaces, multi-stage builds, and multi-service orchestration',
+      project: {
+        title: 'Multi-Service Containerized Microservice Stack with Docker Compose',
+        description: 'Production-ready container setup orchestrating a Node.js API, PostgreSQL database with healthchecks, Redis cache, and Nginx reverse proxy.',
+        tech_stack: ['Docker', 'Docker Compose', 'Nginx', 'PostgreSQL', 'Redis'],
+        deliverables: ['Production multi-stage Dockerfile (<80MB Alpine image)', 'docker-compose.yml with volume persistence and healthchecks', 'Zero-downtime container restart policy']
+      },
+      days: [
+        { topic: 'Container Fundamentals: Namespaces, Cgroups, Union Filesystems & Docker Daemon', type: 'learn', desc: 'Understand isolation mechanisms separating containers from virtual machines.' },
+        { topic: 'Dockerfile Instructions: FROM, RUN, COPY, ADD, CMD vs ENTRYPOINT', type: 'practice', desc: 'Understand build caching layers, non-root user execution, and signal trapping.' },
+        { topic: 'Multi-Stage Docker Builds & Image Optimization Techniques', type: 'practice', desc: 'Eliminate development toolchains from production images to minimize attack surfaces.' },
+        { topic: 'Docker Networking: Bridge, Host, Overlay & DNS Service Discovery', type: 'project', desc: 'Connect isolated containers across private bridge networks.' },
+        { topic: 'Docker Compose: Orchestrating Multi-Tier Apps (App + DB + Redis + Nginx)', type: 'project', desc: 'Configure dependencies, healthchecks, environment variables, and persistent volumes.' },
+        { topic: 'Timed Assessment: Write Optimized Multi-Stage Docker Stack', type: 'mock test', desc: 'Containerize full-stack application within 45 minutes.' },
+        { topic: 'Weekly Revision: Docker Security Best Practices & Container Vulnerability Scanning (Trivy)', type: 'revision', desc: 'Scan images for CVEs, remove setuid binaries, and configure read-only root filesystems.' }
       ],
       docs: 'https://docs.docker.com/',
       practice: 'https://github.com/docker/awesome-compose'
     },
     {
-      title: 'Cloud Computing Infrastructure on AWS (EC2, S3, RDS, VPC)',
-      milestone: 'Architect secure cloud environments with custom VPCs, compute instances, and managed databases',
+      title: 'CI/CD Pipelines with GitHub Actions & Automated Testing',
+      milestone: 'Master continuous integration, automated testing workflows, semantic versioning, and container registry publishing',
       project: {
-        title: 'High-Availability Multi-AZ Cloud Infrastructure on AWS',
-        description: 'AWS architecture featuring public/private subnets, Application Load Balancer, Auto Scaling EC2 instances, and Multi-AZ RDS.',
-        tech_stack: ['AWS VPC', 'AWS EC2 & ALB', 'AWS RDS PostgreSQL', 'AWS S3 & CloudFront'],
-        deliverables: ['Custom VPC with NAT Gateway and Security Groups', 'Application Load Balancer health checking', 'S3 Static asset hosting with CloudFront CDN']
+        title: 'Enterprise Automated CI/CD Pipeline & Security Compliance Gate',
+        description: 'GitHub Actions workflow matrix running linters, unit tests, integration tests with testcontainers, vulnerability scans, and publishing signed Docker images.',
+        tech_stack: ['GitHub Actions', 'Docker Hub / GHCR', 'Trivy', 'Semantic Release'],
+        deliverables: ['Multi-job GitHub Actions workflow file (.github/workflows/ci.yml)', 'Automated PR validation with branch protection rules', 'Automated semantic versioning & GitHub release notes']
       },
       days: [
-        'AWS Fundamentals: Regions, Availability Zones, IAM policies, roles, and least-privilege access principles',
-        'Networking (VPC): Public & Private Subnets, Internet Gateways, Route Tables, NAT Gateways & Security Groups',
-        'Compute (EC2): Instance families, AMIs, Key Pairs, User Data bootstrap scripts & Auto Scaling Groups',
-        'Storage & CDN (S3 / CloudFront): S3 buckets, lifecycle policies, bucket policies & CloudFront edge caching',
-        'Managed Databases (RDS): Multi-AZ deployments, Read Replicas, automated backups & parameter groups',
-        'Milestone Lab: Deploy high-availability web cluster on AWS with ALB and secure private RDS database'
-      ],
-      docs: 'https://docs.aws.amazon.com/',
-      practice: 'https://aws.amazon.com/getting-started/'
-    },
-    {
-      title: 'Infrastructure as Code (IaC) with Terraform',
-      milestone: 'Provision repeatable cloud infrastructure using Terraform modules and remote state management',
-      project: {
-        title: 'Modular Terraform Infrastructure for AWS Multi-Environment (Dev/Prod)',
-        description: 'Terraform repository declaring VPCs, security groups, and EKS clusters with remote S3 state backend and state locking.',
-        tech_stack: ['Terraform (HCL)', 'AWS Provider', 'Remote State (S3 + DynamoDB)', 'TFLint'],
-        deliverables: ['Reusable Terraform child modules', 'Remote state locking with DynamoDB', 'Automated terraform plan/apply workflow']
-      },
-      days: [
-        'IaC Principles: Declarative vs Imperative, state drift, idempotency & Terraform architecture',
-        'HCL Syntax: Providers, resources, data sources, input variables, output values & local values',
-        'Terraform State: terraform.tfstate, remote backends (S3 + DynamoDB state locking) & state inspection',
-        'Terraform Modules: Writing reusable infrastructure modules with variable validation and outputs',
-        'Terraform Workspaces & Environments: Structuring dev vs staging vs production infrastructure safely',
-        'Milestone Lab: Provision a complete AWS VPC and compute cluster using modular Terraform code'
-      ],
-      docs: 'https://developer.hashicorp.com/terraform/docs',
-      practice: 'https://developer.hashicorp.com/terraform/tutorials'
-    },
-    {
-      title: 'Kubernetes Container Orchestration (K8s) & Cluster Management',
-      milestone: 'Deploy and manage containerized workloads with Pods, Deployments, Services, and Ingress',
-      project: {
-        title: 'Resilient Microservices Deployment on Kubernetes (EKS/Minikube)',
-        description: 'Kubernetes cluster deployment with Rolling Updates, ConfigMaps, Secrets, Horizontal Pod Autoscaling (HPA), and Ingress.',
-        tech_stack: ['Kubernetes (K8s)', 'kubectl', 'Minikube / Kind', 'Helm Charts'],
-        deliverables: ['Deployment manifests with liveness/readiness probes', 'ClusterIP and Ingress routing rules', 'Horizontal Pod Autoscaler (HPA) CPU-based autoscaling']
-      },
-      days: [
-        'Kubernetes Architecture: Control Plane (API Server, etcd, Scheduler, Controller Manager) vs Worker Nodes (kubelet, kube-proxy)',
-        'Core Workloads: Pods, ReplicaSets, Deployments, Rolling Updates, Rollbacks & Resource Requests/Limits',
-        'Networking & Services: ClusterIP, NodePort, LoadBalancer & Ingress Controllers (Nginx Ingress)',
-        'Configuration & Secrets: ConfigMaps, Secrets, downward API & mounting environment variables into containers',
-        'Autoscaling & Packaging: Horizontal Pod Autoscaler (HPA), Metrics Server & Helm package manager charts',
-        'Milestone Lab: Deploy a containerized microservice on Kubernetes with Ingress routing and HPA scaling'
-      ],
-      docs: 'https://kubernetes.io/docs/home/',
-      practice: 'https://kubernetes.io/docs/tutorials/'
-    },
-    {
-      title: 'CI/CD Pipelines, GitOps & Production Observability',
-      milestone: 'Build automated continuous integration pipelines with GitHub Actions and Prometheus/Grafana monitoring',
-      project: {
-        title: 'Zero-Downtime Automated CI/CD Pipeline & Monitoring Suite',
-        description: 'Automated GitHub Actions workflow building, testing, scanning, pushing Docker images, and deploying with Prometheus metrics.',
-        tech_stack: ['GitHub Actions', 'Docker Hub / ECR', 'Prometheus', 'Grafana'],
-        deliverables: ['Automated PR test & lint workflow', 'Automated container build and security scan', 'Prometheus / Grafana latency and error monitoring dashboard']
-      },
-      days: [
-        'CI/CD Foundations: Continuous Integration vs Delivery vs Deployment, Pipeline triggers & runners',
-        'GitHub Actions: Workflows, jobs, steps, action marketplace, secrets management & caching dependencies',
-        'Continuous Deployment: Automated Docker build, image tagging with Git SHA & deployment webhooks',
-        'GitOps with ArgoCD: Declarative cluster synchronization, automated reconciliation & drift detection',
-        'Observability (Prometheus & Grafana): Metrics collection, PromQL queries, alerting rules & Grafana dashboards',
-        'Milestone Lab: Build end-to-end GitHub Actions pipeline deploying to Kubernetes with Grafana monitoring'
+        { topic: 'CI/CD Principles: Shift-Left Testing, Trunk-Based Development & Build Fast', type: 'learn', desc: 'Understand continuous integration feedback loops and release automation.' },
+        { topic: 'GitHub Actions Syntax: Workflows, Jobs, Steps, Runners, and Context Variables', type: 'practice', desc: 'Define declarative workflows triggered on push, pull_request, and release events.' },
+        { topic: 'Workflow Optimization: Dependency Caching, Matrix Builds & Artifact Passing', type: 'practice', desc: 'Speed up CI pipelines from 10 minutes to under 2 minutes with aggressive caching.' },
+        { topic: 'Automated Security Gates: SAST, Secret Scanning & Container CVE Auditing (Trivy)', type: 'project', desc: 'Block pull requests containing high/critical CVEs or leaked secrets.' },
+        { topic: 'Continuous Delivery: Publishing Images to GHCR / Docker Hub & Semantic Tagging', type: 'project', desc: 'Automate container image build, tag, and push on merged main branches.' },
+        { topic: 'Timed Assessment: Build End-to-End CI Pipeline Workflow', type: 'mock test', desc: 'Construct working GitHub Action with caching and tests in 45m.' },
+        { topic: 'Weekly Revision: Secrets Management in CI & Environment Protection Rules', type: 'revision', desc: 'Configure environment approval gates, OIDC tokens, and encrypted secrets.' }
       ],
       docs: 'https://docs.github.com/en/actions',
-      practice: 'https://prometheus.io/docs/introduction/overview/'
+      practice: 'https://github.com/sdras/awesome-actions'
+    },
+    {
+      title: 'Cloud Fundamentals: AWS Core Infrastructure (IAM, VPC, EC2, S3)',
+      milestone: 'Master AWS identity management, Virtual Private Clouds (VPC), EC2 instances, security groups, and S3 storage',
+      project: {
+        title: 'Secure Multi-Tier Cloud VPC & Web Server Architecture on AWS',
+        description: 'Custom AWS Virtual Private Cloud with public/private subnets, NAT Gateway, Internet Gateway, EC2 instances, and least-privilege IAM roles.',
+        tech_stack: ['AWS VPC', 'AWS EC2', 'AWS IAM', 'AWS S3', 'Security Groups'],
+        deliverables: ['Configured multi-AZ VPC architecture', 'Secure EC2 web server in public subnet with private database tier', 'IAM policies enforcing least-privilege role delegation']
+      },
+      days: [
+        { topic: 'AWS IAM: Users, Groups, Roles, Policies & Principle of Least Privilege', type: 'learn', desc: 'Understand JSON policy syntax, assume-role STS tokens, and MFA enforcement.' },
+        { topic: 'AWS VPC Networking: Subnets, Route Tables, Internet Gateways & NAT Gateways', type: 'practice', desc: 'Design dual-AZ network topology isolating internal databases from public traffic.' },
+        { topic: 'Security Groups vs Network Access Control Lists (NACLs)', type: 'practice', desc: 'Configure stateful firewall rules and stateless subnet-level boundaries.' },
+        { topic: 'AWS EC2: Instance Types, EBS Volumes, Key Pairs & User Data Scripts', type: 'project', desc: 'Bootstrap web servers automatically on boot using custom Bash user data.' },
+        { topic: 'AWS S3: Buckets, Versioning, Lifecycle Policies, Encryption & Static Hosting', type: 'project', desc: 'Configure automated object archival to Glacier and secure bucket policies.' },
+        { topic: 'Timed Assessment: Configure AWS VPC & EC2 Infrastructure', type: 'mock test', desc: 'Set up isolated VPC with public/private routing in 45 minutes.' },
+        { topic: 'Weekly Revision: AWS Well-Architected Framework & Cost Optimization', type: 'revision', desc: 'Review the 6 pillars of Well-Architected Framework and AWS Budgets alerts.' }
+      ],
+      docs: 'https://docs.aws.amazon.com/',
+      practice: 'https://aws.amazon.com/free/'
+    },
+    {
+      title: 'Infrastructure as Code (IaC) with Terraform: Providers, State & Modules',
+      milestone: 'Master declarative cloud provisioning with Terraform, state management, variables, and reusable modules',
+      project: {
+        title: 'Modular Production Cloud Infrastructure Provisioned via Terraform',
+        description: 'Production Terraform configuration provisioning an AWS VPC, EC2 Auto Scaling Group, Application Load Balancer, and RDS PostgreSQL database.',
+        tech_stack: ['HashiCorp Terraform', 'AWS Provider', 'IaC', 'Remote State'],
+        deliverables: ['Reusable Terraform modules for VPC and Compute', 'Remote state locking with S3 and DynamoDB', 'Terraform plan & apply validation report']
+      },
+      days: [
+        { topic: 'IaC Fundamentals: Declarative vs Imperative, Idempotency & Terraform CLI', type: 'learn', desc: 'Understand terraform init, plan, apply, destroy lifecycle.' },
+        { topic: 'Terraform HCL Syntax: Resources, Data Sources, Variables & Outputs', type: 'practice', desc: 'Define structured configuration files with typed input variables.' },
+        { topic: 'Terraform State Architecture: Local State, S3 Remote Backend & DynamoDB State Locking', type: 'practice', desc: 'Prevent concurrent apply race conditions and state corruption in teams.' },
+        { topic: 'Building Reusable Terraform Modules & Dynamic Count/For_Each Loops', type: 'project', desc: 'Package infrastructure components into versioned, composable modules.' },
+        { topic: 'Provisioning AWS Application Load Balancers (ALB) & RDS with Terraform', type: 'project', desc: 'Automate database instance creation and load balancer target groups.' },
+        { topic: 'Timed Assessment: Write Terraform Configuration for Web Architecture', type: 'mock test', desc: 'Author complete Terraform module from scratch under 45m clock.' },
+        { topic: 'Weekly Revision: Terraform Drift Detection & Code Formatting (terraform fmt/validate)', type: 'revision', desc: 'Detect out-of-band cloud modifications and enforce CI linting with tflint.' }
+      ],
+      docs: 'https://developer.hashicorp.com/terraform/docs',
+      practice: 'https://github.com/antonbabenko/terraform-aws-devops'
+    },
+    {
+      title: 'Kubernetes (K8s) Core Architecture, Pods, Deployments & Services',
+      milestone: 'Master Kubernetes control plane, worker nodes, Pods, ReplicaSets, Deployments, and ClusterIP/NodePort Services',
+      project: {
+        title: 'Resilient Microservices Deployment on Local Kubernetes (Minikube / Kind)',
+        description: 'Kubernetes manifest suite deploying a multi-tier web application with rolling updates, liveness/readiness probes, and ClusterIP services.',
+        tech_stack: ['Kubernetes', 'Minikube / Kind', 'kubectl', 'YAML Manifests'],
+        deliverables: ['Declarative Deployment and Service YAML manifests', 'Configured liveness and readiness health probes', 'Demonstrated zero-downtime rolling update deployment']
+      },
+      days: [
+        { topic: 'Kubernetes Architecture: API Server, etcd, Scheduler, Kubelet & Kube-Proxy', type: 'learn', desc: 'Understand control plane coordination and worker node container runtimes.' },
+        { topic: 'Pod Lifecycle, Multi-Container Pods & kubectl Imperative vs Declarative Commands', type: 'practice', desc: 'Manage pods, view container logs, and execute commands via kubectl exec.' },
+        { topic: 'Kubernetes Deployments: ReplicaSets, Rolling Updates & Rollback Strategies', type: 'practice', desc: 'Execute zero-downtime application updates and test instant rollbacks.' },
+        { topic: 'Kubernetes Services: ClusterIP, NodePort, LoadBalancer & DNS Resolution', type: 'project', desc: 'Enable inter-pod networking and external traffic ingress.' },
+        { topic: 'Healthchecks: Liveness, Readiness & Startup Probes Configuration', type: 'project', desc: 'Prevent traffic from hitting unready pods and restart crashed containers.' },
+        { topic: 'Timed Assessment: Write K8s Deployment & Service Manifests', type: 'mock test', desc: 'Deploy resilient application on Kubernetes cluster in 45m.' },
+        { topic: 'Weekly Revision: Resource Requests vs Limits & OOMKilled Debugging', type: 'revision', desc: 'Tune CPU/memory requests and understand Linux OOM killer priorities.' }
+      ],
+      docs: 'https://kubernetes.io/docs/home/',
+      practice: 'https://github.com/kelseyhightower/kubernetes-the-hard-way'
+    },
+    {
+      title: 'Advanced Kubernetes: ConfigMaps, Secrets, Ingress & Helm Package Management',
+      milestone: 'Master ConfigMaps, Secrets, Ingress Controllers (Nginx), Persistent Volumes, and Helm Charts',
+      project: {
+        title: 'Production Kubernetes Ingress Architecture & Custom Helm Chart',
+        description: 'Complete Helm chart packaging microservice manifests with templated values, Nginx Ingress routing, TLS termination, and encrypted Secrets.',
+        tech_stack: ['Kubernetes', 'Helm v3', 'Nginx Ingress', 'Cert-Manager'],
+        deliverables: ['Custom reusable Helm chart with values.yaml', 'Nginx Ingress Controller routing with path rules', 'PersistentVolumeClaim for database storage']
+      },
+      days: [
+        { topic: 'Configuration Management: ConfigMaps & Secrets (Base64 vs External Secrets)', type: 'learn', desc: 'Decouple environment configurations from container images.' },
+        { topic: 'Persistent Storage: PersistentVolumes (PV), PersistentVolumeClaims (PVC) & StorageClasses', type: 'practice', desc: 'Attach dynamic cloud disk volumes for stateful database containers.' },
+        { topic: 'Kubernetes Ingress: Ingress Controllers (Nginx), Host/Path Routing & TLS', type: 'practice', desc: 'Route external HTTP/HTTPS traffic to internal cluster services via domain names.' },
+        { topic: 'Helm Fundamentals: Chart Structure, Templates, Values.yaml & Release Lifecycle', type: 'project', desc: 'Package multi-manifest applications into parameterized, installable charts.' },
+        { topic: 'Advanced Helm: Template Functions, Flow Control (if/range) & Dependencies', type: 'project', desc: 'Include database subcharts and customize deployments per environment.' },
+        { topic: 'Timed Assessment: Author Custom Helm Chart & Deploy Application', type: 'mock test', desc: 'Build and install working Helm chart under 45m timer.' },
+        { topic: 'Weekly Revision: StatefulSets vs Deployments & DaemonSets Use Cases', type: 'revision', desc: 'Understand unique network identities and ordered startup in StatefulSets.' }
+      ],
+      docs: 'https://helm.sh/docs/',
+      practice: 'https://artifacthub.io/'
+    },
+    {
+      title: 'GitOps & Continuous Deployment with ArgoCD & Flux',
+      milestone: 'Master GitOps principles, declarative continuous deployment, automated sync, and drift reconciliation with ArgoCD',
+      project: {
+        title: 'Automated GitOps Continuous Deployment Pipeline with ArgoCD',
+        description: 'GitOps workflow where cluster state automatically synchronizes with a Git repository using ArgoCD, featuring automated rollouts and canary deployments.',
+        tech_stack: ['ArgoCD', 'GitOps', 'Kubernetes', 'GitHub'],
+        deliverables: ['Configured ArgoCD Application manifest pointing to Git repo', 'Automated drift detection and self-healing deployment', 'Rollback verification via simple git revert']
+      },
+      days: [
+        { topic: 'GitOps Philosophy: Declarative Descriptions, Versioned Immutability & Self-Healing', type: 'learn', desc: 'Understand Git as the single source of truth for cloud and cluster state.' },
+        { topic: 'ArgoCD Architecture: API Server, Repository Server, Application Controller', type: 'practice', desc: 'Install ArgoCD in Kubernetes and connect private GitHub repositories.' },
+        { topic: 'Declarative Application CRDs: Defining ArgoCD Apps via YAML Manifests', type: 'practice', desc: 'Define automated sync policies, automated pruning, and self-healing.' },
+        { topic: 'Progressive Delivery: Canary & Blue/Green Deployments with Argo Rollouts', type: 'project', desc: 'Shift production traffic gradually based on automated metric analysis.' },
+        { topic: 'Disaster Recovery & Cluster Rebuilding via GitOps Repository Replay', type: 'project', desc: 'Rebuild entire cluster state from scratch in minutes using Git history.' },
+        { topic: 'Timed Assessment: Deploy App via GitOps ArgoCD Manifests', type: 'mock test', desc: 'Configure working ArgoCD sync application in 45m.' },
+        { topic: 'Weekly Revision: Secrets in GitOps: Sealed Secrets & HashiCorp Vault Integration', type: 'revision', desc: 'Safely commit encrypted secrets to public/private Git repositories.' }
+      ],
+      docs: 'https://argo-cd.readthedocs.io/en/stable/',
+      practice: 'https://github.com/argoproj/argo-cd-example-apps'
+    },
+    {
+      title: 'Observability & Monitoring: Prometheus, Grafana & Metrics Collection',
+      milestone: 'Master metric types (counter, gauge, histogram), Prometheus scraping, PromQL queries, and Grafana dashboards',
+      project: {
+        title: 'Production Infrastructure & Application Observability Stack',
+        description: 'Complete observability suite scraping node metrics, Kubernetes cluster states, and application HTTP latencies visualized on Grafana dashboards.',
+        tech_stack: ['Prometheus', 'Grafana', 'Node Exporter', 'PromQL', 'Alertmanager'],
+        deliverables: ['Configured Prometheus scraping configuration & targets', 'PromQL queries calculating 99th percentile HTTP latency', 'Custom Grafana dashboard with alert rules']
+      },
+      days: [
+        { topic: 'Observability Pillars: Metrics, Logs & Traces (The Three Pillars)', type: 'learn', desc: 'Understand timeseries data, dimensionality, and pull vs push telemetry architectures.' },
+        { topic: 'Prometheus Architecture: TSDB, Pull Model, Exporters & Service Discovery', type: 'practice', desc: 'Deploy Prometheus with Node Exporter scraping CPU, RAM, and disk IO.' },
+        { topic: 'PromQL Mastery: Rate, Increase, Histogram_Quantile & Aggregation Operators', type: 'practice', desc: 'Calculate request rates (RPS), error percentages, and p95 latency quantiles.' },
+        { topic: 'Building Interactive Dashboards in Grafana: Panels, Variables & Thresholds', type: 'project', desc: 'Design operational dashboards with dynamic server selector dropdowns.' },
+        { topic: 'Alerting with Alertmanager: Route Rules, Receiver Webhooks & Slack Notifications', type: 'project', desc: 'Trigger automated critical alerts when error rates exceed 5% over 5 minutes.' },
+        { topic: 'Timed Assessment: Construct PromQL Queries & Grafana Dashboard', type: 'mock test', desc: 'Build working dashboard from raw Prometheus metrics in 45m.' },
+        { topic: 'Weekly Revision: RED & USE Monitoring Methodologies', type: 'revision', desc: 'Review Rate/Errors/Duration (services) vs Utilization/Saturation/Errors (resources).' }
+      ],
+      docs: 'https://prometheus.io/docs/introduction/overview/',
+      practice: 'https://grafana.com/docs/grafana/latest/'
+    },
+    {
+      title: 'Centralized Logging & Distributed Tracing (Loki, Promtail & OpenTelemetry)',
+      milestone: 'Master centralized log aggregation with Grafana Loki / Promtail and distributed request tracing with OpenTelemetry & Jaeger',
+      project: {
+        title: 'Distributed Tracing & Log Aggregation Pipeline for Microservices',
+        description: 'Full telemetry pipeline indexing container logs into Loki with Promtail and instrumenting microservices with OpenTelemetry to trace requests across services.',
+        tech_stack: ['Grafana Loki', 'Promtail', 'OpenTelemetry', 'Jaeger', 'LogQL'],
+        deliverables: ['Promtail log shipper pipeline with label extraction', 'LogQL search queries parsing JSON logs in Grafana', 'OpenTelemetry distributed trace spans displayed in Jaeger']
+      },
+      days: [
+        { topic: 'Log Aggregation Fundamentals: Structured JSON Logging vs Plaintext, Log Shipping', type: 'learn', desc: 'Understand log indexing trade-offs and label cardinality risks.' },
+        { topic: 'Grafana Loki & Promtail: Log Stream Indexing & Label Pipelines', type: 'practice', desc: 'Deploy Promtail collecting stdout from Docker and Kubernetes containers.' },
+        { topic: 'LogQL Query Language: Stream Selectors, Filter Expressions & Metric Queries', type: 'practice', desc: 'Extract error rates directly from raw log lines using rate({app="api"} |= "error").' },
+        { topic: 'Distributed Tracing Principles: Trace Context, Spans, Baggage & Propagation', type: 'project', desc: 'Trace incoming HTTP requests across multiple microservices via W3C traceparent headers.' },
+        { topic: 'OpenTelemetry (OTel) Auto-Instrumentation & Jaeger Visualizer', type: 'project', desc: 'Identify latency bottlenecks and pinpoint which database call caused slow requests.' },
+        { topic: 'Timed Assessment: Query Logs with LogQL & Debug Trace Bottlenecks', type: 'mock test', desc: 'Isolate root cause of injected microservice bug in 45m.' },
+        { topic: 'Weekly Revision: High Cardinality Pitfalls & Log Retention Policies', type: 'revision', desc: 'Prevent Loki out-of-memory crashes by avoiding dynamic labels.' }
+      ],
+      docs: 'https://grafana.com/docs/loki/latest/',
+      practice: 'https://opentelemetry.io/docs/'
+    },
+    {
+      title: 'Site Reliability Engineering (SRE): SLOs, Error Budgets & Chaos Engineering',
+      milestone: 'Master SLI/SLO formulation, Error Budget policies, incident response runbooks, and Chaos Engineering',
+      project: {
+        title: 'SRE Production Readiness Review, SLO Engine & Chaos Test Suite',
+        description: 'SRE operational framework defining 99.9% availability SLOs, automated error budget burn alerts, and Chaos Mesh experiments testing node failures.',
+        tech_stack: ['SRE Principles', 'Chaos Mesh / LitmusChaos', 'Runbooks', 'Incident Management'],
+        deliverables: ['Documented SLI/SLO specification and error budget policy', 'Automated error budget burn rate alerting rules', 'Chaos test report documenting system resilience during network latency injection']
+      },
+      days: [
+        { topic: 'SRE Core Concepts: SLIs (Indicators), SLOs (Objectives) & SLAs (Agreements)', type: 'learn', desc: 'Formulate quantifiable availability and latency reliability metrics.' },
+        { topic: 'Error Budget Management: Calculating Downtime Allowances & Burn Rates', type: 'practice', desc: 'Balance feature deployment velocity against system reliability budgets.' },
+        { topic: 'Multi-Window Multi-Burn-Rate Alerting Strategy', type: 'practice', desc: 'Trigger fast/slow burn rate alerts minimizing alert fatigue.' },
+        { topic: 'Chaos Engineering: Simulating Network Latency, Packet Loss & Pod Termination', type: 'project', desc: 'Inject failure experiments to verify graceful degradation and circuit breakers.' },
+        { topic: 'Post-Mortem & Incident Response: Blameless Post-Mortems & Actionable Remediation', type: 'project', desc: 'Write comprehensive blameless root-cause incident analyses.' },
+        { topic: 'Timed Assessment: Calculate Error Budgets & Write Incident Runbook', type: 'mock test', desc: 'Deliver production SRE runbook under 45m timer.' },
+        { topic: 'Weekly Revision: Production Readiness Review (PRR) Checklist', type: 'revision', desc: 'Audit architectures against 25-point SRE production deployment checklist.' }
+      ],
+      docs: 'https://sre.google/sre-book/table-of-contents/',
+      practice: 'https://chaos-mesh.org/'
+    },
+    {
+      title: 'DevOps Capstone: Multi-Cloud Production Infrastructure & Mock Interviews',
+      milestone: 'Finalize end-to-end cloud infrastructure portfolio, execute disaster recovery drills, and prepare for senior DevOps interviews',
+      project: {
+        title: 'Enterprise Multi-Environment Cloud & Kubernetes Platform (Capstone)',
+        description: 'Production-grade enterprise platform automated via Terraform IaC, containerized with Docker, deployed on Kubernetes via GitOps ArgoCD, with full Prometheus/Grafana observability.',
+        tech_stack: ['AWS', 'Terraform', 'Kubernetes', 'GitHub Actions', 'ArgoCD', 'Prometheus'],
+        deliverables: ['Complete public GitHub infrastructure repository with documentation', 'Live Kubernetes cluster hosting scalable microservices', 'Full architecture diagram and disaster recovery playbook']
+      },
+      days: [
+        { topic: 'Architecture Documentation: C4 Model & Cloud Infrastructure Diagrams', type: 'learn', desc: 'Document VPC, cluster, ingress, CI/CD, and monitoring topology with clear architecture diagrams.' },
+        { topic: 'Security Hardening Audit: CIS Benchmarks & Cloud Security Posture (CSPM)', type: 'practice', desc: 'Audit AWS account and Kubernetes cluster against CIS compliance benchmarks.' },
+        { topic: 'Disaster Recovery Simulation: Backup, Restore & Multi-Region Failover', type: 'practice', desc: 'Execute database snapshot restoration and DNS failover drill.' },
+        { topic: 'Cost Optimization Sprint: AWS Compute Optimizer & Spot Instances', type: 'project', desc: 'Reduce cloud infrastructure monthly expenditure by 40% with Spot instances and rightsizing.' },
+        { topic: 'Portfolio Repository Polish, Demo Architecture Video & README', type: 'project', desc: 'Assemble professional GitHub portfolio showcasing IaC and GitOps automation.' },
+        { topic: 'Timed Assessment: DevOps System Design & Live Troubleshooting Interview', type: 'mock test', desc: 'Solve live infrastructure outage and design scalable cloud architecture in 60m.' },
+        { topic: 'Weekly Revision: Engineering Career Roadmap & DevOps Interview Framework', type: 'revision', desc: 'Finalize behavioral STAR stories and deep-dive technical question prep.' }
+      ],
+      docs: 'https://github.com/bregman-arie/devops-exercises',
+      practice: 'https://roadmap.sh/devops'
     }
   ];
 
@@ -2575,6 +3133,10 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
     selectedCatalog = fullStackCatalog;
     defaultDocs = 'https://developer.mozilla.org/en-US/docs/Web';
     defaultPractice = 'https://github.com/tastejs/todomvc';
+  } else if (/data\s*analyst|analytics|power\s*bi|tableau|sql|excel|bi\s*developer|data\s*visualization/i.test(lowerSkill)) {
+    selectedCatalog = dataAnalystCatalog;
+    defaultDocs = 'https://mode.com/sql-tutorial/';
+    defaultPractice = 'https://www.stratascratch.com/';
   } else if (/python|ai|machine\s*learning|data\s*science|deep\s*learning|pytorch|tensorflow|nlp|llm|langchain|rag|genai/i.test(lowerSkill)) {
     selectedCatalog = pythonAICatalog;
     defaultDocs = 'https://docs.python.org/3/';
@@ -2589,71 +3151,236 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
     defaultPractice = 'https://leetcode.com/problemset/all/';
   } else {
     // Dynamic universal generator for custom domains
-    selectedCatalog = [
+    // Dynamic progressive generator for ANY custom domain / target role (16 Distinct Non-Repeating Milestones)
+    const getCustomMilestones = (skillName) => [
       {
-        title: `${skill} Environment Setup & Core Foundations`,
-        milestone: `Establish developer tooling, master fundamental syntax and architectural principles of ${skill}`,
-        project: {
-          title: `${skill} Foundation Starter & Utility Module`,
-          description: `Practical baseline module testing all foundational syntax, configuration, and execution flows for ${skill}.`,
-          tech_stack: [skill, 'Git', 'Unit Testing'],
-          deliverables: ['Configured development environment', 'Clean modular architecture', 'Unit test coverage for base utilities']
-        },
+        title: `${skillName} Foundations, Tooling & Core Architecture`,
+        milestone: `Establish professional workflow, master fundamental syntax, and foundational mental models in ${skillName}`,
         days: [
-          `${skill} Tooling, runtime environment setup & hello-world execution pipeline`,
-          `Core syntax, primitive types, variable scoping & memory allocation rules in ${skill}`,
-          `Control flow, conditional branching, iteration loops & error handling mechanisms in ${skill}`,
-          `Modular architecture: Functions, reusable components, packages & dependency imports`,
-          `Input/output streams, file system access & configuration management for ${skill}`,
-          `Milestone Lab: Build and test ${skill} Foundation Starter application`
-        ],
-        docs: `https://www.google.com/search?q=${encodeURIComponent(skill + ' official documentation guide')}`,
-        practice: `https://github.com/topics/${encodeURIComponent(skill.toLowerCase().replace(/[^a-z0-9]/g, '-'))}`
+          { topic: `${skillName} Environment Setup, Tooling & Core Architecture`, type: 'learn' },
+          { topic: `${skillName} Fundamental Concepts, Syntax & Guided Problem Set #1`, type: 'practice' },
+          { topic: `${skillName} In-Depth Conceptual Practice & Pattern Decomposition`, type: 'practice' },
+          { topic: `${skillName} Practical Implementation Lab & Mini Project`, type: 'project' },
+          { topic: `${skillName} Real-World Case Study & Integration Lab`, type: 'project' },
+          { topic: `Timed Assessment: ${skillName} Fundamentals Challenge`, type: 'mock test' },
+          { topic: `Weekly Revision: ${skillName} Mind Map, Flashcards & Core Synthesis`, type: 'revision' }
+        ]
       },
       {
-        title: `${skill} Intermediate Architecture & Real-World Patterns`,
-        milestone: `Implement production design patterns, asynchronous processing, and state management in ${skill}`,
-        project: {
-          title: `${skill} Intermediate Workflow Automation Service`,
-          description: `Interactive application applying production patterns, data persistence, and error recovery in ${skill}.`,
-          tech_stack: [skill, 'Database / Storage', 'API Integration'],
-          deliverables: ['Design pattern implementation', 'Asynchronous data pipeline', 'Benchmark profiling report']
-        },
+        title: `${skillName} Core Data Flow, Type Structures & Execution Models`,
+        milestone: `Master memory layout, data structures, and deterministic execution in ${skillName}`,
         days: [
-          `Object modeling, interfaces & idiomatic design patterns in ${skill}`,
-          `Asynchronous workflows, concurrency, event loops & non-blocking processing in ${skill}`,
-          `Data persistence, storage queries & serialization (JSON/Binary) in ${skill}`,
-          `External API integration, network protocols & secure authentication handling`,
-          `Performance optimization, memory profiling & debugging bottlenecks in ${skill}`,
-          `Milestone Lab: Build Intermediate Workflow Automation Service using ${skill}`
-        ],
-        docs: `https://www.google.com/search?q=${encodeURIComponent(skill + ' best practices architecture')}`,
-        practice: `https://github.com/topics/${encodeURIComponent(skill.toLowerCase().replace(/[^a-z0-9]/g, '-'))}`
+          { topic: `Data Types, Memory Allocation & State Flow in ${skillName}`, type: 'learn' },
+          { topic: `Control Structures, Exception Handling & Data Validation`, type: 'practice' },
+          { topic: `Structural Data Modeling & Transformation Drills`, type: 'practice' },
+          { topic: `Data Pipeline Engine & Transformation Mini-Lab`, type: 'project' },
+          { topic: `Integration with Standard I/O & File Subsystems`, type: 'project' },
+          { topic: `Timed Assessment: Data Flow & Structural Logic`, type: 'mock test' },
+          { topic: `Weekly Revision: Memory Models & Execution Retrospective`, type: 'revision' }
+        ]
       },
       {
-        title: `${skill} Production Hardening, Testing & Deployment`,
-        milestone: `Write automated test suites, harden security, and containerize/deploy ${skill} workloads`,
-        project: {
-          title: `${skill} Production-Ready Capstone Application`,
-          description: `End-to-end production application demonstrating architecture, automated testing, and CI/CD deployment using ${skill}.`,
-          tech_stack: [skill, 'Docker', 'CI/CD Pipeline', 'Monitoring'],
-          deliverables: ['Automated test suite (Unit & Integration)', 'Docker containerization manifest', 'Production deployment link and documentation']
-        },
+        title: `${skillName} Modular Architecture, Design Patterns & Clean Code`,
+        milestone: `Implement SOLID principles, creational/behavioral patterns, and maintainable structure in ${skillName}`,
         days: [
-          `Automated testing: Unit tests, integration test mocks & test coverage reporting for ${skill}`,
-          `Security best practices, input sanitization & secrets management in ${skill}`,
-          `Containerization: Building minimal, secure Docker images for ${skill}`,
-          `CI/CD Automation: Automated testing and deployment workflows with GitHub Actions`,
-          `Observability, logging, health check endpoints & performance metrics for ${skill}`,
-          `Milestone Lab: Launch and deploy complete ${skill} Production Capstone application`
-        ],
-        docs: `https://www.google.com/search?q=${encodeURIComponent(skill + ' production deployment guide')}`,
-        practice: `https://github.com/topics/${encodeURIComponent(skill.toLowerCase().replace(/[^a-z0-9]/g, '-'))}`
+          { topic: `Modular Decomposition & Decoupling Strategies`, type: 'learn' },
+          { topic: `Factory, Singleton, Observer & Strategy Patterns in ${skillName}`, type: 'practice' },
+          { topic: `Refactoring Monolithic Logic into Scalable Modules`, type: 'practice' },
+          { topic: `Modular Component Library & Service Architecture`, type: 'project' },
+          { topic: `Interface Contracts & Dependency Injection Setup`, type: 'project' },
+          { topic: `Timed Assessment: Architecture & Design Pattern Challenge`, type: 'mock test' },
+          { topic: `Weekly Revision: Clean Code Patterns & Architecture Review`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Persistence, Data Modeling & Storage Optimization`,
+        milestone: `Integrate relational/NoSQL storage, indexing, transactions, and caching layers with ${skillName}`,
+        days: [
+          { topic: `Storage Engines, Schemas & Query Optimization`, type: 'learn' },
+          { topic: `Transactional Integrity, Locking & Index Tuning`, type: 'practice' },
+          { topic: `In-Memory Caching & Query Latency Reduction`, type: 'practice' },
+          { topic: `Persistent High-Throughput Storage Service`, type: 'project' },
+          { topic: `Database Migrations & Connection Pooling Configuration`, type: 'project' },
+          { topic: `Timed Assessment: Storage & Database Engineering`, type: 'mock test' },
+          { topic: `Weekly Revision: Schema Design & Caching Playbook`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Networking, APIs & Inter-Service Communication`,
+        milestone: `Build robust RESTful, GraphQL, or gRPC interfaces and network protocols for ${skillName}`,
+        days: [
+          { topic: `Network Protocols (HTTP/2, WebSockets, gRPC, TCP/IP)`, type: 'learn' },
+          { topic: `RESTful Endpoint Design, Rate Limiting & Serialization`, type: 'practice' },
+          { topic: `Asynchronous Client/Server Communication & Webhooks`, type: 'practice' },
+          { topic: `Full-Featured Gateway & Communication Service`, type: 'project' },
+          { topic: `API Contract Testing & Automated Mocking`, type: 'project' },
+          { topic: `Timed Assessment: API & Network Systems Assessment`, type: 'mock test' },
+          { topic: `Weekly Revision: Protocol Standards & API Design Review`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Concurrency, Multithreading & Asynchronous Pipelines`,
+        milestone: `Master async event loops, thread pools, race condition avoidance, and parallel pipelines in ${skillName}`,
+        days: [
+          { topic: `Concurrency Models (Event Loop, Threads, Coroutines, Channels)`, type: 'learn' },
+          { topic: `Locking Mechanisms, Mutexes & Race Condition Elimination`, type: 'practice' },
+          { topic: `Parallel Worker Pools & Producer-Consumer Queues`, type: 'practice' },
+          { topic: `High-Throughput Asynchronous Task Dispatcher`, type: 'project' },
+          { topic: `Backpressure Management & Deadlock Prevention Lab`, type: 'project' },
+          { topic: `Timed Assessment: Concurrency & Async Systems Challenge`, type: 'mock test' },
+          { topic: `Weekly Revision: Thread Safety & Async Architecture`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Automated Testing, CI/CD & Quality Engineering`,
+        milestone: `Establish unit, integration, and end-to-end test pipelines with automated CI/CD in ${skillName}`,
+        days: [
+          { topic: `Testing Pyramid (Unit, Integration, Contract, E2E)`, type: 'learn' },
+          { topic: `Test-Driven Development (TDD) & Edge Case Discovery`, type: 'practice' },
+          { topic: `Mocking External Dependencies & Code Coverage Profiling`, type: 'practice' },
+          { topic: `Automated GitHub Actions CI/CD Pipeline`, type: 'project' },
+          { topic: `Automated Regression Suite & Quality Gates`, type: 'project' },
+          { topic: `Timed Assessment: Quality Assurance & Test Engineering`, type: 'mock test' },
+          { topic: `Weekly Revision: Testing Matrix & Quality Retrospective`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Security Hardening, Cryptography & Auth Protocols`,
+        milestone: `Implement OWASP security mitigations, JWT/OAuth2 authentication, RBAC, and encryption in ${skillName}`,
+        days: [
+          { topic: `Threat Modeling & OWASP Top 10 Mitigation Strategies`, type: 'learn' },
+          { topic: `OAuth2, JWT Authentication & Role-Based Access Control (RBAC)`, type: 'practice' },
+          { topic: `Data Encryption at Rest/In-Transit & Secret Management`, type: 'practice' },
+          { topic: `Hardened Identity & Access Management (IAM) Module`, type: 'project' },
+          { topic: `Security Auditing & Vulnerability Scanning Pipeline`, type: 'project' },
+          { topic: `Timed Assessment: Security & Cryptography Assessment`, type: 'mock test' },
+          { topic: `Weekly Revision: Security Checklist & Compliance Blueprint`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Performance Profiling, Memory Optimization & Benchmarking`,
+        milestone: `Identify execution bottlenecks, reduce CPU/memory overhead, and benchmark workloads in ${skillName}`,
+        days: [
+          { topic: `Flame Graphs, CPU/Memory Profilers & Profiling Methodology`, type: 'learn' },
+          { topic: `Garbage Collection Tuning & Memory Leak Detection`, type: 'practice' },
+          { topic: `Algorithm Optimization & Low-Latency Refactoring`, type: 'practice' },
+          { topic: `Automated Performance Benchmarking Suite`, type: 'project' },
+          { topic: `Load Testing & Stress Testing Simulation Lab`, type: 'project' },
+          { topic: `Timed Assessment: Performance Tuning & Optimization`, type: 'mock test' },
+          { topic: `Weekly Revision: Latency Playbook & Performance Ledger`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Distributed Systems, Microservices & Messaging`,
+        milestone: `Architect message queues, event-driven microservices, and distributed consistency in ${skillName}`,
+        days: [
+          { topic: `CAP Theorem, Distributed Consensus & Event-Driven Patterns`, type: 'learn' },
+          { topic: `Message Queues (Kafka/RabbitMQ/Redis Streams) Integration`, type: 'practice' },
+          { topic: `Idempotency, Saga Patterns & Distributed Transactions`, type: 'practice' },
+          { topic: `Scalable Event-Driven Microservice Ecosystem`, type: 'project' },
+          { topic: `Circuit Breakers, Retries & Fault Tolerance Simulation`, type: 'project' },
+          { topic: `Timed Assessment: Distributed Architecture Challenge`, type: 'mock test' },
+          { topic: `Weekly Revision: Microservices Blueprint & Topology`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Containerization, Kubernetes & Cloud Native Infrastructure`,
+        milestone: `Package applications into multi-stage Docker containers and orchestrate deployments with Kubernetes`,
+        days: [
+          { topic: `Container Internals (Namespaces, cgroups, Layer Optimization)`, type: 'learn' },
+          { topic: `Multi-Stage Dockerfile Construction & Image Hardening`, type: 'practice' },
+          { topic: `Kubernetes Deployments, Services, ConfigMaps & Ingress`, type: 'practice' },
+          { topic: `Cloud-Native Container Orchestration Lab`, type: 'project' },
+          { topic: `Zero-Downtime Rolling Deployment Pipeline`, type: 'project' },
+          { topic: `Timed Assessment: Cloud & Container Deployment`, type: 'mock test' },
+          { topic: `Weekly Revision: Kubernetes Manifests & Cloud Topology`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Observability, Distributed Tracing & Production Reliability`,
+        milestone: `Implement OpenTelemetry, Prometheus metrics, structured logging, and incident response in ${skillName}`,
+        days: [
+          { topic: `The 3 Pillars of Observability (Metrics, Logs, Traces)`, type: 'learn' },
+          { topic: `OpenTelemetry Distributed Tracing & Span Instrumentation`, type: 'practice' },
+          { topic: `Prometheus Metrics & Grafana Alerting Dashboards`, type: 'practice' },
+          { topic: `Production-Grade Telemetry & Health Monitoring Suite`, type: 'project' },
+          { topic: `Disaster Recovery & Chaos Engineering Simulation`, type: 'project' },
+          { topic: `Timed Assessment: Reliability & Observability Exam`, type: 'mock test' },
+          { topic: `Weekly Revision: Production Runbook & SLO/SLA Framework`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} End-to-End Enterprise Capstone Architecture`,
+        milestone: `Design and implement a complete full-featured enterprise capstone project showcasing ${skillName}`,
+        days: [
+          { topic: `Capstone Scope Definition, RFC Design & Technical Spec`, type: 'learn' },
+          { topic: `Core Engine Implementation & Modular Service Wiring`, type: 'practice' },
+          { topic: `Data Persistence, Caching & Resilience Integration`, type: 'practice' },
+          { topic: `Enterprise Capstone Phase 1: Core Functionality Build`, type: 'project' },
+          { topic: `Enterprise Capstone Phase 2: Security & API Gateway`, type: 'project' },
+          { topic: `Timed Assessment: Capstone Code Review & Peer Audit`, type: 'mock test' },
+          { topic: `Weekly Revision: Architecture RFC & Milestone Evaluation`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Capstone Finalization, Stress Testing & Production Launch`,
+        milestone: `Finalize capstone build, execute end-to-end stress tests, and deploy live to production cloud infrastructure`,
+        days: [
+          { topic: `Production Readiness Review & Security Hardening`, type: 'learn' },
+          { topic: `End-to-End User Flow Testing & Edge Case Polish`, type: 'practice' },
+          { topic: `Stress Testing & Cloud Performance Optimization`, type: 'practice' },
+          { topic: `Enterprise Capstone Phase 3: Cloud Deployment`, type: 'project' },
+          { topic: `Live Production Verification & Documentation Publishing`, type: 'project' },
+          { topic: `Timed Assessment: Capstone Defense & Technical Q&A`, type: 'mock test' },
+          { topic: `Weekly Revision: Production Portfolio Wrap-up`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} High-Impact Technical Interview Mastery & Live Problem Solving`,
+        milestone: `Master technical interview communication, behavioral alignment, and live whiteboard problem solving`,
+        days: [
+          { topic: `Interview Frameworks: Clarifying Questions & System Decomposition`, type: 'learn' },
+          { topic: `High-Frequency Domain Problem Sets & Live Coding Drills`, type: 'practice' },
+          { topic: `Trade-Off Analysis & Performance Communication`, type: 'practice' },
+          { topic: `Full-Length Mock Interview Simulation with AI Feedback`, type: 'project' },
+          { topic: `Behavioral & Architecture STAR Story Mapping`, type: 'project' },
+          { topic: `Timed Assessment: Live Technical Screening Challenge`, type: 'mock test' },
+          { topic: `Weekly Revision: Interview Question Ledger & Solution Cards`, type: 'revision' }
+        ]
+      },
+      {
+        title: `${skillName} Senior Industry Specialization & Career Readiness`,
+        milestone: `Achieve top-percentile mastery, finalize professional portfolio, and achieve verified career readiness`,
+        days: [
+          { topic: `Emerging Trends & Advanced Specialization in ${skillName}`, type: 'learn' },
+          { topic: `Open Source Contribution & Production Code Review`, type: 'practice' },
+          { topic: `Portfolio Polish, GitHub Showcase & Technical Writing`, type: 'practice' },
+          { topic: `Comprehensive Career Readiness Portfolio Publication`, type: 'project' },
+          { topic: `Final Verification Audit & Benchmark Score Validation`, type: 'project' },
+          { topic: `Timed Assessment: Master Comprehensive Final Examination`, type: 'mock test' },
+          { topic: `Weekly Revision: Complete ${skillName} Masterclass Graduation Review`, type: 'revision' }
+        ]
       }
     ];
+    const customList = getCustomMilestones(skill);
+    selectedCatalog = customList.map(c => ({
+      title: c.title,
+      milestone: c.milestone,
+      project: {
+        title: `${skill} Capstone Sprint`, 
+        description: `Practical project demonstrating ${c.title} concepts in ${skill}.`,
+        tech_stack: [skill, 'Production Tooling', 'Quality Engineering'],
+        deliverables: ['Working codebase', 'Automated test suite', 'Documentation']
+      },
+      days: c.days,
+      docs: `https://www.google.com/search?q=${encodeURIComponent(skill + ' documentation')}`,
+      practice: `https://github.com/topics/${encodeURIComponent(skill.toLowerCase().replace(/[^a-z0-9]/g, '-'))}`
+    }));
   }
 
-  // Generate week-by-week curriculum
+  // Generate week-by-week curriculum across totalWeeks
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
   for (let w = 1; w <= totalWeeks; w++) {
     const moduleIndex = (w - 1) % selectedCatalog.length;
     const cat = selectedCatalog[moduleIndex];
@@ -2661,7 +3388,7 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
     const weekTitle = `Week ${w}: ${cat.title}`;
     const milestone = cat.milestone;
     const project = {
-      title: `${cat.project.title} (Sprint ${w})`,
+      title: `${cat.project.title} (Week ${w})`,
       description: cat.project.description,
       tech_stack: cat.project.tech_stack,
       deliverables: cat.project.deliverables
@@ -2669,22 +3396,53 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
 
     const tasks = [];
 
-    for (let d = 1; d <= 6; d++) {
-      const dayTopic = cat.days[d - 1] || `In-depth practical implementation sprint on ${cat.title} module ${d}`;
+    for (let d = 1; d <= 7; d++) {
+      const dayData = cat.days && cat.days[d - 1] ? cat.days[d - 1] : {
+        topic: `${cat.title} - Day ${d} Mastery Sprint`,
+        type: d === 1 ? 'learn' : d <= 3 ? 'practice' : d <= 5 ? 'project' : d === 6 ? 'mock test' : 'revision',
+        desc: `In-depth focused study session on ${cat.title} module ${d}`
+      };
 
-      let desc = '';
-      if (language === 'hi') {
-        desc = `दिन ${d}: ${dayTopic} (${dailyHours} घंटे व्यावहारिक अभ्यास)`;
-      } else if (language === 'mr') {
-        desc = `दिवस ${d}: ${dayTopic} (${dailyHours} तास प्रात्यक्षिक सराव)`;
-      } else if (language === 'sa') {
-        desc = `दिनम् ${d}: ${dayTopic} (${dailyHours} होराभ्यासः)`;
+      const rawDayTopic = typeof dayData === 'string' ? dayData : dayData.topic;
+      const cleanTopic = rawDayTopic.replace(/^Day\s*\d+\s*:\s*/i, '').replace(/\s*\(\d+\s*hrs?[^)]*\)/gi, '').trim();
+      const dayType = dayData.type || (d === 1 ? 'learn' : d <= 3 ? 'practice' : d <= 5 ? 'project' : d === 6 ? 'mock test' : 'revision');
+      const dayName = dayNames[d - 1];
+
+      // Concrete "done when" criteria
+      let doneWhen = '';
+      if (dayType === 'learn') {
+        doneWhen = `Understood core architecture, completed conceptual notes, and summarized 3 key takeaways.`;
+      } else if (dayType === 'practice') {
+        doneWhen = `Solved all practice exercises with clean code, verified edge cases, and 0 errors.`;
+      } else if (dayType === 'project') {
+        doneWhen = `Implemented project features, tested locally, and committed working code to Git.`;
+      } else if (dayType === 'mock test') {
+        doneWhen = `Completed timed challenge under ${minutes}m clock, scored results, and logged review notes.`;
       } else {
-        desc = `Day ${d}: ${dayTopic} (${dailyHours} hrs focused coding)`;
+        doneWhen = `Completed active recall review, redid weak problems, and confirmed 100% week readiness.`;
       }
 
-      // STRICT RESOURCE RULE: Only Day 1 gets the 3 curated links (1x Video, 1x Article/Docs, 1x Practice).
-      // Days 2 to 6 get NO links to keep daily tasks clean and focused without repetitive clutter.
+      // Generate exact subtasks whose minutes sum to `minutes`
+      const subtask1Title = `${cleanTopic} - Core Theory & Method Walkthrough`;
+      const subtask1Res = cat.docs || defaultDocs;
+      const subtask1Done = `Notes documented and core concept verified.`;
+
+      const subtask2Title = `${cleanTopic} - Hands-On Implementation & Problem Solving`;
+      const subtask2Res = cat.practice || defaultPractice;
+      const subtask2Done = `Exercises completed with verified outputs.`;
+
+      const subtask3Title = `${cleanTopic} - Self-Evaluation & Edge-Case Review`;
+      const subtask3Res = `https://www.google.com/search?q=${encodeURIComponent(skill + ' ' + cleanTopic + ' cheatsheet')}`;
+      const subtask3Done = `Review checklist verified with 0 pending questions.`;
+
+      const subtasks = makeSubtasks(
+        w, d,
+        subtask1Title, subtask1Res, subtask1Done,
+        subtask2Title, subtask2Res, subtask2Done,
+        subtask3Title, subtask3Res, subtask3Done
+      );
+
+      // On Day 1 ONLY of each week, provide 3 curated top-level links
       let links = [];
       if (d === 1) {
         const queryTerm = encodeURIComponent(`${skill} ${cat.title} full masterclass tutorial`);
@@ -2695,7 +3453,7 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
             url: `https://www.youtube.com/results?search_query=${queryTerm}`
           },
           {
-            title: `${skill} Official Docs & Architecture Guide`,
+            title: `${skill} Official Documentation & Architecture Guide`,
             type: 'article',
             url: cat.docs || defaultDocs
           },
@@ -2709,8 +3467,16 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
 
       tasks.push({
         day_number: d,
-        task_description: desc,
-        resource_links: links
+        day: dayName,
+        task_description: cleanTopic,
+        topic: cleanTopic,
+        type: dayType,
+        time: `${minutes} min Session`,
+        duration_minutes: minutes,
+        done_when: doneWhen,
+        subtasks,
+        resource_links: links,
+        is_completed: false
       });
     }
 
@@ -2731,7 +3497,6 @@ function getFallbackRoadmap(skill, durationWeeks, dailyHours, role, language) {
 
   return weeks;
 }
-
 
 /**
  * 7. AI Subtask Breakdown for Goals

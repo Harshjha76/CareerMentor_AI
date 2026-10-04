@@ -17,10 +17,10 @@ export async function authenticateToken(req, res, next) {
 
     // Self-healing: If user record is missing in DB (e.g. SQLite database reset on Render restart),
     // restore the user record automatically using the cryptographically verified JWT payload
-    if (userRes.rows.length === 0 && decoded && (decoded.id || decoded.email)) {
+    if (userRes.rows.length === 0 && decoded && decoded.id && decoded.email && decoded.email.includes('@')) {
       try {
-        const userEmail = decoded.email || `student_${decoded.id.slice(0, 8)}@careerpilot.ai`;
-        const userName = decoded.name || userEmail.split('@')[0] || 'CareerPilot Student';
+        const userEmail = decoded.email.trim().toLowerCase();
+        const userName = decoded.name || userEmail.split('@')[0];
         
         // Check if user already exists under the same email
         const byEmail = await query('SELECT * FROM users WHERE email = $1', [userEmail]);
@@ -35,7 +35,7 @@ export async function authenticateToken(req, res, next) {
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
             [
               decoded.id,
-              `recovered_${decoded.id}`,
+              `google_sub_${encodeURIComponent(userEmail)}`,
               userEmail,
               userName,
               defaultAvatar,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useGoal } from '../context/GoalContext';
 import { api } from '../services/api';
 import {
   FileText,
@@ -21,12 +22,20 @@ import {
   AlertCircle,
   Activity,
   Bell,
-  Mail
+  Mail,
+  Flame,
+  ShieldCheck,
+  Building2,
+  Briefcase,
+  LogOut,
+  UserCheck,
+  RefreshCw
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
+  const { goal } = useGoal();
   const navigate = useNavigate();
 
   const [resumeScore, setResumeScore] = useState(88);
@@ -34,48 +43,51 @@ export default function DashboardPage() {
   const [plannerTasks, setPlannerTasks] = useState([]);
   const [goals, setGoals] = useState([]);
   const [userSkills, setUserSkills] = useState([]);
+  const [streakData, setStreakData] = useState(null);
+  const [matchedInternshipsCount, setMatchedInternshipsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [agentNotification, setAgentNotification] = useState(null);
   const [triggeringCheckin, setTriggeringCheckin] = useState(false);
 
   // Flexible Availability & Interactive Charts State
-  const [availableMinutes, setAvailableMinutes] = useState(user?.available_study_minutes || 57);
+  const [availableMinutes, setAvailableMinutes] = useState(goal.daily_minutes || user?.available_study_minutes || 60);
   const [hoveredStudyIndex, setHoveredStudyIndex] = useState(null);
   const [hoveredGapIndex, setHoveredGapIndex] = useState(null);
-  const [customMinsInput, setCustomMinsInput] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
-
-  const handleSelectMinutes = async (mins) => {
-    const val = parseInt(mins, 10);
-    if (!val || val <= 0) return;
-    setAvailableMinutes(val);
-    setShowCustomInput(false);
-    try {
-      await api.auth.updateProfile({ available_study_minutes: val });
-    } catch (e) {
-      console.warn('Failed to save study minutes:', e);
-    }
-  };
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [resumeRes, roadmapsRes, plannerRes, goalsRes, skillsRes] = await Promise.all([
-          api.resume.getLatest().catch(() => ({ resume: null })),
-          api.roadmap.getAll().catch(() => ({ roadmaps: [] })),
-          api.planner.get('weekly').catch(() => ({ tasks: [] })),
-          api.goals.getAll().catch(() => ({ goals: [] })),
-          api.skills.get().catch(() => ({ skills: [] }))
+        const [resumeRes, roadmapsRes, plannerRes, goalsRes, skillsRes, streakRes, internRes] = await Promise.allSettled([
+          api.resume.getLatest(),
+          api.roadmap.getAll(),
+          api.planner.get('weekly'),
+          api.goals.getAll(),
+          api.skills.get(),
+          api.reminders.getStreakStatus(),
+          api.internships.getRecommendations()
         ]);
 
-        if (resumeRes.resume) {
-          setResumeScore(resumeRes.resume.score);
+        if (resumeRes.status === 'fulfilled' && resumeRes.value?.resume) {
+          setResumeScore(resumeRes.value.resume.score);
         }
-
-        setRoadmaps(roadmapsRes.roadmaps || []);
-        setPlannerTasks(plannerRes.tasks || []);
-        setGoals(goalsRes.goals || []);
-        setUserSkills(skillsRes.skills || []);
+        if (roadmapsRes.status === 'fulfilled' && roadmapsRes.value?.roadmaps) {
+          setRoadmaps(roadmapsRes.value.roadmaps);
+        }
+        if (plannerRes.status === 'fulfilled' && plannerRes.value?.tasks) {
+          setPlannerTasks(plannerRes.value.tasks);
+        }
+        if (goalsRes.status === 'fulfilled' && goalsRes.value?.goals) {
+          setGoals(goalsRes.value.goals);
+        }
+        if (skillsRes.status === 'fulfilled' && skillsRes.value?.skills) {
+          setUserSkills(skillsRes.value.skills);
+        }
+        if (streakRes.status === 'fulfilled' && streakRes.value) {
+          setStreakData(streakRes.value);
+        }
+        if (internRes.status === 'fulfilled' && internRes.value?.top_internships) {
+          setMatchedInternshipsCount(internRes.value.top_internships.length);
+        }
       } catch (err) {
         console.error('Failed to load dashboard:', err);
       } finally {
@@ -98,30 +110,27 @@ export default function DashboardPage() {
     }
   };
 
-  const togglePlannerTask = async (taskId) => {
-    const updated = plannerTasks.map(task => {
-      if (task.id === taskId) {
-        return { ...task, is_completed: !task.is_completed, status: !task.is_completed ? 'completed' : 'pending' };
-      }
-      return task;
-    });
-    setPlannerTasks(updated);
-    try {
-      await api.planner.saveTasks(updated);
-    } catch (err) {
-      console.error('Failed to update task:', err);
-    }
-  };
+  const activeRoadmap = roadmaps.find(r => r.skill_name?.toLowerCase() === goal.domain?.toLowerCase()) || roadmaps[0];
+  const roadmapProgress = activeRoadmap?.progress || 0;
 
-  const pendingTasksCount = plannerTasks.filter(t => !t.is_completed).length;
+  // Knowledge gap calculations
+  const knownSkillNames = userSkills.map(s => s.name.toLowerCase());
+  const sampleTargetReqs = ['Python', 'SQL', 'Docker', 'REST APIs', 'Git', 'System Design', 'React'];
+  const matchedReqs = sampleTargetReqs.filter(r => knownSkillNames.some(k => k.includes(r.toLowerCase()) || r.toLowerCase().includes(k)));
+  const compatibilityPct = userSkills.length === 0 ? 0 : Math.min(95, Math.max(20, Math.round((matchedReqs.length / sampleTargetReqs.length) * 100)));
+  const gapPct = 100 - compatibilityPct;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-[#F8FAFC]">
+    <div className="min-h-screen bg-[#090D16] text-[#F8FAFC] pb-16">
+      {/* Top Ambient Glows */}
+      <div className="absolute top-0 left-1/3 w-96 h-96 bg-[#3B82F6]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-20 right-1/4 w-96 h-96 bg-[#8B5CF6]/10 rounded-full blur-3xl pointer-events-none" />
+
       {/* 2-Hour Autonomous Agent Toast Alert */}
       {agentNotification && (
         <div className="fixed top-20 right-6 z-50 max-w-md bg-[#111827] rounded-3xl border border-[#06B6D4] shadow-2xl p-5 animate-in slide-in-from-top-6 duration-300">
           <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#06B6D4] text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#06B6D4]/20">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#06B6D4] text-white flex items-center justify-center shrink-0 shadow-lg shadow-[#06B6D4]/20">
               <Sparkles className="w-5 h-5 animate-spin" />
             </div>
             <div className="space-y-1">
@@ -136,7 +145,7 @@ export default function DashboardPage() {
               <div className="pt-2 flex justify-end">
                 <button
                   onClick={() => navigate('/planner')}
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white text-xs font-bold shadow-md shadow-[#3B82F6]/20 transition-all"
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white text-xs font-bold shadow-md transition-all"
                 >
                   View Remaining Tasks →
                 </button>
@@ -146,807 +155,361 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#111827] via-[#172033] to-[#0B1220] border border-[#1E293B] text-[#F8FAFC] p-6 sm:p-10 shadow-2xl">
-        <div className="relative z-10 max-w-3xl">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1E293B] text-[#06B6D4] text-xs font-bold border border-[#06B6D4]/30">
-              <Sparkles className="w-3.5 h-3.5" />
-              Target: {user?.target_role || 'Software Engineer'}
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] text-xs font-bold border border-[#10B981]/30">
-              <Activity className="w-3.5 h-3.5 animate-pulse" />
-              {t('dashboard.agent_active')}
-            </span>
-            {user?.email && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#172033] text-[#06B6D4] text-xs font-semibold border border-[#1E293B]">
-                <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
-                Alerts to: {user.email}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8 relative z-10">
+        {/* Mission Control Hero Banner */}
+        <div className="bg-gradient-to-r from-[#111827] via-[#172033] to-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="relative z-10 max-w-2xl space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#3B82F6]/15 border border-[#3B82F6]/30 text-[#60A5FA] text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5" />
+                Target: {user?.target_role || goal.domain || 'Software Engineer'}
               </span>
-            )}
-          </div>
-
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight mb-2 text-[#F8FAFC]">
-            {t('dashboard.welcome')}, {user?.name || 'Aarav'}! 👋
-          </h1>
-          <p className="text-[#94A3B8] text-sm sm:text-base leading-relaxed mb-6 max-w-2xl">
-            {t('dashboard.subheading')}
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleTrigger2hCheckin}
-              disabled={triggeringCheckin}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs sm:text-sm font-bold shadow-lg shadow-[#3B82F6]/25 transition-all"
-            >
-              <Bell className="w-4 h-4" />
-              {t('dashboard.btn_trigger_checkin')}
-            </button>
-            <Link
-              to="/what-i-know"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#172033] hover:bg-[#1E293B] text-[#F8FAFC] text-xs sm:text-sm font-semibold border border-[#1E293B] transition-all"
-            >
-              <BrainCircuit className="w-4 h-4 text-[#06B6D4]" />
-              {t('dashboard.action_what_i_know')}
-            </Link>
-          </div>
-        </div>
-
-        {/* Decorative ambient glows */}
-        <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-[#3B82F6]/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute right-32 top-0 w-48 h-48 bg-[#06B6D4]/10 rounded-full blur-2xl pointer-events-none"></div>
-      </div>
-
-      {/* CORE FEATURE MODULES GRID (Directly Below Title) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Module 1: Career Chatbot */}
-        <Link
-          to="/chat"
-          className="group p-5 bg-[#111827] rounded-3xl border border-[#1E293B] shadow-lg hover:shadow-2xl hover:border-[#3B82F6]/60 hover:bg-[#172033] transition-all hover:-translate-y-1 flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-              <MessageSquare className="w-6 h-6" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] text-xs font-bold">
+                <Activity className="w-3.5 h-3.5 animate-pulse" />
+                Autonomous Agent Online
+              </span>
+              {user?.email && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#090D16] border border-[#1E293B] text-[#38BDF8] text-xs font-semibold">
+                  <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
+                  {user.email}
+                </span>
+              )}
             </div>
-            <h3 className="font-black text-sm text-[#F8FAFC] group-hover:text-[#3B82F6] transition-colors">
-              Career Chatbot
-            </h3>
-            <p className="text-xs text-[#94A3B8] mt-1 leading-snug">
-              24/7 ChatGPT & Claude-level career counseling & mock prep.
+
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-[#F8FAFC]">
+              Welcome back, {user?.name || 'Engineer'}! 👋
+            </h1>
+            <p className="text-[#94A3B8] text-xs sm:text-sm leading-relaxed max-w-2xl">
+              Your autonomous career agent is actively synchronizing your learning velocity, ATS resume calibration, and verified hiring opportunities.
             </p>
-          </div>
-          <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#06B6D4] group-hover:translate-x-1 transition-transform">
-            Start Chatting <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-        </Link>
 
-        {/* Module 2: Resume Analyzer */}
-        <Link
-          to="/resume"
-          className="group p-5 bg-[#111827] rounded-3xl border border-[#1E293B] shadow-lg hover:shadow-2xl hover:border-[#3B82F6]/60 hover:bg-[#172033] transition-all hover:-translate-y-1 flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600/20 to-cyan-500/20 border border-blue-500/30 text-[#06B6D4] flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-              <FileText className="w-6 h-6" />
-            </div>
-            <h3 className="font-black text-sm text-[#F8FAFC] group-hover:text-[#06B6D4] transition-colors">
-              Resume Analyzer
-            </h3>
-            <p className="text-xs text-[#94A3B8] mt-1 leading-snug">
-              Deep details extraction & instant ATS scoring out of 100.
-            </p>
-          </div>
-          <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#3B82F6] group-hover:translate-x-1 transition-transform">
-            Analyze Resume <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-        </Link>
-
-        {/* Module 3: Learning Roadmap */}
-        <Link
-          to="/roadmap"
-          className="group p-5 bg-[#111827] rounded-3xl border border-[#1E293B] shadow-lg hover:shadow-2xl hover:border-purple-500/60 hover:bg-[#172033] transition-all hover:-translate-y-1 flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600/20 to-indigo-500/20 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-              <Map className="w-6 h-6" />
-            </div>
-            <h3 className="font-black text-sm text-[#F8FAFC] group-hover:text-purple-400 transition-colors">
-              Smart Roadmap
-            </h3>
-            <p className="text-xs text-[#94A3B8] mt-1 leading-snug">
-              Personalized week-by-week curriculum with curated resources.
-            </p>
-          </div>
-          <div className="mt-4 flex items-center gap-1 text-xs font-bold text-purple-400 group-hover:translate-x-1 transition-transform">
-            View Curriculum <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-        </Link>
-
-        {/* Module 4: AI Planner (Human + AI) */}
-        <Link
-          to="/planner"
-          className="group p-5 bg-[#111827] rounded-3xl border border-[#1E293B] shadow-lg hover:shadow-2xl hover:border-[#10B981]/60 hover:bg-[#172033] transition-all hover:-translate-y-1 flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600/20 to-teal-500/20 border border-emerald-500/30 text-[#10B981] flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <h3 className="font-black text-sm text-[#F8FAFC] group-hover:text-[#10B981] transition-colors">
-              AI Planner
-            </h3>
-            <p className="text-xs text-[#94A3B8] mt-1 leading-snug">
-              Co-planning: get pros & cons with 1-click AI schedule refinement.
-            </p>
-          </div>
-          <div className="mt-4 flex items-center gap-1 text-xs font-bold text-[#10B981] group-hover:translate-x-1 transition-transform">
-            Plan Schedule <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-        </Link>
-
-        {/* Module 5: What I Know */}
-        <Link
-          to="/what-i-know"
-          className="group p-5 bg-[#111827] rounded-3xl border border-[#1E293B] shadow-lg hover:shadow-2xl hover:border-rose-500/60 hover:bg-[#172033] transition-all hover:-translate-y-1 flex flex-col justify-between"
-        >
-          <div>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500/20 to-pink-600/20 border border-rose-500/30 text-rose-400 flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-              <BrainCircuit className="w-6 h-6" />
-            </div>
-            <h3 className="font-black text-sm text-[#F8FAFC] group-hover:text-rose-400 transition-colors">
-              What I Know
-            </h3>
-            <p className="text-xs text-[#94A3B8] mt-1 leading-snug">
-              Verified skill vault & dream company compatibility assessment.
-            </p>
-          </div>
-          <div className="mt-4 flex items-center gap-1 text-xs font-bold text-rose-400 group-hover:translate-x-1 transition-transform">
-            Explore Vault <ArrowRight className="w-3.5 h-3.5" />
-          </div>
-        </Link>
-      </div>
-
-      {/* DEDICATED COMPARTMENT: WHAT I KNOW & SKILLS VAULT */}
-      {(() => {
-        const targetRole = user?.target_role || 'Software Engineer';
-        const isPythonDomain = /python|ai|machine learning|data science|ml|nlp/i.test(targetRole);
-        const isJavaDomain = /java|spring/i.test(targetRole);
-        const isDevOpsDomain = /devops|cloud|sre|infrastructure|kubernetes|linux/i.test(targetRole);
-        const isFrontendDomain = /frontend|ui|react|vue|angular/i.test(targetRole);
-
-        const getTargetRoleRequirements = () => {
-          if (isPythonDomain) {
-            return ['Python', 'Django / FastAPI', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Redis Caching', 'Data Structures & Algorithms', 'System Design'];
-          } else if (isJavaDomain) {
-            return ['Java', 'Spring Boot', 'SQL & PostgreSQL', 'Docker', 'REST APIs', 'Microservices', 'Git & GitHub', 'Data Structures & Algorithms', 'System Design'];
-          } else if (isDevOpsDomain) {
-            return ['Linux', 'Docker', 'Kubernetes', 'AWS / Cloud', 'CI/CD Pipelines', 'Git & GitHub', 'Terraform', 'Python / Bash Scripting', 'Monitoring & Grafana'];
-          } else if (isFrontendDomain) {
-            return ['JavaScript', 'TypeScript', 'React.js', 'HTML5 & CSS3', 'Tailwind CSS', 'REST / GraphQL APIs', 'Git & GitHub', 'State Management'];
-          }
-          return ['JavaScript', 'React.js', 'Node.js', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Tailwind CSS', 'System Design'];
-        };
-
-        const targetRoleSkills = getTargetRoleRequirements();
-        const knownSkillNames = userSkills.map(s => s.name);
-        
-        const matchedSkillsList = targetRoleSkills.filter(req => 
-          knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
-        );
-
-        const missingGapsList = targetRoleSkills.filter(req => 
-          !knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
-        );
-
-        const compatibilityPct = userSkills.length === 0 ? 0 : Math.min(95, Math.max(15, Math.round((matchedSkillsList.length / targetRoleSkills.length) * 100)));
-        const gapPct = 100 - compatibilityPct;
-
-        return (
-          <div className="bg-gradient-to-br from-[#111827] via-[#172033] to-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#1E293B] pb-5">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] animate-ping"></span>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#06B6D4]">
-                    Knowledge Vault & Skill Gap Compartment
-                  </span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black text-[#F8FAFC]">
-                  What I Know vs What I Need To Know
-                </h2>
-                <p className="text-xs sm:text-sm text-[#94A3B8] mt-0.5">
-                  Live skill alignment for <span className="font-bold text-[#F8FAFC]">{user?.target_role || 'Software Engineer'}</span> at <span className="font-bold text-[#F8FAFC]">{user?.dream_companies || 'Google, Microsoft'}</span>.
-                </p>
-              </div>
-
-              <Link
-                to="/what-i-know"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white text-xs sm:text-sm font-bold shadow-lg shadow-[#3B82F6]/20 transition-all hover:scale-[1.02]"
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={handleTrigger2hCheckin}
+                disabled={triggeringCheckin}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs sm:text-sm font-bold shadow-lg shadow-[#3B82F6]/25 transition-all cursor-pointer disabled:opacity-50"
               >
-                <BrainCircuit className="w-4 h-4" />
-                Manage Full Vault →
+                <Bell className="w-4 h-4" />
+                {triggeringCheckin ? 'Dispatching...' : 'Trigger 2h Study Check-in'}
+              </button>
+              <Link
+                to="/roadmap"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#090D16] hover:bg-[#111827] text-[#CBD5E1] hover:text-[#F8FAFC] text-xs sm:text-sm font-bold border border-[#1E293B] transition-all"
+              >
+                <Map className="w-4 h-4 text-[#06B6D4]" />
+                Resume Learning Roadmap
               </Link>
             </div>
+          </div>
 
-            {/* Skill Matrix Breakdown Preview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Mastered Skills Preview */}
-              <div className="p-5 rounded-2xl bg-[#0B1220]/70 border border-[#10B981]/30 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-[#10B981] flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-                    What I Know {userSkills.length > 0 ? `(Mastered • ${compatibilityPct}%)` : '(Awaiting Skills)'}
-                  </h4>
-                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-                    {userSkills.length > 0 ? `${userSkills.length} Verified` : '0 Verified'}
-                  </span>
-                </div>
-                <p className="text-xs text-[#94A3B8]">
-                  {userSkills.length > 0
-                    ? 'Proficiencies extracted from your resume and verified assessments:'
-                    : 'No skills added yet. Upload your resume or add your skills in What I Know:'}
-                </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {userSkills.length > 0 ? (
-                    userSkills.map((skill, idx) => (
-                      <span
-                        key={skill.id || idx}
-                        className="px-2.5 py-1 rounded-lg bg-[#10B981]/10 text-[#10B981] text-xs font-semibold border border-[#10B981]/25"
-                      >
-                        ✓ {skill.name}
-                      </span>
-                    ))
-                  ) : (
-                    <div className="flex items-center gap-3 pt-1">
-                      <Link
-                        to="/resume"
-                        className="px-3 py-1.5 rounded-xl bg-[#172033] hover:bg-[#1E293B] text-[#06B6D4] text-xs font-bold border border-[#1E293B]"
-                      >
-                        📄 Upload Resume
-                      </Link>
-                      <Link
-                        to="/what-i-know"
-                        className="px-3 py-1.5 rounded-xl bg-[#3B82F6]/20 hover:bg-[#3B82F6]/30 text-[#3B82F6] text-xs font-bold border border-[#3B82F6]/30"
-                      >
-                        + Add Skills
-                      </Link>
-                    </div>
-                  )}
-                </div>
+          {/* Connected Google Identity Card with One-Click Account Switching */}
+          <div className="relative z-10 shrink-0 bg-[#090D16]/90 border border-[#1E293B] rounded-2xl p-4 sm:p-5 w-full lg:w-72 space-y-3 shadow-xl backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#3B82F6] to-[#06B6D4] flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-md">
+                {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
               </div>
-
-              {/* Target Gap Skills Preview */}
-              <div className="p-5 rounded-2xl bg-[#0B1220]/70 border border-amber-500/30 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-400" />
-                    What I Need To Know (Target Gap • {userSkills.length > 0 ? `${gapPct}%` : '100%'})
-                  </h4>
-                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                    Tier-1 Required
-                  </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-[#F8FAFC] truncate">
+                  {user?.name || 'Verified User'}
                 </div>
-                <p className="text-xs text-[#94A3B8]">
-                  Priority gaps to bridge for technical interviews at {user?.dream_companies || 'Google, Microsoft'}:
-                </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {missingGapsList.length > 0 ? (
-                    missingGapsList.slice(0, 6).map((skill, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 text-xs font-semibold border border-amber-500/25"
-                      >
-                        ⚡ {skill}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-[#10B981] font-semibold">
-                      🎉 Full skill alignment achieved for {targetRole}!
-                    </span>
-                  )}
+                <div className="text-[11px] text-[#94A3B8] truncate" title={user?.email}>
+                  {user?.email || 'Signed In'}
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
 
-      {/* REALISTIC INTERACTIVE PIE CHARTS & VISUAL ANALYTICS WITH CURSOR HOVER TOOLTIP */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Pie Chart 1: Study Time Allocation with Flexible Availability Selector */}
-        <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-extrabold text-[#F8FAFC] flex items-center gap-2">
-                <Clock className="w-5 h-5 text-[#3B82F6]" />
-                Study Time Allocation
-              </h3>
-              <p className="text-xs text-[#94A3B8]">
-                Current availability: <span className="font-bold text-[#06B6D4]">{availableMinutes} mins/day</span>
-              </p>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 text-[#10B981] text-[10px] font-bold">
+              <UserCheck className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Google OAuth Verified</span>
             </div>
 
-            {/* Quick Availability Pills (30m, 45m, 57m, 90m, Custom) */}
-            <div className="flex items-center gap-1 bg-[#0B1220] p-1 rounded-2xl text-xs font-bold border border-[#1E293B]">
-              {[30, 45, 57, 90].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => handleSelectMinutes(m)}
-                  className={`px-2.5 py-1 rounded-xl transition-all ${
-                    availableMinutes === m
-                      ? 'bg-[#3B82F6] text-white shadow-sm'
-                      : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-                  }`}
-                >
-                  {m}m
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
-                onClick={() => setShowCustomInput(!showCustomInput)}
-                className={`px-2 py-1 rounded-xl transition-all ${
-                  ![30, 45, 57, 90].includes(availableMinutes)
-                    ? 'bg-[#3B82F6] text-white shadow-sm'
-                    : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-                }`}
-              >
-                Custom
-              </button>
-            </div>
-          </div>
-
-          {showCustomInput && (
-            <div className="flex items-center gap-2 p-3 bg-[#0B1220] rounded-2xl border border-[#1E293B]">
-              <span className="text-xs text-[#94A3B8] font-medium">Set daily study time:</span>
-              <input
-                type="number"
-                min="10"
-                max="600"
-                value={customMinsInput}
-                onChange={(e) => setCustomMinsInput(e.target.value)}
-                placeholder="e.g. 57"
-                className="w-20 px-2 py-1 bg-[#172033] border border-[#1E293B] rounded-lg text-xs font-bold text-[#F8FAFC] outline-none focus:border-[#3B82F6]"
-              />
-              <button
+                type="button"
                 onClick={() => {
-                  if (customMinsInput) handleSelectMinutes(customMinsInput);
+                  logout();
+                  navigate('/');
                 }}
-                className="px-3 py-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-lg text-xs font-bold transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#161F30] hover:bg-[#1E293B] border border-[#2A3548] text-[#38BDF8] text-[11px] font-bold transition-all cursor-pointer"
+                title="Switch to another Google or Email account"
               >
-                Apply
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Switch Account</span>
               </button>
-            </div>
-          )}
 
-          {/* SVG Pie Chart with Cursor Hover */}
-          <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-            <div className="relative w-48 h-48 flex-shrink-0">
-              <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                {/* DSA 45% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#8B5CF6"
-                  strokeWidth={hoveredStudyIndex === 0 ? "6.5" : "4.5"}
-                  strokeDasharray="45 55"
-                  strokeDashoffset="0"
-                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
-                  onMouseEnter={() => setHoveredStudyIndex(0)}
-                  onMouseLeave={() => setHoveredStudyIndex(null)}
-                />
-                {/* Web Dev & APIs 25% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#06B6D4"
-                  strokeWidth={hoveredStudyIndex === 1 ? "6.5" : "4.5"}
-                  strokeDasharray="25 75"
-                  strokeDashoffset="-45"
-                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
-                  onMouseEnter={() => setHoveredStudyIndex(1)}
-                  onMouseLeave={() => setHoveredStudyIndex(null)}
-                />
-                {/* System Design 15% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#F59E0B"
-                  strokeWidth={hoveredStudyIndex === 2 ? "6.5" : "4.5"}
-                  strokeDasharray="15 85"
-                  strokeDashoffset="-70"
-                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
-                  onMouseEnter={() => setHoveredStudyIndex(2)}
-                  onMouseLeave={() => setHoveredStudyIndex(null)}
-                />
-                {/* Core CS Theory 15% */}
-                <circle
-                  cx="18" cy="18" r="15.915"
-                  fill="transparent"
-                  stroke="#3B82F6"
-                  strokeWidth={hoveredStudyIndex === 3 ? "6.5" : "4.5"}
-                  strokeDasharray="15 85"
-                  strokeDashoffset="-85"
-                  className="cursor-pointer transition-all duration-200 hover:opacity-90"
-                  onMouseEnter={() => setHoveredStudyIndex(3)}
-                  onMouseLeave={() => setHoveredStudyIndex(null)}
-                />
-              </svg>
-
-              {/* Dynamic Center Tooltip on Hover */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                {hoveredStudyIndex === 0 && (
-                  <>
-                    <span className="text-xs font-extrabold text-[#8B5CF6]">DSA Mastery</span>
-                    <span className="text-xl font-black text-[#F8FAFC]">{Math.round(availableMinutes * 0.45)} mins</span>
-                    <span className="text-[10px] uppercase font-bold text-[#94A3B8]">45% of time</span>
-                  </>
-                )}
-                {hoveredStudyIndex === 1 && (
-                  <>
-                    <span className="text-xs font-extrabold text-[#06B6D4]">Projects & APIs</span>
-                    <span className="text-xl font-black text-[#F8FAFC]">{Math.round(availableMinutes * 0.25)} mins</span>
-                    <span className="text-[10px] uppercase font-bold text-[#94A3B8]">25% of time</span>
-                  </>
-                )}
-                {hoveredStudyIndex === 2 && (
-                  <>
-                    <span className="text-xs font-extrabold text-[#F59E0B]">System Design</span>
-                    <span className="text-xl font-black text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)} mins</span>
-                    <span className="text-[10px] uppercase font-bold text-[#94A3B8]">15% of time</span>
-                  </>
-                )}
-                {hoveredStudyIndex === 3 && (
-                  <>
-                    <span className="text-xs font-extrabold text-[#3B82F6]">CS Core & OS</span>
-                    <span className="text-xl font-black text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)} mins</span>
-                    <span className="text-[10px] uppercase font-bold text-[#94A3B8]">15% of time</span>
-                  </>
-                )}
-                {hoveredStudyIndex === null && (
-                  <>
-                    <span className="text-2xl font-black text-[#F8FAFC]">{availableMinutes}m</span>
-                    <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Hover slice</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Interactive Legend with Cursor Hover */}
-            <div className="space-y-2.5 w-full sm:w-auto text-xs">
-              <div
-                onMouseEnter={() => setHoveredStudyIndex(0)}
-                onMouseLeave={() => setHoveredStudyIndex(null)}
-                className={`flex items-center justify-between sm:justify-start gap-4 p-2.5 rounded-xl cursor-pointer transition-all border ${
-                  hoveredStudyIndex === 0 ? 'bg-[#172033] border-[#8B5CF6]/50 shadow-sm' : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                }`}
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 text-[11px] font-bold transition-all cursor-pointer"
               >
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#8B5CF6]"></span>
-                  <span className="font-semibold text-[#F8FAFC]">Algorithms & DSA</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-[#F8FAFC]">{Math.round(availableMinutes * 0.45)}m</span>
-                  <span className="text-[10px] text-[#94A3B8] ml-1.5">(45%)</span>
-                </div>
-              </div>
-
-              <div
-                onMouseEnter={() => setHoveredStudyIndex(1)}
-                onMouseLeave={() => setHoveredStudyIndex(null)}
-                className={`flex items-center justify-between sm:justify-start gap-4 p-2.5 rounded-xl cursor-pointer transition-all border ${
-                  hoveredStudyIndex === 1 ? 'bg-[#172033] border-[#06B6D4]/50 shadow-sm' : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#06B6D4]"></span>
-                  <span className="font-semibold text-[#F8FAFC]">Projects & APIs</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-[#F8FAFC]">{Math.round(availableMinutes * 0.25)}m</span>
-                  <span className="text-[10px] text-[#94A3B8] ml-1.5">(25%)</span>
-                </div>
-              </div>
-
-              <div
-                onMouseEnter={() => setHoveredStudyIndex(2)}
-                onMouseLeave={() => setHoveredStudyIndex(null)}
-                className={`flex items-center justify-between sm:justify-start gap-4 p-2.5 rounded-xl cursor-pointer transition-all border ${
-                  hoveredStudyIndex === 2 ? 'bg-[#172033] border-[#F59E0B]/50 shadow-sm' : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
-                  <span className="font-semibold text-[#F8FAFC]">System Design</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)}m</span>
-                  <span className="text-[10px] text-[#94A3B8] ml-1.5">(15%)</span>
-                </div>
-              </div>
-
-              <div
-                onMouseEnter={() => setHoveredStudyIndex(3)}
-                onMouseLeave={() => setHoveredStudyIndex(null)}
-                className={`flex items-center justify-between sm:justify-start gap-4 p-2.5 rounded-xl cursor-pointer transition-all border ${
-                  hoveredStudyIndex === 3 ? 'bg-[#172033] border-[#3B82F6]/50 shadow-sm' : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#3B82F6]"></span>
-                  <span className="font-semibold text-[#F8FAFC]">Core CS (OS/DBMS)</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)}m</span>
-                  <span className="text-[10px] text-[#94A3B8] ml-1.5">(15%)</span>
-                </div>
-              </div>
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Pie Chart 2: "What I Know vs What I Need to Know" Interactive Donut Chart */}
-        {(() => {
-          const targetRole = user?.target_role || 'Software Engineer';
-          const isPythonDomain = /python|ai|machine learning|data science|ml|nlp/i.test(targetRole);
-          const isJavaDomain = /java|spring/i.test(targetRole);
-          const isDevOpsDomain = /devops|cloud|sre|infrastructure|kubernetes|linux/i.test(targetRole);
-          const isFrontendDomain = /frontend|ui|react|vue|angular/i.test(targetRole);
-
-          const getTargetRoleRequirements = () => {
-            if (isPythonDomain) {
-              return ['Python', 'Django / FastAPI', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Redis Caching', 'Data Structures & Algorithms', 'System Design'];
-            } else if (isJavaDomain) {
-              return ['Java', 'Spring Boot', 'SQL & PostgreSQL', 'Docker', 'REST APIs', 'Microservices', 'Git & GitHub', 'Data Structures & Algorithms', 'System Design'];
-            } else if (isDevOpsDomain) {
-              return ['Linux', 'Docker', 'Kubernetes', 'AWS / Cloud', 'CI/CD Pipelines', 'Git & GitHub', 'Terraform', 'Python / Bash Scripting', 'Monitoring & Grafana'];
-            } else if (isFrontendDomain) {
-              return ['JavaScript', 'TypeScript', 'React.js', 'HTML5 & CSS3', 'Tailwind CSS', 'REST / GraphQL APIs', 'Git & GitHub', 'State Management'];
-            }
-            return ['JavaScript', 'React.js', 'Node.js', 'PostgreSQL / SQL', 'REST APIs', 'Git & GitHub', 'Docker', 'Tailwind CSS', 'System Design'];
-          };
-
-          const targetRoleSkills = getTargetRoleRequirements();
-          const knownSkillNames = userSkills.map(s => s.name);
-          
-          const matchedSkillsList = targetRoleSkills.filter(req => 
-            knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
-          );
-
-          const missingGapsList = targetRoleSkills.filter(req => 
-            !knownSkillNames.some(k => k.toLowerCase().includes(req.toLowerCase().split(' ')[0]) || req.toLowerCase().includes(k.toLowerCase()))
-          );
-
-          const compatibilityPct = userSkills.length === 0 ? 0 : Math.min(95, Math.max(15, Math.round((matchedSkillsList.length / targetRoleSkills.length) * 100)));
-          const gapPct = 100 - compatibilityPct;
-
-          return (
-            <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-extrabold text-[#F8FAFC] flex items-center gap-2">
-                    <BrainCircuit className="w-5 h-5 text-[#06B6D4]" />
-                    Knowledge Gap Analysis
-                  </h3>
-                  <p className="text-xs text-[#94A3B8]">
-                    What I Know vs What I Need for {user?.dream_companies?.split(',')[0] || 'Google'}
-                  </p>
-                </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
-                  compatibilityPct >= 75
-                    ? 'bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30'
-                    : compatibilityPct > 0
-                    ? 'bg-[#3B82F6]/20 text-[#3B82F6] border-[#3B82F6]/30'
-                    : 'bg-slate-800 text-slate-400 border-slate-700'
-                }`}>
-                  {compatibilityPct}% Compatible
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-                {/* SVG Donut with Hover */}
-                <div className="relative w-48 h-48 flex-shrink-0">
-                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                    {/* What I Know Slice */}
-                    <circle
-                      cx="18" cy="18" r="15.915"
-                      fill="transparent"
-                      stroke="#10B981"
-                      strokeWidth={hoveredGapIndex === 0 ? "7" : "4.5"}
-                      strokeDasharray={`${compatibilityPct} ${gapPct}`}
-                      strokeDashoffset="0"
-                      className="cursor-pointer transition-all duration-200 hover:opacity-95"
-                      onMouseEnter={() => setHoveredGapIndex(0)}
-                      onMouseLeave={() => setHoveredGapIndex(null)}
-                    />
-                    {/* What I Need to Know Slice */}
-                    <circle
-                      cx="18" cy="18" r="15.915"
-                      fill="transparent"
-                      stroke="#F59E0B"
-                      strokeWidth={hoveredGapIndex === 1 ? "7" : "4.5"}
-                      strokeDasharray={`${gapPct} ${compatibilityPct}`}
-                      strokeDashoffset={`-${compatibilityPct}`}
-                      className="cursor-pointer transition-all duration-200 hover:opacity-95"
-                      onMouseEnter={() => setHoveredGapIndex(1)}
-                      onMouseLeave={() => setHoveredGapIndex(null)}
-                    />
-                  </svg>
-
-                  {/* Dynamic Center Display */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                    {hoveredGapIndex === 0 && (
-                      <>
-                        <span className="text-xs font-extrabold text-[#10B981]">Mastered Skills</span>
-                        <span className="text-2xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
-                        <span className="text-[10px] text-[#94A3B8]">{userSkills.length} Verified</span>
-                      </>
-                    )}
-                    {hoveredGapIndex === 1 && (
-                      <>
-                        <span className="text-xs font-extrabold text-[#F59E0B]">Missing Gaps</span>
-                        <span className="text-2xl font-black text-[#F8FAFC]">{gapPct}%</span>
-                        <span className="text-[10px] text-[#94A3B8]">{missingGapsList.length} Gaps to Bridge</span>
-                      </>
-                    )}
-                    {hoveredGapIndex === null && (
-                      <>
-                        <span className="text-2xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
-                        <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Role Match</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Interactive Legend */}
-                <div className="space-y-3 w-full sm:w-auto text-xs">
-                  <div
-                    onMouseEnter={() => setHoveredGapIndex(0)}
-                    onMouseLeave={() => setHoveredGapIndex(null)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                      hoveredGapIndex === 0
-                        ? 'bg-[#172033] border-[#10B981]/60 shadow-sm'
-                        : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4 mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#10B981]"></span>
-                        <span className="font-bold text-[#F8FAFC]">What I Know</span>
-                      </div>
-                      <span className="font-black text-[#10B981]">{compatibilityPct}%</span>
-                    </div>
-                    <div className="text-[11px] text-[#94A3B8] max-w-[200px] truncate">
-                      {userSkills.length > 0 ? userSkills.map(s => s.name).join(', ') : 'No verified skills yet'}
-                    </div>
-                  </div>
-
-                  <div
-                    onMouseEnter={() => setHoveredGapIndex(1)}
-                    onMouseLeave={() => setHoveredGapIndex(null)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                      hoveredGapIndex === 1
-                        ? 'bg-[#172033] border-amber-500/60 shadow-sm'
-                        : 'bg-[#0B1220]/60 border-[#1E293B] hover:bg-[#172033]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-4 mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
-                        <span className="font-bold text-[#F8FAFC]">What I Need To Know</span>
-                      </div>
-                      <span className="font-black text-amber-400">{gapPct}%</span>
-                    </div>
-                    <div className="text-[11px] text-[#94A3B8] max-w-[200px] truncate">
-                      {missingGapsList.length > 0 ? missingGapsList.slice(0, 3).join(', ') : 'Zero Gaps Remaining'}
-                    </div>
-                  </div>
-                </div>
+        {/* 4 Quick Key Metric Glass Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: ATS Resume Score */}
+          <Link
+            to="/resume"
+            className="p-5 rounded-3xl bg-[#111827] border border-[#1E293B] hover:border-[#3B82F6]/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between space-y-3 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase text-[#94A3B8]">ATS Resume Score</span>
+              <div className="w-9 h-9 rounded-xl bg-[#3B82F6]/15 text-[#60A5FA] flex items-center justify-center">
+                <FileText className="w-4 h-4" />
               </div>
             </div>
-          );
-        })()}
-      </div>
+            <div>
+              <div className="text-3xl font-black text-[#F8FAFC]">{resumeScore}/100</div>
+              <p className="text-[11px] text-[#10B981] font-semibold mt-0.5">High Industry Readiness 🚀</p>
+            </div>
+            <div className="text-xs font-bold text-[#60A5FA] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>Analyze Resume</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
 
-      {/* Today's Schedule & Goal Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Column 1 & 2: Today's Schedule */}
-        <div className="lg:col-span-2 bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-8 shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#172033] text-[#3B82F6] flex items-center justify-center border border-[#1E293B]">
+          {/* Card 2: Roadmap Progress */}
+          <Link
+            to="/roadmap"
+            className="p-5 rounded-3xl bg-[#111827] border border-[#1E293B] hover:border-[#06B6D4]/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between space-y-3 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase text-[#94A3B8]">Curriculum Progress</span>
+              <div className="w-9 h-9 rounded-xl bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center">
+                <Map className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-black text-[#F8FAFC]">{roadmapProgress}%</div>
+              <p className="text-[11px] text-[#94A3B8] font-semibold mt-0.5">{activeRoadmap?.skill_name || 'Active Roadmap'}</p>
+            </div>
+            <div className="text-xs font-bold text-[#06B6D4] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>View Milestones</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
+
+          {/* Card 3: Verified Skills Inventory */}
+          <Link
+            to="/what-i-know"
+            className="p-5 rounded-3xl bg-[#111827] border border-[#1E293B] hover:border-emerald-500/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between space-y-3 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase text-[#94A3B8]">Verified Skills</span>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                <BrainCircuit className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-black text-[#F8FAFC]">{userSkills.length} Verified</div>
+              <p className="text-[11px] text-emerald-400 font-semibold mt-0.5">0% Demo / Genuine Baseline</p>
+            </div>
+            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>Open Skill Vault</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
+
+          {/* Card 4: Qualified Internships */}
+          <Link
+            to="/internships"
+            className="p-5 rounded-3xl bg-[#111827] border border-[#1E293B] hover:border-[#8B5CF6]/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between space-y-3 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase text-[#94A3B8]">Matched Internships</span>
+              <div className="w-9 h-9 rounded-xl bg-[#8B5CF6]/15 text-[#A78BFA] flex items-center justify-center">
+                <Briefcase className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-black text-[#F8FAFC]">{matchedInternshipsCount} Openings</div>
+              <p className="text-[11px] text-[#A78BFA] font-semibold mt-0.5">≥ 60% Match Threshold</p>
+            </div>
+            <div className="text-xs font-bold text-[#A78BFA] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              <span>Browse Openings</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
+        </div>
+
+        {/* 5 Core Feature Navigation Modules */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Link
+            to="/chat"
+            className="p-5 bg-[#111827] rounded-3xl border border-[#1E293B] hover:border-amber-500/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center mb-3">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-[#F8FAFC]">Career Chatbot</h3>
+              <p className="text-xs text-[#94A3B8] mt-1 leading-snug">24/7 intelligent career counseling & interview mock prep.</p>
+            </div>
+            <div className="mt-4 text-xs font-bold text-amber-400 flex items-center gap-1">Start Chatting →</div>
+          </Link>
+
+          <Link
+            to="/resume"
+            className="p-5 bg-[#111827] rounded-3xl border border-[#1E293B] hover:border-[#3B82F6]/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/15 text-[#60A5FA] flex items-center justify-center mb-3">
+                <FileText className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-[#F8FAFC]">Resume Analyzer</h3>
+              <p className="text-xs text-[#94A3B8] mt-1 leading-snug">Deep structured extraction & honest ATS scoring.</p>
+            </div>
+            <div className="mt-4 text-xs font-bold text-[#60A5FA] flex items-center gap-1">Analyze Resume →</div>
+          </Link>
+
+          <Link
+            to="/roadmap"
+            className="p-5 bg-[#111827] rounded-3xl border border-[#1E293B] hover:border-purple-500/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center mb-3">
+                <Map className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-sm text-[#F8FAFC]">Smart Roadmap</h3>
+              <p className="text-xs text-[#94A3B8] mt-1 leading-snug">7-day progressive curriculum tailored to your goal.</p>
+            </div>
+            <div className="mt-4 text-xs font-bold text-purple-400 flex items-center gap-1">View Curriculum →</div>
+          </Link>
+
+          <Link
+            to="/planner"
+            className="p-5 bg-[#111827] rounded-3xl border border-[#1E293B] hover:border-emerald-500/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-[#10B981] flex items-center justify-center mb-3">
                 <Calendar className="w-5 h-5" />
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-[#F8FAFC]">
-                  {t('dashboard.today_schedule')}
-                </h2>
-                <p className="text-xs text-[#94A3B8]">Synchronized with your active roadmaps and study plan</p>
-              </div>
+              <h3 className="font-bold text-sm text-[#F8FAFC]">AI Study Planner</h3>
+              <p className="text-xs text-[#94A3B8] mt-1 leading-snug">Human + AI co-planning with exact minute breakdown.</p>
             </div>
+            <div className="mt-4 text-xs font-bold text-[#10B981] flex items-center gap-1">Open Co-Planner →</div>
+          </Link>
 
-            <Link
-              to="/planner"
-              className="text-xs font-semibold text-[#3B82F6] hover:text-[#06B6D4] flex items-center gap-1 transition-colors"
-            >
-              Full Planner <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {plannerTasks.slice(0, 5).map((task) => (
-              <div
-                key={task.id}
-                onClick={() => togglePlannerTask(task.id)}
-                className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  task.is_completed
-                    ? 'bg-[#0B1220]/40 border-[#1E293B]/60 text-[#94A3B8]'
-                    : 'bg-[#0B1220]/70 border-[#1E293B] hover:border-[#3B82F6]/50 hover:bg-[#172033]'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={!!task.is_completed}
-                  onChange={() => {}}
-                  className="mt-1 w-4 h-4 rounded text-[#3B82F6] accent-[#3B82F6] cursor-pointer"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium leading-snug ${task.is_completed ? 'line-through text-[#94A3B8]' : 'text-[#F8FAFC]'}`}>
-                    {task.description}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-[#94A3B8] flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {task.time || '18:00 - 20:00'}
-                    </span>
-                    {task.is_ai_suggested && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/25">
-                        AI Plan
-                      </span>
-                    )}
-                  </div>
-                </div>
+          <Link
+            to="/what-i-know"
+            className="p-5 bg-[#111827] rounded-3xl border border-[#1E293B] hover:border-rose-500/50 shadow-xl transition-all hover:-translate-y-1 flex flex-col justify-between group"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center mb-3">
+                <BrainCircuit className="w-5 h-5" />
               </div>
-            ))}
-          </div>
+              <h3 className="font-bold text-sm text-[#F8FAFC]">What I Know</h3>
+              <p className="text-xs text-[#94A3B8] mt-1 leading-snug">Verified skills baseline & skill-gap bridge catalog.</p>
+            </div>
+            <div className="mt-4 text-xs font-bold text-rose-400 flex items-center gap-1">Explore Vault →</div>
+          </Link>
         </div>
 
-        {/* Column 3: Active Goals */}
-        <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 shadow-xl space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-[#F8FAFC] flex items-center gap-2">
-              <Target className="w-4 h-4 text-[#06B6D4]" />
-              {t('dashboard.active_goals_title')}
-            </h3>
-            <Link to="/goals" className="text-xs text-[#3B82F6] hover:text-[#06B6D4] transition-colors font-semibold">
-              Manage
-            </Link>
-          </div>
+        {/* Interactive Charts: Study Time Allocation & Knowledge Gap Donut */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Chart 1: Study Time Allocation */}
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-7 shadow-xl space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-[#F8FAFC] flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-[#3B82F6]" />
+                  Study Time Allocation
+                </h3>
+                <p className="text-xs text-[#94A3B8]">Session budget: {availableMinutes} mins/day</p>
+              </div>
+              <span className="text-xs font-bold text-[#60A5FA] bg-[#3B82F6]/15 px-2.5 py-1 rounded-full border border-[#3B82F6]/30">
+                Balanced Ratio
+              </span>
+            </div>
 
-          <div className="space-y-4">
-            {goals.slice(0, 3).map((goal) => (
-              <div key={goal.id} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#F8FAFC] truncate max-w-[180px]">
-                    {goal.goal_description}
-                  </span>
-                  <span className="font-bold text-[#06B6D4]">
-                    {goal.progress_percentage || 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-[#0B1220] h-2.5 rounded-full overflow-hidden border border-[#1E293B]">
-                  <div
-                    className="bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] h-full rounded-full transition-all duration-300"
-                    style={{ width: `${goal.progress_percentage || 0}%` }}
-                  />
+            <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
+              <div className="relative w-44 h-44 shrink-0">
+                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#8B5CF6" strokeWidth={hoveredStudyIndex === 0 ? "6.5" : "4.5"} strokeDasharray="45 55" strokeDashoffset="0" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(0)} onMouseLeave={() => setHoveredStudyIndex(null)} />
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#06B6D4" strokeWidth={hoveredStudyIndex === 1 ? "6.5" : "4.5"} strokeDasharray="25 75" strokeDashoffset="-45" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(1)} onMouseLeave={() => setHoveredStudyIndex(null)} />
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#F59E0B" strokeWidth={hoveredStudyIndex === 2 ? "6.5" : "4.5"} strokeDasharray="15 85" strokeDashoffset="-70" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(2)} onMouseLeave={() => setHoveredStudyIndex(null)} />
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3B82F6" strokeWidth={hoveredStudyIndex === 3 ? "6.5" : "4.5"} strokeDasharray="15 85" strokeDashoffset="-85" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(3)} onMouseLeave={() => setHoveredStudyIndex(null)} />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                  <span className="text-xl font-black text-[#F8FAFC]">{availableMinutes}m</span>
+                  <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Daily Target</span>
                 </div>
               </div>
-            ))}
+
+              <div className="space-y-2 w-full sm:w-auto text-xs">
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-[#A78BFA] font-bold">Algorithms & DSA</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.45)}m (45%)</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-[#06B6D4] font-bold">Projects & APIs</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.25)}m (25%)</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-amber-400 font-bold">System Design</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)}m (15%)</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-[#60A5FA] font-bold">CS Core & Review</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)}m (15%)</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="pt-2">
-            <Link
-              to="/goals"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#172033] hover:bg-[#1E293B] text-[#F8FAFC] text-xs font-bold transition-colors border border-[#1E293B]"
-            >
-              + Add New Career Milestone
-            </Link>
+          {/* Chart 2: Knowledge Gap Donut */}
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-7 shadow-xl space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-[#F8FAFC] flex items-center gap-2">
+                  <BrainCircuit className="w-5 h-5 text-[#06B6D4]" />
+                  Knowledge Gap Alignment
+                </h3>
+                <p className="text-xs text-[#94A3B8]">Target Role: {user?.target_role || 'Software Engineer'}</p>
+              </div>
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/30">
+                {compatibilityPct}% Matched
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
+              <div className="relative w-44 h-44 shrink-0">
+                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10B981" strokeWidth="5.5" strokeDasharray={`${compatibilityPct} ${gapPct}`} strokeDashoffset="0" />
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#F59E0B" strokeWidth="5.5" strokeDasharray={`${gapPct} ${compatibilityPct}`} strokeDashoffset={`-${compatibilityPct}`} />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                  <span className="text-xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
+                  <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Role Fit</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 w-full sm:w-auto text-xs">
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-emerald-400 font-bold">Verified Known Skills</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{userSkills.length} Skills</span>
+                </div>
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-amber-400 font-bold">High-Yield Gaps</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{Math.max(1, 8 - userSkills.length)} Gaps</span>
+                </div>
+                <Link
+                  to="/what-i-know"
+                  className="w-full text-center block py-1.5 rounded-xl bg-[#172033] hover:bg-[#1e2d47] text-xs font-bold text-[#60A5FA] border border-[#3B82F6]/30 transition-all"
+                >
+                  Manage Knowledge Vault →
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>

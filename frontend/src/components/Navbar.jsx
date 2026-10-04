@@ -40,7 +40,15 @@ export default function Navbar() {
     { to: '/admin', label: t('nav.admin'), icon: BarChart2 },
   ];
 
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
   const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const handleSwitchAccount = () => {
+    setUserDropdownOpen(false);
     logout();
     navigate('/');
   };
@@ -129,22 +137,66 @@ export default function Navbar() {
                     <Settings className="w-4 h-4" />
                   </Link>
 
-                  <div className="flex items-center gap-2 pl-2 border-l border-[#1E293B]">
-                    <img
-                      src={user?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                      alt={user?.name}
-                      className="w-8 h-8 rounded-full border border-[#3B82F6]/40 object-cover"
-                    />
-                    <span className="hidden md:block text-xs font-semibold text-[#F8FAFC] max-w-[100px] truncate">
-                      {user?.name?.split(' ')[0]}
-                    </span>
+                  <div className="relative">
                     <button
-                      onClick={handleLogout}
-                      className="p-2 text-[#94A3B8] hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
-                      title={t('nav.logout')}
+                      onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                      className="flex items-center gap-2.5 p-1.5 pl-2.5 rounded-2xl bg-[#161F30] border border-[#1E293B] hover:border-[#3B82F6]/50 transition-all cursor-pointer"
                     >
-                      <LogOut className="w-4 h-4" />
+                      <img
+                        src={user?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user?.email || 'user')}`}
+                        alt={user?.name}
+                        className="w-7 h-7 rounded-full border border-[#3B82F6]/40 object-cover"
+                      />
+                      <div className="hidden sm:block text-left pr-1">
+                        <div className="text-xs font-bold text-[#F8FAFC] max-w-[120px] truncate leading-tight">
+                          {user?.name || user?.email?.split('@')[0]}
+                        </div>
+                        <div className="text-[10px] text-[#94A3B8] max-w-[120px] truncate font-normal">
+                          {user?.email}
+                        </div>
+                      </div>
                     </button>
+
+                    {userDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-64 bg-[#111318] rounded-2xl shadow-2xl border border-[#232730] p-3 z-50 text-xs animate-in fade-in zoom-in-95 duration-150 text-[#E2E8F0] space-y-2">
+                        <div className="p-2.5 rounded-xl bg-[#0E1015] border border-[#1F232B]">
+                          <div className="font-bold text-[#F8FAFC] text-xs truncate">{user?.name}</div>
+                          <div className="text-[#94A3B8] text-[11px] truncate">{user?.email}</div>
+                          <div className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] text-[10px] font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" /> Verified Google Account
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 pt-1 border-t border-[#1F232B]">
+                          <Link
+                            to="/settings"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1C212B] transition-colors"
+                          >
+                            <Settings className="w-4 h-4 text-[#3B82F6]" />
+                            <span>Account Settings</span>
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={handleSwitchAccount}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[#06B6D4] hover:bg-[#1C212B] transition-colors font-medium text-left cursor-pointer"
+                          >
+                            <Sparkles className="w-4 h-4 text-[#06B6D4]" />
+                            <span>Switch Google Account</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors font-medium text-left cursor-pointer"
+                          >
+                            <LogOut className="w-4 h-4 text-red-400" />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Mobile Menu Toggle */}
@@ -156,12 +208,20 @@ export default function Navbar() {
                   </button>
                 </div>
               ) : (
-                <Link
-                  to="/"
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold bg-[#3B82F6] hover:bg-[#2563eb] text-white shadow-md shadow-[#3B82F6]/20 transition-all"
-                >
-                  Get Started
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/"
+                    className="inline-flex items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#161F30] border border-[#1E293B] transition-all"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/"
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] hover:from-[#2563EB] hover:to-[#0891B2] text-white shadow-md shadow-[#3B82F6]/20 transition-all"
+                  >
+                    Get Started
+                  </Link>
+                </div>
               )}
             </div>
           </div>

@@ -115,7 +115,7 @@ await itAsync('Generates 4-Week Roadmap with non-repeating modules & valid links
   curriculum.forEach(week => {
     assert.ok(!weekTitles.has(week.title), `Duplicate week title detected: ${week.title}`);
     weekTitles.add(week.title);
-    assert.strictEqual(week.tasks.length, 6, 'Each week must have 6 active study days');
+    assert.strictEqual(week.tasks.length, 7, 'Each week must have 7 active study days');
     // Day 1 has 3 links
     const day1 = week.tasks[0];
     assert.strictEqual(day1.resource_links.length, 3, 'Day 1 must have 3 curated resources');
@@ -137,9 +137,55 @@ await itAsync('Generates 8-Week Roadmap without topic duplication', async () => 
 });
 
 await itAsync('Generates Custom Domain Roadmap (e.g. Rust Systems) dynamically without empty results', async () => {
-  const curriculum = await generateRoadmapWithAI('Rust Systems Programming', 4, 2, 'Systems Engineer', 'en');
+  const curriculum = await generateRoadmapWithAI('Rust Systems Programming', 4, 2, 'Systems Engineer', 'en', 57);
   assert.strictEqual(curriculum.length, 4, 'Should generate 4 weeks for custom skill');
   assert.ok(curriculum[0].title.includes('Rust Systems Programming'), 'Should specialize in the requested domain');
+  assert.strictEqual(curriculum[0].tasks.length, 7, 'Custom domain must also generate 7 days per week');
+});
+
+// -------------------------------------------------------------
+// RULE 5: SUBTASK MINUTES SUM TO EXACT DAILY STUDY TIME
+// -------------------------------------------------------------
+console.log('\n📌 Testing Rule 5: Subtask Minutes Exact Math & 7-Day Arc');
+
+await itAsync('Subtask minutes sum to exact daily study commitment (no drift across 30, 45, 57, 90, 120m)', async () => {
+  const minuteBudgets = [30, 45, 57, 90, 120];
+  for (const mins of minuteBudgets) {
+    const curriculum = await generateRoadmapWithAI('Data Structures & Algorithms', 1, mins, 'Software Engineer', 'en', 'Intermediate');
+    const week1 = curriculum[0];
+    assert.strictEqual(week1.tasks.length, 7, 'Must have 7 days');
+    week1.tasks.forEach((task, dIdx) => {
+      const subtaskSum = (task.subtasks || []).reduce((sum, st) => sum + (st.duration_minutes || 0), 0);
+      assert.strictEqual(
+        subtaskSum,
+        mins,
+        `Day ${dIdx + 1} subtasks sum (${subtaskSum}m) must equal daily budget (${mins}m)`
+      );
+    });
+  }
+});
+
+await itAsync('All 5 standard catalogs return 7 distinct days per week with valid resources', async () => {
+  const domains = [
+    'Full Stack Web Development',
+    'Data Structures & Algorithms',
+    'Data Analyst & Business Intelligence',
+    'Python & Machine Learning',
+    'DevOps & Cloud Engineering'
+  ];
+
+  for (const domain of domains) {
+    const curriculum = await generateRoadmapWithAI(domain, 2, 2, 'Engineer', 'en', 60);
+    assert.strictEqual(curriculum.length, 2, `${domain} should return requested 2 weeks`);
+    curriculum.forEach(week => {
+      assert.strictEqual(week.tasks.length, 7, `${domain} week ${week.week_number} must have 7 days`);
+      week.tasks.forEach(task => {
+        assert.ok(task.topic, 'Task must have topic');
+        assert.ok(task.type, 'Task must have type');
+        assert.ok(Array.isArray(task.subtasks) && task.subtasks.length >= 2, 'Task must have at least 2 subtasks');
+      });
+    });
+  }
 });
 
 // -------------------------------------------------------------
@@ -152,6 +198,7 @@ console.log('='.repeat(50) + '\n');
 if (totalFailed > 0) {
   process.exit(1);
 } else {
-  console.log('🎉 ALL 7 CORE RULES STRICTLY VERIFIED!\n');
+  console.log('🎉 ALL MASTER PROMPT CORE RULES STRICTLY VERIFIED!\n');
   process.exit(0);
 }
+

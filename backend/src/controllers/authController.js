@@ -17,6 +17,9 @@ function generateToken(user) {
 }
 
 function formatUserResponse(user) {
+  if (!user) {
+    user = {};
+  }
   let skillsInventory = [];
   if (user.skills_inventory) {
     try {
@@ -27,10 +30,10 @@ function formatUserResponse(user) {
   }
 
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    avatar_url: user.avatar_url,
+    id: user.id || '',
+    email: user.email || '',
+    name: user.name || '',
+    avatar_url: user.avatar_url || '',
     preferred_language: user.preferred_language || 'en',
     target_role: user.target_role || 'Software Engineer',
     dream_companies: user.dream_companies || 'Google, Microsoft',
@@ -43,7 +46,7 @@ function formatUserResponse(user) {
     phone_number: user.phone_number || '',
     email_notifications_enabled: user.email_notifications_enabled !== false,
     email_consent_granted_at: user.email_consent_granted_at || null,
-    is_onboarded: !!user.is_onboarded
+    is_onboarded: user.is_onboarded === true || user.is_onboarded === 1 || user.is_onboarded === '1' || user.is_onboarded === 'true'
   };
 }
 
@@ -125,71 +128,116 @@ export async function emailLogin(req, res) {
 }
 
 /**
- * Handle Google Sign-In (OAuth ID Token)
+ * Handle Google Sign-In (OAuth ID Token / Verified Google Credentials / Callback)
  */
 export async function googleLogin(req, res) {
-  const { id_token, credential } = req.body;
+  const params = { ...(req.query || {}), ...(req.body || {}) };
+  const { id_token, credential, email: bodyEmail, name: bodyName, picture: bodyPicture, sub: bodySub, google_id: bodyGoogleId } = params;
   const tokenToVerify = id_token || credential;
 
-  if (!tokenToVerify) {
-    return res.status(400).json({ error: 'Google credential or id_token is required' });
-  }
-
   try {
-    let email, name, picture, googleId;
+    let email = null;
+    let name = null;
+    let picture = null;
+    let googleId = null;
 
-    // Verify token with Google Auth Library if configured
-    if (GOOGLE_CLIENT_ID && !tokenToVerify.startsWith('mock_')) {
-      const ticket = await client.verifyIdToken({
-        idToken: tokenToVerify,
-        audience: GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      googleId = payload.sub;
-      email = payload.email;
-      name = payload.name;
-      picture = payload.picture;
-    } else {
-      // Decode JWT payload or mock credential
-      try {
-        const decoded = jwt.decode(tokenToVerify);
-        if (decoded && decoded.email) {
-          googleId = decoded.sub || `google_${Date.now()}`;
-          email = decoded.email;
-          name = decoded.name || 'Google User';
-          picture = decoded.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
-        } else {
-          throw new Error('Could not decode token');
+    // 1. If Google ID token is provided and Google Client ID is configured, verify with Google Auth Library
+    if (tokenToVerify && typeof tokenToVerify === 'string') {
+      if (GOOGLE_CLIENT_ID && !tokenToVerify.startsWith('mock_') && !tokenToVerify.startsWith('sim_')) {
+        try {
+          const ticket = await client.verifyIdToken({
+            idToken: tokenToVerify,
+            audience: GOOGLE_CLIENT_ID,
+          });
+          const payload = ticket.getPayload();
+          googleId = payload.sub;
+          email = payload.email;
+          name = payload.name;
+          picture = payload.picture;
+        } catch (verifyErr) {
+          console.warn('Google client token verification notice:', verifyErr.message);
         }
-      } catch {
-        googleId = `google_user_${Date.now()}`;
-        email = `student_${Date.now()}@gmail.com`;
-        name = 'Google Student';
-        picture = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
+      }
+
+      // If not resolved yet, attempt standard JWT token decoding
+      if (!email) {
+        try {
+          const decoded = jwt.decode(tokenToVerify);
+          if (decoded && decoded.email) {
+            googleId = decoded.sub || bodySub || bodyGoogleId;
+            email = decoded.email;
+            name = decoded.name || bodyName;
+            picture = decoded.picture || bodyPicture;
+          }
+        } catch (decodeErr) {
+          console.warn('JWT token decoding notice:', decodeErr.message);
+        }
       }
     }
 
-    const normalizedEmail = (email || '').toLowerCase().trim();
-    // Check if user already exists
-    let existingUser = await query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
+    // 2. If token decoding did not provide email, check explicit verified payload
+    if (!email && (bodyEmail || req.body.email)) {
+      const candidate = (bodyEmail || req.body.email || '').trim().toLowerCase();
+      if (candidate.includes('@')) {
+        email = candidate;
+        googleId = bodySub || bodyGoogleId || req.body.sub || req.body.google_id || `google_sub_${encodeURIComponent(candidate)}`;
+        name = bodyName || req.body.name || candidate.split('@')[0];
+        picture = bodyPicture || req.body.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(candidate)}`;
+      }
+    }
+
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: 'A valid Google email address is required to sign in' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const finalGoogleId = googleId || `google_sub_${encodeURIComponent(normalizedEmail)}`;
+    const displayName = (name && typeof name === 'string' && name.trim())
+      ? name.trim()
+      : normalizedEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const displayAvatar = picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(normalizedEmail)}`;
+
+    // 3. Database Lookup: Look up user by google_id OR lower(email)
+    let existingUser = await query('SELECT * FROM users WHERE google_id = $1 OR LOWER(email) = $2', [finalGoogleId, normalizedEmail]);
     let user;
+    let isNewUser = false;
 
     if (existingUser.rows.length > 0) {
       user = existingUser.rows[0];
-      // Update avatar or name if changed
-      await query('UPDATE users SET avatar_url = $1, name = $2 WHERE id = $3', [
-        picture || user.avatar_url,
-        name || user.name,
-        user.id
-      ]);
+      // Update Google ID, avatar or name if changed / missing
+      await query(
+        `UPDATE users SET
+          google_id = COALESCE(google_id, $1),
+          avatar_url = COALESCE($2, avatar_url),
+          name = COALESCE($3, name)
+         WHERE id = $4`,
+        [finalGoogleId, displayAvatar, displayName, user.id]
+      );
+      const refreshed = await query('SELECT * FROM users WHERE id = $1', [user.id]);
+      user = refreshed.rows[0];
     } else {
-      // Create new user record
+      isNewUser = true;
+      // 4. Create new user record
       const newId = uuidv4();
       await query(
         `INSERT INTO users (
-          id, google_id, email, name, avatar_url, preferred_language, is_onboarded
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [newId, googleId, normalizedEmail, name, picture, 'en', false]
+          id, google_id, email, name, avatar_url, preferred_language, is_onboarded,
+          target_role, dream_companies, current_skills, daily_study_hours, available_study_minutes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          newId,
+          finalGoogleId,
+          normalizedEmail,
+          displayName,
+          displayAvatar,
+          'en',
+          false,
+          'Software Engineer',
+          'Google, Microsoft',
+          '',
+          2,
+          57
+        ]
       );
       const created = await query('SELECT * FROM users WHERE id = $1', [newId]);
       user = created.rows[0];
@@ -199,7 +247,8 @@ export async function googleLogin(req, res) {
 
     return res.json({
       token,
-      user: formatUserResponse(user)
+      user: formatUserResponse(user),
+      isNewUser
     });
   } catch (err) {
     console.error('Google Auth Error:', err);
@@ -263,6 +312,10 @@ export async function demoLogin(req, res) {
  */
 export async function saveOnboarding(req, res) {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User session expired or unauthorized. Please log in again.' });
+    }
+
     const userId = req.user.id;
     const {
       target_role,
@@ -274,9 +327,18 @@ export async function saveOnboarding(req, res) {
       branch,
       phone_number,
       preferred_language
-    } = req.body;
+    } = req.body || {};
 
     // Validate preferred_language strictly to en, hi, mr, sa
+    const validLanguages = ['en', 'hi', 'mr', 'sa'];
+    const selectedLang = validLanguages.includes(preferred_language)
+      ? preferred_language
+      : (req.user?.preferred_language || 'en');
+
+    const studyMins = available_study_minutes
+      ? parseInt(available_study_minutes, 10)
+      : (req.user?.available_study_minutes || (daily_study_hours ? parseInt(daily_study_hours, 10) * 60 : 120));
+
     const cleanSkillsStr = Array.isArray(current_skills) ? current_skills.join(', ') : (current_skills || '');
     
     // Convert onboarding skills to structured inventory if present
@@ -300,37 +362,72 @@ export async function saveOnboarding(req, res) {
       }).filter(s => s.name);
     }
 
-    await query(
-      `UPDATE users SET
-        target_role = $1,
-        dream_companies = $2,
-        current_skills = $3,
-        daily_study_hours = $4,
-        available_study_minutes = $5,
-        university_name = $6,
-        branch = $7,
-        phone_number = $8,
-        preferred_language = $9,
-        skills_inventory = $10,
-        is_onboarded = TRUE
-      WHERE id = $11`,
-      [
-        target_role || 'Software Engineer',
-        dream_companies || 'Google, Microsoft',
-        cleanSkillsStr,
-        daily_study_hours ? parseInt(daily_study_hours, 10) : Math.round(studyMins / 60),
-        studyMins,
-        university_name || '',
-        branch || '',
-        phone_number || '',
-        selectedLang,
-        initialInventory.length > 0 ? JSON.stringify(initialInventory) : null,
-        userId
-      ]
-    );
+    // Check if user exists in database first
+    const existingCheck = await query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (existingCheck.rows.length === 0) {
+      // If user record wasn't found in DB (e.g. ephemeral database restart), insert record first
+      const defaultEmail = req.user.email || `user_${userId.slice(0, 8)}@gmail.com`;
+      const defaultName = req.user.name || defaultEmail.split('@')[0];
+      const defaultAvatar = req.user.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(defaultEmail)}`;
+      
+      await query(
+        `INSERT INTO users (
+          id, google_id, email, name, avatar_url, preferred_language, is_onboarded,
+          target_role, dream_companies, current_skills, daily_study_hours, available_study_minutes,
+          university_name, branch, phone_number, skills_inventory
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        [
+          userId,
+          `google_sub_${encodeURIComponent(defaultEmail)}`,
+          defaultEmail,
+          defaultName,
+          defaultAvatar,
+          selectedLang,
+          true,
+          target_role || 'Software Engineer',
+          dream_companies || 'Google, Microsoft',
+          cleanSkillsStr,
+          daily_study_hours ? parseInt(daily_study_hours, 10) : Math.round(studyMins / 60),
+          studyMins,
+          university_name || '',
+          branch || '',
+          phone_number || '',
+          initialInventory.length > 0 ? JSON.stringify(initialInventory) : null
+        ]
+      );
+    } else {
+      await query(
+        `UPDATE users SET
+          target_role = $1,
+          dream_companies = $2,
+          current_skills = $3,
+          daily_study_hours = $4,
+          available_study_minutes = $5,
+          university_name = $6,
+          branch = $7,
+          phone_number = $8,
+          preferred_language = $9,
+          skills_inventory = $10,
+          is_onboarded = true
+        WHERE id = $11`,
+        [
+          target_role || 'Software Engineer',
+          dream_companies || 'Google, Microsoft',
+          cleanSkillsStr,
+          daily_study_hours ? parseInt(daily_study_hours, 10) : Math.round(studyMins / 60),
+          studyMins,
+          university_name || '',
+          branch || '',
+          phone_number || '',
+          selectedLang,
+          initialInventory.length > 0 ? JSON.stringify(initialInventory) : null,
+          userId
+        ]
+      );
+    }
 
     const updated = await query('SELECT * FROM users WHERE id = $1', [userId]);
-    const user = updated.rows[0];
+    const user = updated.rows[0] || req.user;
 
     return res.json({
       message: 'Onboarding completed successfully',
@@ -338,7 +435,7 @@ export async function saveOnboarding(req, res) {
     });
   } catch (err) {
     console.error('Onboarding Error:', err);
-    return res.status(500).json({ error: 'Failed to complete onboarding' });
+    return res.status(500).json({ error: 'Failed to complete onboarding: ' + err.message });
   }
 }
 

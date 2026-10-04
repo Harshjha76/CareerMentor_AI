@@ -6,47 +6,54 @@ import { sendEmailReminder } from '../services/emailService.js';
 export async function createRoadmap(req, res) {
   try {
     const userId = req.user.id;
-    const { skill_name, duration_weeks, daily_hours } = req.body;
+    const { skill_name, duration_weeks, daily_hours, daily_minutes, skill_level } = req.body;
 
     if (!skill_name) {
       return res.status(400).json({ error: 'Skill or domain name is required' });
     }
 
-    const weeks = parseInt(duration_weeks || '4', 10);
-    const hours = parseInt(daily_hours || req.user.daily_study_hours || '2', 10);
+    const weeks = parseInt(duration_weeks || '12', 10);
+    const numericMinutes = Number(daily_minutes) || (Number(daily_hours) ? Number(daily_hours) * 60 : (req.user.available_study_minutes || 60));
     const targetRole = req.user.target_role || 'Software Engineer';
     const language = req.user.preferred_language || 'en';
+    const skillLevel = skill_level || 'Intermediate';
 
-    console.log(`🗺️ Generating roadmap for [${skill_name}], ${weeks} weeks, ${hours}h/day in [${language}]`);
+    console.log(`🗺️ Generating roadmap for [${skill_name}], ${weeks} weeks, ${numericMinutes}m/day in [${language}]`);
 
-    const curriculum = await generateRoadmapWithAI(skill_name, weeks, hours, targetRole, language);
+    const curriculum = await generateRoadmapWithAI(skill_name, weeks, numericMinutes, targetRole, language, skillLevel);
 
     const roadmapId = uuidv4();
+    const hoursEquivalent = Math.max(1, Math.round(numericMinutes / 60));
     await query(
       `INSERT INTO roadmaps (id, user_id, skill_name, duration_weeks, daily_hours, target_role, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [roadmapId, userId, skill_name, weeks, hours, targetRole, 'active']
+      [roadmapId, userId, skill_name, weeks, hoursEquivalent, targetRole, 'active']
     );
 
-    // Insert weekly tasks
+    // Insert weekly tasks with rich daily payload
     for (const week of curriculum) {
       for (const task of week.tasks) {
         const taskId = uuidv4();
-        let payload = task.resource_links || [];
-        if (task.day_number === 1) {
-          payload = {
-            links: task.resource_links || [],
+        const payload = {
+          topic: task.topic || task.task_description,
+          type: task.type || 'learn',
+          time: task.time || `${numericMinutes} min Session`,
+          duration_minutes: task.duration_minutes || numericMinutes,
+          done_when: task.done_when || '',
+          subtasks: task.subtasks || [],
+          links: task.resource_links || [],
+          ...(task.day_number === 1 ? {
             week_title: week.title,
             milestone: week.milestone,
             milestone_project: week.milestone_project || null,
             time_distribution: week.time_distribution || {
               theory_percent: 25,
-              dsa_practice_percent: 40,
+              practical_build_percent: 40,
               project_percent: 25,
               revision_percent: 10
             }
-          };
-        }
+          } : {})
+        };
 
         await query(
           `INSERT INTO roadmap_tasks (
@@ -74,7 +81,7 @@ export async function createRoadmap(req, res) {
           toEmail: req.user.email,
           emailType: 'goal',
           subject: `🗺️ New Study Roadmap Activated: ${skill_name} (${weeks} Weeks)`,
-          textContent: `Hi ${req.user.name},\n\nYour new comprehensive study roadmap for ${skill_name} is active (${weeks} weeks, ${hours}h/day).\n\nStart with Week 1 Day 1 foundational tasks in your roadmap to maintain your streak!\n\n- CareerMentor AI Agent`,
+          textContent: `Hi ${req.user.name},\n\nYour new comprehensive study roadmap for ${skill_name} is active (${weeks} weeks, ${numericMinutes}m/day).\n\nStart with Week 1 Day 1 foundational tasks in your roadmap to maintain your streak!\n\n- CareerMentor AI Agent`,
           htmlContent: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 16px; background: #0b1220; color: #f8fafc;">
               <div style="text-align: center; margin-bottom: 24px;">
@@ -84,7 +91,7 @@ export async function createRoadmap(req, res) {
                 <h1 style="color: #ffffff; margin: 16px 0 6px 0; font-size: 20px;">
                   ${skill_name} Mastery Roadmap
                 </h1>
-                <p style="color: #94a3b8; font-size: 13.5px; margin: 0;">Plan: <strong>${weeks} Weeks</strong> at <strong>${hours} hours/day</strong></p>
+                <p style="color: #94a3b8; font-size: 13.5px; margin: 0;">Plan: <strong>${weeks} Weeks</strong> at <strong>${numericMinutes} minutes/day</strong></p>
               </div>
               <div style="background: #111c30; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
                 <h3 style="color: #60a5fa; font-size: 14px; margin: 0 0 8px 0;">🎯 Week 1 Focus:</h3>
@@ -108,7 +115,7 @@ export async function createRoadmap(req, res) {
       roadmapId,
       skill_name,
       duration_weeks: weeks,
-      daily_hours: hours,
+      daily_minutes: numericMinutes,
       curriculum
     });
   } catch (err) {
@@ -145,6 +152,12 @@ export async function getUserRoadmaps(req, res) {
         let weekTitle = null;
         let milestone = null;
         let milestoneProject = null;
+        let topic = null;
+        let type = 'learn';
+        let time = '60 min Session';
+        let durationMinutes = 60;
+        let doneWhen = '';
+        let subtasks = [];
 
         if (typeof t.resource_links === 'string') {
           try {
@@ -156,6 +169,12 @@ export async function getUserRoadmaps(req, res) {
               weekTitle = parsed.week_title || null;
               milestone = parsed.milestone || null;
               milestoneProject = parsed.milestone_project || null;
+              topic = parsed.topic || null;
+              type = parsed.type || 'learn';
+              time = parsed.time || '60 min Session';
+              durationMinutes = parsed.duration_minutes || 60;
+              doneWhen = parsed.done_when || '';
+              subtasks = parsed.subtasks || [];
               if (parsed.time_distribution) {
                 detectedTimeDistribution = parsed.time_distribution;
               }
@@ -181,6 +200,12 @@ export async function getUserRoadmaps(req, res) {
 
         weeksMap[t.week_number].tasks.push({
           ...t,
+          topic: topic || t.task_description,
+          type: type || 'learn',
+          time: time || '60 min Session',
+          duration_minutes: durationMinutes,
+          done_when: doneWhen,
+          subtasks: subtasks,
           resource_links: links,
           is_completed: !!t.is_completed
         });
@@ -193,7 +218,7 @@ export async function getUserRoadmaps(req, res) {
         completedTasks,
         time_distribution: detectedTimeDistribution || {
           theory_percent: 25,
-          dsa_practice_percent: 40,
+          practical_build_percent: 40,
           project_percent: 25,
           revision_percent: 10
         },
@@ -222,6 +247,127 @@ export async function toggleTaskComplete(req, res) {
     return res.json({ message: 'Task updated', taskId, is_completed });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update task: ' + err.message });
+  }
+}
+
+export async function toggleRoadmapSubtask(req, res) {
+  try {
+    const { taskId } = req.params;
+    const { subtaskId, is_completed } = req.body;
+
+    const taskRes = await query(`SELECT * FROM roadmap_tasks WHERE id = $1`, [taskId]);
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const task = taskRes.rows[0];
+    let payload = {};
+    try {
+      payload = JSON.parse(task.resource_links || '{}');
+    } catch {}
+
+    const subtasks = payload.subtasks || [];
+    let updatedSubtasks = subtasks.map(st => {
+      if (st.id === subtaskId) {
+        return { ...st, is_completed: !!is_completed };
+      }
+      return st;
+    });
+
+    const allSubtasksDone = updatedSubtasks.length > 0 && updatedSubtasks.every(st => !!st.is_completed);
+    payload.subtasks = updatedSubtasks;
+
+    const taskCompleted = allSubtasksDone || !!task.is_completed;
+    const completedAt = taskCompleted ? (task.completed_at || new Date().toISOString()) : null;
+
+    await query(
+      `UPDATE roadmap_tasks SET resource_links = $1, is_completed = $2, completed_at = $3 WHERE id = $4`,
+      [JSON.stringify(payload), taskCompleted, completedAt, taskId]
+    );
+
+    return res.json({ success: true, taskId, subtaskId, is_completed, task_completed: taskCompleted, subtasks: updatedSubtasks });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to toggle subtask: ' + err.message });
+  }
+}
+
+export async function regenerateWeekRoadmap(req, res) {
+  try {
+    const userId = req.user.id;
+    const { roadmapId, weekNumber, skillName, dailyMinutes = 60, skillLevel = 'Intermediate' } = req.body;
+
+    if (!roadmapId || !weekNumber) {
+      return res.status(400).json({ error: 'roadmapId and weekNumber are required' });
+    }
+
+    const roadmapRes = await query(`SELECT * FROM roadmaps WHERE id = $1 AND user_id = $2`, [roadmapId, userId]);
+    if (roadmapRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Roadmap not found' });
+    }
+
+    const roadmap = roadmapRes.rows[0];
+    const skill = skillName || roadmap.skill_name;
+    const totalWeeks = roadmap.duration_weeks || 12;
+    const targetRole = roadmap.target_role || req.user.target_role || 'Software Engineer';
+    const language = req.user.preferred_language || 'en';
+
+    const { regenerateSingleWeekWithAI } = await import('../services/aiService.js');
+    const weekData = await regenerateSingleWeekWithAI({
+      skillName: skill,
+      weekNumber: Number(weekNumber),
+      totalWeeks,
+      dailyMinutes: Number(dailyMinutes) || (roadmap.daily_hours * 60) || 60,
+      targetRole,
+      language,
+      skillLevel
+    });
+
+    // Delete existing tasks for this week
+    await query(`DELETE FROM roadmap_tasks WHERE roadmap_id = $1 AND week_number = $2`, [roadmapId, Number(weekNumber)]);
+
+    // Insert new tasks
+    for (const task of weekData.tasks) {
+      const taskId = uuidv4();
+      const payload = {
+        topic: task.topic || task.task_description,
+        type: task.type || 'learn',
+        time: task.time || `${dailyMinutes} min Session`,
+        duration_minutes: task.duration_minutes || dailyMinutes,
+        done_when: task.done_when || '',
+        subtasks: task.subtasks || [],
+        links: task.resource_links || [],
+        ...(task.day_number === 1 ? {
+          week_title: weekData.title,
+          milestone: weekData.milestone,
+          milestone_project: weekData.milestone_project || null,
+          time_distribution: weekData.time_distribution || null
+        } : {})
+      };
+
+      await query(
+        `INSERT INTO roadmap_tasks (
+          id, roadmap_id, week_number, day_number, task_description, resource_links, is_completed
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          taskId,
+          roadmapId,
+          Number(weekNumber),
+          task.day_number,
+          task.task_description,
+          JSON.stringify(payload),
+          false
+        ]
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: `Week ${weekNumber} regenerated successfully`,
+      week: weekData
+    });
+  } catch (err) {
+    console.error('Regenerate Week Error:', err);
+    return res.status(500).json({ error: 'Failed to regenerate week: ' + err.message });
   }
 }
 

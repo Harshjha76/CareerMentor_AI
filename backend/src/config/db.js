@@ -109,12 +109,15 @@ export async function initDB() {
       target_role VARCHAR(255),
       dream_companies TEXT,
       current_skills TEXT,
+      skills_inventory TEXT,
       daily_study_hours INTEGER DEFAULT 2,
       available_study_minutes INTEGER DEFAULT 120,
       university_name VARCHAR(255),
       branch VARCHAR(255),
       phone_number VARCHAR(50),
       preferred_language VARCHAR(10) DEFAULT 'en',
+      email_notifications_enabled BOOLEAN DEFAULT TRUE,
+      email_consent_granted_at TIMESTAMP,
       is_onboarded BOOLEAN DEFAULT FALSE
     );`,
 

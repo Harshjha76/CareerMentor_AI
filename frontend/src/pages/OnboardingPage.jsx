@@ -16,7 +16,8 @@ import {
   GraduationCap,
   Phone,
   BookOpen,
-  Mail
+  Mail,
+  AlertCircle
 } from 'lucide-react';
 
 const COMMON_SKILLS = [
@@ -27,12 +28,13 @@ const COMMON_SKILLS = [
 ];
 
 export default function OnboardingPage() {
-  const { user, completeOnboarding } = useAuth();
+  const { user, completeOnboarding, logout } = useAuth();
   const { t, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Form State
   const [targetRole, setTargetRole] = useState(user?.target_role || 'Software Engineer');
@@ -62,6 +64,7 @@ export default function OnboardingPage() {
 
   const handleComplete = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
       await completeOnboarding({
         target_role: targetRole,
@@ -76,7 +79,8 @@ export default function OnboardingPage() {
       });
       navigate('/dashboard');
     } catch (err) {
-      alert('Failed to save profile: ' + err.message);
+      console.error('Onboarding Save Error:', err);
+      setErrorMsg(err.message || 'Failed to complete onboarding. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -127,9 +131,25 @@ export default function OnboardingPage() {
                 </h3>
                 <p className="text-xs text-[#94A3B8]">Define your primary career target, college background, and contact info.</p>
                 {user?.email && (
-                  <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#172033] border border-[#3B82F6]/30 text-xs text-[#06B6D4]">
-                    <Mail className="w-3.5 h-3.5 text-[#3B82F6]" />
-                    <span>Agent notifications linked to: <strong className="text-[#F8FAFC] font-semibold">{user.email}</strong></span>
+                  <div className="mt-3 flex items-center justify-between p-3.5 rounded-2xl bg-[#161F30] border border-[#3B82F6]/30 text-xs">
+                    <div className="flex items-center gap-2.5 text-[#06B6D4] min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-[#3B82F6] flex items-center justify-center text-white font-bold text-[10px] shrink-0">
+                        {(user.name || user.email).charAt(0).toUpperCase()}
+                      </div>
+                      <span className="truncate">
+                        Agent notifications linked to: <strong className="text-[#F8FAFC] font-semibold">{user.email}</strong> <span className="text-[10px] text-[#94A3B8] font-normal">(read-only)</span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logout();
+                        navigate('/');
+                      }}
+                      className="text-xs font-semibold text-[#60A5FA] hover:text-white underline ml-3 shrink-0 cursor-pointer"
+                    >
+                      Switch account
+                    </button>
                   </div>
                 )}
               </div>
@@ -343,6 +363,13 @@ export default function OnboardingPage() {
                   })}
                 </div>
               </div>
+
+              {errorMsg && (
+                <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span className="flex-1">{errorMsg}</span>
+                </div>
+              )}
             </div>
           )}
 
