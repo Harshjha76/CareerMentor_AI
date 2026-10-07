@@ -134,6 +134,8 @@ export default function RoadmapPage() {
   const [skillInput, setSkillInput] = useState(goal.domain || 'Full Stack Web Development');
   const [durationInput, setDurationInput] = useState(goal.duration_weeks || 12);
   const [dailyMinsInput, setDailyMinsInput] = useState(goal.daily_minutes || 60);
+  const [skillLevel, setSkillLevel] = useState(goal.level || 'Intermediate');
+  const [targetRoleInput, setTargetRoleInput] = useState(user?.target_role || 'Software Engineer');
   const [loading, setLoading] = useState(true);
   const [activeRoadmap, setActiveRoadmap] = useState(null);
   const [expandedWeeks, setExpandedWeeks] = useState({ 1: true });
@@ -147,7 +149,8 @@ export default function RoadmapPage() {
     if (goal.domain && goal.domain !== skillInput) setSkillInput(goal.domain);
     if (goal.duration_weeks && goal.duration_weeks !== durationInput) setDurationInput(goal.duration_weeks);
     if (goal.daily_minutes && goal.daily_minutes !== dailyMinsInput) setDailyMinsInput(goal.daily_minutes);
-  }, [goal.domain, goal.duration_weeks, goal.daily_minutes]);
+    if (goal.level && goal.level !== skillLevel) setSkillLevel(goal.level);
+  }, [goal.domain, goal.duration_weeks, goal.daily_minutes, goal.level]);
 
   useEffect(() => {
     loadRoadmaps();
@@ -168,7 +171,8 @@ export default function RoadmapPage() {
           skill_name: goal.domain,
           duration_weeks: goal.duration_weeks || 12,
           daily_minutes: goal.daily_minutes || 60,
-          skill_level: goal.level || 'Intermediate'
+          skill_level: goal.level || skillLevel || 'Intermediate',
+          target_role: targetRoleInput || user?.target_role || 'Software Engineer'
         });
         const fresh = await api.roadmap.getAll();
         setActiveRoadmap(fresh.roadmaps?.[0] || null);
@@ -212,6 +216,7 @@ export default function RoadmapPage() {
         domain: skillInput.trim(),
         duration_weeks: durationInput,
         daily_minutes: dailyMinsInput,
+        level: skillLevel,
         current_week: 1
       });
 
@@ -219,7 +224,8 @@ export default function RoadmapPage() {
         skill_name: skillInput.trim(),
         duration_weeks: durationInput,
         daily_minutes: dailyMinsInput,
-        skill_level: goal.level || 'Intermediate'
+        skill_level: skillLevel,
+        target_role: targetRoleInput.trim() || 'Software Engineer'
       });
       await loadRoadmaps();
       await loadStreakData();
@@ -517,11 +523,39 @@ export default function RoadmapPage() {
               ))}
             </div>
 
-            {/* Timeline & Daily Commitment Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#1E293B]">
+            {/* 4-Pillar Collection Parameters: Target Role, Skill Level, Timeline & Daily Commitment */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-[#1E293B]">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#94A3B8]">
-                  Curriculum Timeline: <strong className="text-[#F8FAFC]">{durationInput} Weeks</strong>
+                  Target Role
+                </label>
+                <input
+                  type="text"
+                  value={targetRoleInput}
+                  onChange={(e) => setTargetRoleInput(e.target.value)}
+                  placeholder="e.g. Software Engineer"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090D16] border border-[#1E293B] text-xs font-semibold text-[#F8FAFC] outline-none focus:border-[#3B82F6]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8]">
+                  Current Skill Level
+                </label>
+                <select
+                  value={skillLevel}
+                  onChange={(e) => setSkillLevel(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090D16] border border-[#1E293B] text-xs font-semibold text-[#F8FAFC] outline-none focus:border-[#3B82F6]"
+                >
+                  <option value="Beginner">Beginner (Foundations)</option>
+                  <option value="Intermediate">Intermediate (Practicing)</option>
+                  <option value="Advanced">Advanced (Production / Staff)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8]">
+                  Duration: <strong className="text-[#F8FAFC]">{durationInput} Weeks</strong>
                 </label>
                 <select
                   value={durationInput}
@@ -535,12 +569,13 @@ export default function RoadmapPage() {
                   <option value={16}>16 Weeks (4 Months Comprehensive)</option>
                   <option value={24}>24 Weeks (6 Months Deep Track)</option>
                   <option value={48}>48 Weeks (12 Months Masterclass)</option>
+                  <option value={52}>52 Weeks (Full Year Engineering Arc)</option>
                 </select>
               </div>
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-semibold text-[#94A3B8]">
-                  <span>Daily Study Commitment</span>
+                  <span>Daily Study Time</span>
                   <span className="text-[#06B6D4] font-bold">{dailyMinsInput} mins/day</span>
                 </div>
                 <input

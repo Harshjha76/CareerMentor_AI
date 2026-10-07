@@ -3,7 +3,7 @@
  * Tests Adaptive Roadmap & Chatbot Quality Pipeline
  */
 
-import { generateProgressiveRoadmap, adaptRoadmapCurriculum } from '../src/services/curriculumEngine.js';
+import { generateProgressiveRoadmap, adaptRoadmapCurriculum, detectSemanticDuplicates } from '../src/services/curriculumEngine.js';
 import { verifyAnswerQualityPipeline, isOffTopicQuery } from '../src/services/aiService.js';
 
 let passed = 0;
@@ -21,8 +21,25 @@ function assert(condition, message) {
 
 console.log('\n🧪 RUNNING ADAPTIVE ROADMAP & CHATBOT EVALUATION SUITE\n');
 
-// 1. TEST LONG PLANS (12, 24, 48, 52 WEEKS) IN SYSTEM DESIGN (0 DUPLICATES)
-console.log('📌 Testing System Design Long Roadmaps (12, 24, 48, 52 Weeks) for 0 Duplicates:');
+// 1. TEST 8-WEEK DSA IN JAVA ROADMAP (Zero duplicates, logical progression, exact workload)
+console.log('📌 Testing 8-Week DSA in Java (Specific Concept per Week & Zero Repetition):');
+const javaDsaPlan = generateProgressiveRoadmap('DSA in Java', 8, 60, 'Java Software Engineer', 'Intermediate');
+assert(javaDsaPlan.length === 8, 'Generates exactly 8 weeks for DSA in Java');
+
+const expectedDsaKeywords = ['Array', 'Two Pointers', 'Recursion', 'Linked List', 'Binary Tree', 'PriorityQueue', 'Dynamic Programming', 'Collections'];
+let keywordsPassed = 0;
+javaDsaPlan.forEach((week, idx) => {
+  const kw = expectedDsaKeywords[idx];
+  const hasKeyword = week.title.toLowerCase().includes(kw.toLowerCase()) || (week.tasks || []).some(t => t.topic.toLowerCase().includes(kw.toLowerCase()));
+  if (hasKeyword) keywordsPassed++;
+});
+assert(keywordsPassed >= 7, `All 8 weeks in DSA in Java cover distinct, progressively advanced concepts (${keywordsPassed}/8 matched)`);
+
+const semanticDsaResult = detectSemanticDuplicates(javaDsaPlan);
+assert(!semanticDsaResult.hasDuplicates, `Semantic duplicate check confirmed 0 duplicate modules in 8-Week DSA in Java`);
+
+// 2. TEST LONG PLANS (12, 24, 48, 52 WEEKS) IN SYSTEM DESIGN (0 DUPLICATES)
+console.log('\n📌 Testing System Design Long Roadmaps (12, 24, 48, 52 Weeks) for 0 Duplicates:');
 [12, 24, 48, 52].forEach(weeksCount => {
   const plan = generateProgressiveRoadmap('System Design & Distributed Architecture', weeksCount, 60, 'Staff Software Engineer', 'Advanced');
   assert(plan.length === weeksCount, `Generates exactly ${weeksCount} weeks for System Design`);

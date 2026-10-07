@@ -113,12 +113,51 @@ export default function DashboardPage() {
   const activeRoadmap = roadmaps.find(r => r.skill_name?.toLowerCase() === goal.domain?.toLowerCase()) || roadmaps[0];
   const roadmapProgress = activeRoadmap?.progress || 0;
 
-  // Knowledge gap calculations
-  const knownSkillNames = userSkills.map(s => s.name.toLowerCase());
-  const sampleTargetReqs = ['Python', 'SQL', 'Docker', 'REST APIs', 'Git', 'System Design', 'React'];
-  const matchedReqs = sampleTargetReqs.filter(r => knownSkillNames.some(k => k.includes(r.toLowerCase()) || r.toLowerCase().includes(k)));
-  const compatibilityPct = userSkills.length === 0 ? 0 : Math.min(95, Math.max(20, Math.round((matchedReqs.length / sampleTargetReqs.length) * 100)));
+  // Knowledge gap calculations using genuine user verified skills vs target role requirements
+  const ROLE_SKILL_REQUIREMENTS = {
+    'software engineer': ['Data Structures & Algorithms', 'System Design', 'Git', 'SQL', 'REST APIs', 'Clean Architecture', 'Testing & CI/CD'],
+    'frontend developer': ['React', 'JavaScript / TypeScript', 'HTML5 & CSS3', 'Tailwind CSS', 'REST / GraphQL APIs', 'State Management', 'Web Performance'],
+    'backend developer': ['Node.js / Express', 'PostgreSQL / SQL', 'REST & gRPC APIs', 'Redis Caching', 'Docker', 'Authentication & JWT', 'System Design'],
+    'full stack developer': ['React / Frontend', 'Node.js / Backend', 'PostgreSQL / MongoDB', 'REST APIs', 'Docker', 'Git / CI-CD', 'System Design'],
+    'data scientist': ['Python', 'Pandas & NumPy', 'Machine Learning', 'SQL', 'Data Visualization', 'Deep Learning', 'Statistics'],
+    'data analyst': ['SQL', 'Excel / Sheets', 'Tableau / PowerBI', 'Python', 'Data Cleaning', 'Business Analytics', 'Statistics'],
+    'devops engineer': ['Docker & Containers', 'Kubernetes', 'CI/CD Pipelines', 'AWS / Cloud', 'Linux / Bash', 'Terraform', 'Monitoring & Observability'],
+    'java developer': ['Core Java & OOP', 'Data Structures & Algorithms', 'Spring Boot', 'SQL & Hibernate', 'REST APIs', 'Microservices', 'Git & Maven'],
+    'python developer': ['Python Core', 'Data Structures & Algorithms', 'FastAPI / Django', 'PostgreSQL / SQL', 'Docker', 'REST APIs', 'Git']
+  };
+
+  const allVerifiedSkillStrings = [
+    ...userSkills.map(s => s.name || s.skill_name || ''),
+    ...(user?.current_skills ? user.current_skills.split(',').map(s => s.trim()) : []),
+    ...(Array.isArray(user?.skills_inventory) ? user.skills_inventory.map(s => typeof s === 'string' ? s : s.name || '') : [])
+  ].filter(Boolean);
+
+  const uniqueVerifiedSkills = Array.from(new Set(allVerifiedSkillStrings.map(s => s.toLowerCase())));
+  const targetRoleKey = (user?.target_role || 'Software Engineer').toLowerCase();
+  const matchedRoleKey = Object.keys(ROLE_SKILL_REQUIREMENTS).find(k => targetRoleKey.includes(k) || k.includes(targetRoleKey)) || 'software engineer';
+  const targetRequiredSkills = ROLE_SKILL_REQUIREMENTS[matchedRoleKey];
+
+  const matchedSkills = targetRequiredSkills.filter(req => {
+    const reqClean = req.toLowerCase();
+    return uniqueVerifiedSkills.some(userSkill => {
+      return userSkill.includes(reqClean) || reqClean.includes(userSkill) ||
+             (reqClean.includes('dsa') && (userSkill.includes('algorithm') || userSkill.includes('data structure') || userSkill.includes('leetcode'))) ||
+             (reqClean.includes('sql') && (userSkill.includes('postgres') || userSkill.includes('mysql') || userSkill.includes('database'))) ||
+             (reqClean.includes('react') && userSkill.includes('frontend')) ||
+             (reqClean.includes('node') && userSkill.includes('backend'));
+    });
+  });
+
+  const rawMatchPct = Math.round((matchedSkills.length / Math.max(1, targetRequiredSkills.length)) * 100);
+  const compatibilityPct = uniqueVerifiedSkills.length === 0 ? 0 : Math.max(25, rawMatchPct);
   const gapPct = 100 - compatibilityPct;
+
+  const studyCategories = [
+    { name: 'Algorithms & DSA', pct: 0.45, color: '#8B5CF6', hoverColor: '#A78BFA', bg: 'bg-[#8B5CF6]/15', text: 'text-[#A78BFA]', offset: 0, dash: '45 55' },
+    { name: 'Projects & APIs', pct: 0.25, color: '#06B6D4', hoverColor: '#22D3EE', bg: 'bg-[#06B6D4]/15', text: 'text-[#06B6D4]', offset: -45, dash: '25 75' },
+    { name: 'System Design', pct: 0.15, color: '#F59E0B', hoverColor: '#FBBF24', bg: 'bg-amber-500/15', text: 'text-amber-400', offset: -70, dash: '15 85' },
+    { name: 'CS Core & Review', pct: 0.15, color: '#3B82F6', hoverColor: '#60A5FA', bg: 'bg-[#3B82F6]/15', text: 'text-[#60A5FA]', offset: -85, dash: '15 85' }
+  ];
 
   return (
     <div className="min-h-screen bg-[#090D16] text-[#F8FAFC] pb-16">
@@ -415,7 +454,7 @@ export default function DashboardPage() {
         {/* Interactive Charts: Study Time Allocation & Knowledge Gap Donut */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Chart 1: Study Time Allocation */}
-          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-7 shadow-xl space-y-5">
+          <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-7 shadow-xl space-y-5 relative overflow-visible">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-[#F8FAFC] flex items-center gap-2">
@@ -425,47 +464,93 @@ export default function DashboardPage() {
                 <p className="text-xs text-[#94A3B8]">Session budget: {availableMinutes} mins/day</p>
               </div>
               <span className="text-xs font-bold text-[#60A5FA] bg-[#3B82F6]/15 px-2.5 py-1 rounded-full border border-[#3B82F6]/30">
-                Balanced Ratio
+                Today's Budget
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-              <div className="relative w-44 h-44 shrink-0">
-                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#8B5CF6" strokeWidth={hoveredStudyIndex === 0 ? "6.5" : "4.5"} strokeDasharray="45 55" strokeDashoffset="0" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(0)} onMouseLeave={() => setHoveredStudyIndex(null)} />
-                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#06B6D4" strokeWidth={hoveredStudyIndex === 1 ? "6.5" : "4.5"} strokeDasharray="25 75" strokeDashoffset="-45" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(1)} onMouseLeave={() => setHoveredStudyIndex(null)} />
-                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#F59E0B" strokeWidth={hoveredStudyIndex === 2 ? "6.5" : "4.5"} strokeDasharray="15 85" strokeDashoffset="-70" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(2)} onMouseLeave={() => setHoveredStudyIndex(null)} />
-                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3B82F6" strokeWidth={hoveredStudyIndex === 3 ? "6.5" : "4.5"} strokeDasharray="15 85" strokeDashoffset="-85" className="cursor-pointer transition-all" onMouseEnter={() => setHoveredStudyIndex(3)} onMouseLeave={() => setHoveredStudyIndex(null)} />
+            <div className="flex flex-col sm:flex-row items-center justify-around gap-6 relative">
+              {/* Donut Chart SVG with Non-Clipping Center and Hover Effects */}
+              <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
+                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90 overflow-visible">
+                  {studyCategories.map((cat, idx) => (
+                    <circle
+                      key={idx}
+                      cx="18"
+                      cy="18"
+                      r="15.915"
+                      fill="transparent"
+                      stroke={hoveredStudyIndex === idx ? cat.hoverColor : cat.color}
+                      strokeWidth={hoveredStudyIndex === idx ? "7" : "5"}
+                      strokeDasharray={cat.dash}
+                      strokeDashoffset={cat.offset}
+                      className="cursor-pointer transition-all duration-200"
+                      onMouseEnter={() => setHoveredStudyIndex(idx)}
+                      onMouseLeave={() => setHoveredStudyIndex(null)}
+                    />
+                  ))}
                 </svg>
 
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                  <span className="text-xl font-black text-[#F8FAFC]">{availableMinutes}m</span>
-                  <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Daily Target</span>
+                {/* Center Dynamic Label or Active Category Tooltip */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2 z-20">
+                  {hoveredStudyIndex !== null ? (
+                    <div className="animate-in fade-in duration-150">
+                      <span className="text-2xl font-black text-[#F8FAFC]">
+                        {Math.round(availableMinutes * studyCategories[hoveredStudyIndex].pct)}m
+                      </span>
+                      <div className="text-[11px] font-bold text-[#60A5FA] uppercase tracking-wider">
+                        {Math.round(studyCategories[hoveredStudyIndex].pct * 100)}% Focus
+                      </div>
+                      <span className="text-[9.5px] text-[#94A3B8] line-clamp-1 max-w-[110px]">
+                        {studyCategories[hoveredStudyIndex].name}
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-2xl font-black text-[#F8FAFC]">{availableMinutes}m</span>
+                      <span className="text-[10px] uppercase font-extrabold text-[#94A3B8] tracking-wider block">
+                        Daily Target
+                      </span>
+                      <span className="text-[9px] text-[#64748B] block mt-0.5">Today's Session</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-2 w-full sm:w-auto text-xs">
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
-                  <span className="text-[#A78BFA] font-bold">Algorithms & DSA</span>
-                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.45)}m (45%)</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
-                  <span className="text-[#06B6D4] font-bold">Projects & APIs</span>
-                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.25)}m (25%)</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
-                  <span className="text-amber-400 font-bold">System Design</span>
-                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)}m (15%)</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
-                  <span className="text-[#60A5FA] font-bold">CS Core & Review</span>
-                  <span className="font-extrabold text-[#F8FAFC]">{Math.round(availableMinutes * 0.15)}m (15%)</span>
-                </div>
+              {/* Interactive Legend List with Non-Overlapping Tooltips */}
+              <div className="space-y-2 w-full sm:w-auto text-xs z-10">
+                {studyCategories.map((cat, idx) => {
+                  const isHovered = hoveredStudyIndex === idx;
+                  return (
+                    <div
+                      key={idx}
+                      onMouseEnter={() => setHoveredStudyIndex(idx)}
+                      onMouseLeave={() => setHoveredStudyIndex(null)}
+                      className={`flex items-center justify-between gap-4 p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        isHovered
+                          ? 'bg-[#1E293B] border-[#3B82F6] shadow-md -translate-y-0.5'
+                          : 'bg-[#090D16] border-[#1E293B] hover:border-[#334155]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }}></span>
+                        <span className={`${cat.text} font-bold`}>{cat.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-extrabold text-[#F8FAFC]">
+                          {Math.round(availableMinutes * cat.pct)}m
+                        </span>
+                        <span className="text-[10px] text-[#94A3B8] ml-1.5 font-medium">
+                          ({Math.round(cat.pct * 100)}%)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Chart 2: Knowledge Gap Donut */}
+          {/* Chart 2: Knowledge Gap Alignment Donut */}
           <div className="bg-[#111827] rounded-3xl border border-[#1E293B] p-6 sm:p-7 shadow-xl space-y-5">
             <div className="flex items-center justify-between">
               <div>
@@ -481,30 +566,65 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-              <div className="relative w-44 h-44 shrink-0">
-                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10B981" strokeWidth="5.5" strokeDasharray={`${compatibilityPct} ${gapPct}`} strokeDashoffset="0" />
-                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#F59E0B" strokeWidth="5.5" strokeDasharray={`${gapPct} ${compatibilityPct}`} strokeDashoffset={`-${compatibilityPct}`} />
+              <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
+                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90 overflow-visible">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.915"
+                    fill="transparent"
+                    stroke="#10B981"
+                    strokeWidth={hoveredGapIndex === 0 ? "7" : "5.5"}
+                    strokeDasharray={`${compatibilityPct} ${gapPct}`}
+                    strokeDashoffset="0"
+                    className="cursor-pointer transition-all duration-200"
+                    onMouseEnter={() => setHoveredGapIndex(0)}
+                    onMouseLeave={() => setHoveredGapIndex(null)}
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.915"
+                    fill="transparent"
+                    stroke="#F59E0B"
+                    strokeWidth={hoveredGapIndex === 1 ? "7" : "5.5"}
+                    strokeDasharray={`${gapPct} ${compatibilityPct}`}
+                    strokeDashoffset={`-${compatibilityPct}`}
+                    className="cursor-pointer transition-all duration-200"
+                    onMouseEnter={() => setHoveredGapIndex(1)}
+                    onMouseLeave={() => setHoveredGapIndex(null)}
+                  />
                 </svg>
 
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                  <span className="text-xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
-                  <span className="text-[10px] uppercase font-bold text-[#94A3B8]">Role Fit</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2 z-20">
+                  {hoveredGapIndex === 1 ? (
+                    <div>
+                      <span className="text-2xl font-black text-amber-400">{gapPct}%</span>
+                      <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider block">Skill Gap</span>
+                      <span className="text-[9px] text-[#94A3B8] block">High-Yield Areas</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-2xl font-black text-[#F8FAFC]">{compatibilityPct}%</span>
+                      <span className="text-[10px] uppercase font-bold text-[#10B981] tracking-wider block">Role Fit</span>
+                      <span className="text-[9px] text-[#94A3B8] block">{matchedSkills.length}/{targetRequiredSkills.length} Skills</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="space-y-2 w-full sm:w-auto text-xs">
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
+              <div className="space-y-2 w-full sm:w-auto text-xs z-10">
+                <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#090D16] border border-[#1E293B]">
                   <span className="text-emerald-400 font-bold">Verified Known Skills</span>
-                  <span className="font-extrabold text-[#F8FAFC]">{userSkills.length} Skills</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{uniqueVerifiedSkills.length} Skills</span>
                 </div>
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#090D16] border border-[#1E293B]">
-                  <span className="text-amber-400 font-bold">High-Yield Gaps</span>
-                  <span className="font-extrabold text-[#F8FAFC]">{Math.max(1, 8 - userSkills.length)} Gaps</span>
+                <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#090D16] border border-[#1E293B]">
+                  <span className="text-amber-400 font-bold">Target Role Coverage</span>
+                  <span className="font-extrabold text-[#F8FAFC]">{matchedSkills.length} of {targetRequiredSkills.length} Required</span>
                 </div>
                 <Link
                   to="/what-i-know"
-                  className="w-full text-center block py-1.5 rounded-xl bg-[#172033] hover:bg-[#1e2d47] text-xs font-bold text-[#60A5FA] border border-[#3B82F6]/30 transition-all"
+                  className="w-full text-center block py-2 rounded-xl bg-[#172033] hover:bg-[#1e2d47] text-xs font-bold text-[#60A5FA] border border-[#3B82F6]/30 transition-all cursor-pointer"
                 >
                   Manage Knowledge Vault →
                 </Link>
