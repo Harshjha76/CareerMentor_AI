@@ -78,12 +78,46 @@ console.log('\n📌 Testing System Design Long Roadmaps (12, 24, 48, 52 Weeks) f
   assert(exactMinuteMath, `${weeksCount}-Week System Design subtask durations sum exactly to 60 minutes`);
 });
 
-// 2. TEST MULTIPLE DOMAINS (DSA, Python, AI/ML, Web Dev, Finance, Quantum Computing)
+// 2. TEST SPECIFIC DOMAINS: 8-Week DSA in Java, 6-Week UI/UX, 12-Week Data Science
+console.log('\n📌 Testing Mandatory Domains (8-Week DSA in Java, 6-Week UI/UX, 12-Week Data Science):');
+
+// A. 6-Week UI/UX
+const uiuxPlan = generateProgressiveRoadmap('UI/UX Product Design', 6, 60, 'Product Designer', 'Intermediate');
+assert(uiuxPlan.length === 6, 'Generated 6-week roadmap for UI/UX Product Design');
+const uiuxTitles = new Set(uiuxPlan.map(w => w.title));
+assert(uiuxTitles.size === 6, '100% unique week modules for UI/UX (6/6)');
+const uiuxHasFigmaOrResearch = uiuxPlan.some(w => w.title.toLowerCase().includes('research') || w.title.toLowerCase().includes('wireframing') || w.title.toLowerCase().includes('design system'));
+assert(uiuxHasFigmaOrResearch, 'UI/UX roadmap includes domain-specific topics (Research, Wireframing, Design Systems)');
+assert(!detectSemanticDuplicates(uiuxPlan).hasDuplicates, 'Zero semantic duplicate modules in 6-Week UI/UX');
+
+// B. 12-Week Data Science
+const dsPlan = generateProgressiveRoadmap('Data Science with Python', 12, 60, 'Data Scientist', 'Intermediate');
+assert(dsPlan.length === 12, 'Generated 12-week roadmap for Data Science with Python');
+const dsTitles = new Set(dsPlan.map(w => w.title));
+assert(dsTitles.size === 12, '100% unique week modules for Data Science (12/12)');
+const dsHasMLTopics = dsPlan.some(w => w.title.toLowerCase().includes('numpy') || w.title.toLowerCase().includes('pandas') || w.title.toLowerCase().includes('supervised') || w.title.toLowerCase().includes('deep learning'));
+assert(dsHasMLTopics, 'Data Science roadmap includes domain-specific topics (NumPy, Pandas, Supervised Learning, Deep Learning)');
+assert(!detectSemanticDuplicates(dsPlan).hasDuplicates, 'Zero semantic duplicate modules in 12-Week Data Science');
+
+// C. Resource URL Integrity Check
+let allUrlsValid = true;
+[javaDsaPlan, uiuxPlan, dsPlan].forEach(plan => {
+  plan.forEach(w => {
+    (w.tasks || []).forEach(t => {
+      (t.resource_links || []).forEach(link => {
+        if (!link.url || !link.url.startsWith('http')) allUrlsValid = false;
+      });
+      (t.subtasks || []).forEach(st => {
+        if (!st.resource || !st.resource.startsWith('http')) allUrlsValid = false;
+      });
+    });
+  });
+});
+assert(allUrlsValid, 'All generated resource links and subtask resources are valid, non-empty HTTPS URLs');
+
+// 3. TEST CROSS-DOMAIN DYNAMIC GENERATION (Finance, Quantum, Rust)
 console.log('\n📌 Testing Cross-Domain Progressive Generation:');
 const domains = [
-  { name: 'Data Structures & Algorithms', weeks: 24, mins: 90 },
-  { name: 'Python, AI & LLM Systems', weeks: 12, mins: 45 },
-  { name: 'Full Stack Modern Web Development', weeks: 16, mins: 60 },
   { name: 'Financial Engineering & Algorithmic Trading', weeks: 8, mins: 30 },
   { name: 'Quantum Computing Algorithms', weeks: 6, mins: 57 },
   { name: 'Rust Embedded Systems & Real-Time Kernel', weeks: 10, mins: 120 }

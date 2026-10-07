@@ -602,9 +602,15 @@ export default function RoadmapPage() {
                   {activeRoadmap.progress || 0}% Completed
                 </span>
               </div>
-              <p className="text-xs text-[#94A3B8]">
-                {activeRoadmap.completedTasks || 0} of {activeRoadmap.totalTasks || 0} milestones checked off
-              </p>
+              {(() => {
+                const totalWeeksCount = activeRoadmap.weeks?.length || activeRoadmap.duration_weeks || 12;
+                const completedWeeksCount = (activeRoadmap.weeks || []).filter(w => (w.tasks || []).length > 0 && w.tasks.every(t => !!t.is_completed)).length;
+                return (
+                  <p className="text-xs text-[#94A3B8]">
+                    <strong className="text-[#F8FAFC]">{completedWeeksCount} of {totalWeeksCount}</strong> Weekly Milestones Completed • <span className="text-[#CBD5E1]">{activeRoadmap.completedTasks || 0}/{activeRoadmap.totalTasks || 0}</span> daily sessions checked
+                  </p>
+                );
+              })()}
               {/* Progress track */}
               <div className="w-full sm:w-80 h-2 bg-[#090D16] rounded-full overflow-hidden border border-[#1E293B] mt-2">
                 <div
