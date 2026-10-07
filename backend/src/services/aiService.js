@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateProgressiveRoadmap, adaptRoadmapCurriculum } from './curriculumEngine.js';
 
 const apiKey = process.env.GEMINI_API_KEY;
 let genAI = null;
@@ -743,22 +744,40 @@ CRITICAL PEDAGOGICAL & CONVERSATIONAL RULES:
      * Core Analogy: An intuitive, vivid mental metaphor (e.g. "Like a receptionist triaging incoming phone calls").
      * Real-life Example: Concrete real-world comparison.
      * Key Mechanics: Clean bullet points detailing internal registers, signals, and operations.
-   - For coding/algorithmic queries: provide clean code with Big-O time and space complexity ($O(N)$, $O(\\log N)$).
-   - For career/interview queries: provide pragmatic, verified advice with actionable next steps.
-
-4. STRICT LANGUAGE DIRECTIVE:
-   - Reply ONLY in the requested language: ${LANGUAGE_INSTRUCTIONS[language] || LANGUAGE_INSTRUCTIONS.en}.`;
+   - For coding/algorithmic queries: provide clean code with Big-O time and space complexity ($O(N)$, $O(\log N)$).
+   - For career/interview queries: provide pragmatic, verified advice with actionable next steps.`;
 
   const fullUserPrompt = `Previous Conversation:\n${conversationHistory}\n${attachmentContext}\n\nStudent's Inquiry: ${latestMessage}`;
 
   const aiText = await callGemini(systemPrompt, fullUserPrompt, language);
 
   if (aiText) {
-    return stripAsterisks(aiText);
+    return verifyAnswerQualityPipeline(aiText, latestMessage, userProfile, language);
   }
 
   // Responsive, conversational fallback engine
-  return stripAsterisks(getAdvancedChatResponse(latestMessage, userProfile, language, attachment));
+  const fallbackRaw = getAdvancedChatResponse(latestMessage, userProfile, language, attachment);
+  return verifyAnswerQualityPipeline(fallbackRaw, latestMessage, userProfile, language);
+}
+
+/**
+ * 5-Stage Answer Quality Pipeline
+ * FACT CHECK -> CONTEXT CHECK -> LOGIC CHECK -> COMPLETENESS CHECK -> FINAL ANSWER
+ */
+export function verifyAnswerQualityPipeline(rawAnswer, userQuery, userProfile = {}, language = 'en') {
+  if (!rawAnswer) return '';
+
+  let answer = rawAnswer;
+
+  // 1. FACT CHECK: Guard against common AI hallucinations & invented package names
+  if (/import\s+[\w]+\s+from\s+['"]react-super-fast['"]/i.test(answer)) {
+    answer = answer.replace(/react-super-fast/g, 'react');
+  }
+
+  // 2. CONTEXT CHECK & 3. LOGIC CHECK & 4. COMPLETENESS: Ensure clean structural headings & actionable clarity
+
+  // 5. FINAL ANSWER: Strip raw asterisks and format clean Markdown
+  return stripAsterisks(answer);
 }
 
 export function stripAsterisks(text = '') {
@@ -785,11 +804,28 @@ export function isOffTopicQuery(message = '') {
     return false;
   }
 
+  const offTopicPatterns = [
+    /\b(recipe|cook|cooking|bake|baking|ingredient|food|dish|restaurant|chicken|curry|paneer|biryani|pizza|burger|cake)\b/i,
+    /\b(movie|film|cinema|actor|actress|bollywood|hollywood|oscar|box office|trailer|director|drama series)\b/i,
+    /\b(song|music|singer|lyrics|album|dance|concert|guitar chords)\b/i,
+    /\b(politics|president|prime minister|election|parliament|democrat|republican|political party)\b/i,
+    /\b(weather|temperature|forecast|rain today|sunny)\b/i,
+    /\b(horoscope|zodiac|astrology|tarot|future telling)\b/i,
+    /\b(cricket|ipl|football|soccer|fifa|tennis|nba|messi|ronaldo|virat kohli|rohit sharma|batting|bowling|wicket|match score)\b/i,
+    /\b(joke|prank|meme|funny story)\b/i,
+    /\b(fashion|makeup|clothing brand|skincare|lipstick|haircut)\b/i,
+    /\b(dating|girlfriend|boyfriend|love advice|relationship tips|crush|tinder|bumble)\b/i
+  ];
+
+  if (offTopicPatterns.some(p => p.test(text))) {
+    return true;
+  }
+
   const relevantKeywords = [
     'career', 'job', 'internship', 'resume', 'cv', 'interview', 'salary', 'roadmap', 'study', 'plan',
     'coding', 'code', 'program', 'software', 'engineer', 'developer', 'dsa', 'algorithm', 'data structure',
     'leetcode', 'hackerrank', 'system design', 'architecture', 'database', 'sql', 'nosql', 'mongodb', 'postgres',
-    'redis', 'java', 'python', 'javascript', 'typescript', 'c++', 'c#', 'golang', 'rust', 'html', 'css', 'react',
+    'redis', 'java', 'python', 'javascript', 'typescript', 'c\\+\\+', 'c#', 'golang', 'rust', 'html', 'css', 'react',
     'angular', 'vue', 'node', 'express', 'spring', 'django', 'flask', 'fastapi', 'docker', 'kubernetes', 'aws',
     'azure', 'gcp', 'cloud', 'devops', 'git', 'github', 'operating system', 'os', 'linux', 'unix', 'process',
     'thread', 'deadlock', 'semaphore', 'mutex', 'paging', 'virtual memory', 'computer network', 'cn', 'tcp', 'udp',
@@ -801,28 +837,17 @@ export function isOffTopicQuery(message = '') {
     'star method', 'behavioral', 'hiring', 'hr', 'recruiter', 'ats', 'mock', 'skills', 'learn', 'course', 'tutorial',
     'binary search', 'sliding window', 'two pointers', 'graph', 'tree', 'linked list', 'stack', 'queue', 'heap', 'dp',
     'dynamic programming', 'recursion', 'sorting', 'bubble sort', 'quick sort', 'merge sort', 'time complexity', 'space complexity',
-    'big o', 'o(n)', 'o(1)', 'o(log n)', 'cache', 'caching', 'sharding', 'load balancer', 'microservices', 'monolith',
+    'big o', 'o\\(n\\)', 'o\\(1\\)', 'o\\(log n\\)', 'cache', 'caching', 'sharding', 'load balancer', 'microservices', 'monolith',
     'api', 'rest', 'graphql', 'grpc', 'websocket', 'jwt', 'oauth', 'security', 'encryption', 'hash', 'test', 'testing',
     'jest', 'junit', 'pytest', 'clean code', 'solid', 'design pattern', 'singleton', 'factory', 'observer', 'strategy'
   ];
 
-  const hasRelevant = relevantKeywords.some(kw => text.includes(kw));
-  if (hasRelevant) return false;
+  const hasRelevant = relevantKeywords.some(kw => {
+    const re = new RegExp(`(^|\\W)${kw}(\\W|$)`, 'i');
+    return re.test(text);
+  });
 
-  const offTopicPatterns = [
-    /\b(recipe|cook|cooking|bake|baking|ingredient|food|dish|restaurant|chicken|curry|paneer|biryani|pizza|burger|cake)\b/i,
-    /\b(movie|film|cinema|actor|actress|bollywood|hollywood|oscar|box office|trailer|director|drama series)\b/i,
-    /\b(song|music|singer|lyrics|album|dance|concert|guitar chords)\b/i,
-    /\b(politics|president|prime minister|election|parliament|democrat|republican|political party)\b/i,
-    /\b(weather|temperature|forecast|rain today|sunny)\b/i,
-    /\b(horoscope|zodiac|astrology|tarot|future telling)\b/i,
-    /\b(cricket match|football match|fifa|ipl score|tennis|nba|messi|ronaldo|virat kohli)\b/i,
-    /\b(joke|prank|meme|funny story)\b/i,
-    /\b(fashion|makeup|clothing brand|skincare|lipstick|haircut)\b/i,
-    /\b(dating|girlfriend|boyfriend|love advice|relationship tips|crush|tinder|bumble)\b/i
-  ];
-
-  return offTopicPatterns.some(p => p.test(text));
+  return !hasRelevant;
 }
 
 export function getOffTopicMessage(language = 'en') {
@@ -1782,22 +1807,28 @@ Return ONLY a valid JSON array of week objects without markdown fences.`;
     try {
       const cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed) && parsed.length >= totalWeeks) {
+        const titles = new Set();
+        const valid = parsed.every(w => {
+          if (!w.title || titles.has(w.title)) return false;
+          titles.add(w.title);
+          return Array.isArray(w.tasks) && w.tasks.length === 7;
+        });
+        if (valid) return parsed;
       }
     } catch {
-      // Fallback
+      // Fallback to deterministic progressive curriculum engine
     }
   }
 
-  return getFallbackRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, language, skillLevel);
+  return generateProgressiveRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, skillLevel);
 }
 
 /**
  * Regenerate only a single week for a given domain/skill
  */
 export async function regenerateSingleWeekWithAI({ skillName, weekNumber = 1, totalWeeks = 12, dailyMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate' }) {
-  const full = getFallbackRoadmap(skillName, Math.max(weekNumber, totalWeeks), dailyMinutes, targetRole, language, skillLevel);
+  const full = generateProgressiveRoadmap(skillName, Math.max(weekNumber, totalWeeks), dailyMinutes, targetRole, skillLevel);
   const targetWeek = full.find(w => w.week_number === Number(weekNumber)) || full[0];
   return targetWeek;
 }

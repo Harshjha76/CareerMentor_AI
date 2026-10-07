@@ -15,14 +15,27 @@ let sqliteDb = null;
 // Determine DB mode:
 const connectionString = process.env.DATABASE_URL;
 
-if (connectionString && connectionString.startsWith('postgres')) {
+if (connectionString && (connectionString.startsWith('postgres://') || connectionString.startsWith('postgresql://'))) {
   try {
+    // Cloud databases on Render, Supabase, Neon, AWS RDS require SSL with rejectUnauthorized: false
+    const isRemote = connectionString.includes('render.com') ||
+                     connectionString.includes('amazonaws.com') ||
+                     connectionString.includes('supabase.co') ||
+                     connectionString.includes('neon.tech') ||
+                     process.env.NODE_ENV === 'production' ||
+                     connectionString.includes('sslmode=') ||
+                     connectionString.includes('.oregon-postgres') ||
+                     connectionString.includes('.frankfurt-postgres');
+
     pgPool = new pg.Pool({
       connectionString,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: isRemote ? { rejectUnauthorized: false } : false,
+      max: 15,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
     isPostgres = true;
-    console.log('✅ Connected to PostgreSQL database');
+    console.log('✅ PostgreSQL connection pool initialized (SSL active for remote host)');
   } catch (err) {
     console.warn('⚠️ PostgreSQL connection failed, falling back to SQLite:', err.message);
     isPostgres = false;
@@ -152,6 +165,7 @@ export async function initDB() {
       task_description TEXT NOT NULL,
       resource_links TEXT,
       is_completed BOOLEAN DEFAULT FALSE,
+      status VARCHAR(20) DEFAULT 'planned',
       completed_at TIMESTAMP
     );`,
 
@@ -258,13 +272,35 @@ export async function initDB() {
     'ALTER TABLE users ADD COLUMN available_study_minutes INTEGER DEFAULT 120;',
     'ALTER TABLE users ADD COLUMN email_notifications_enabled BOOLEAN DEFAULT TRUE;',
     'ALTER TABLE users ADD COLUMN email_consent_granted_at TIMESTAMP;',
-    'ALTER TABLE users ADD COLUMN skills_inventory TEXT;'
+    'ALTER TABLE users ADD COLUMN skills_inventory TEXT;',
+    'ALTER TABLE roadmap_tasks ADD COLUMN status VARCHAR(20) DEFAULT \'planned\';'
   ];
   for (const alterSql of alterColumns) {
     try {
       await query(alterSql);
     } catch {
       // Column already exists or already migrated, safe to ignore
+    }
+  }
+
+  // Idempotent index setup for query performance and data isolation
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);',
+    'CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);',
+    'CREATE INDEX IF NOT EXISTS idx_roadmaps_user_id ON roadmaps(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_roadmap_tasks_roadmap_id ON roadmap_tasks(roadmap_id);',
+    'CREATE INDEX IF NOT EXISTS idx_plans_user_id ON plans(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_resumes_user_id ON resumes(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);',
+    'CREATE INDEX IF NOT EXISTS idx_email_logs_user_id ON email_logs(user_id);'
+  ];
+  for (const indexSql of indexes) {
+    try {
+      await query(indexSql);
+    } catch {
+      // Index already exists, safe to ignore
     }
   }
 

@@ -25,6 +25,8 @@ import {
   toggleRoadmapSubtask,
   regenerateWeekRoadmap,
   updateTask,
+  updateTaskStatus,
+  adaptRoadmap,
   getRoadmapStreak,
   sendRoadmapStreakAlert
 } from '../controllers/roadmapController.js';
@@ -101,11 +103,13 @@ router.get('/resume/latest', authenticateToken, getLatestResume);
 
 // 3. Smart Roadmap
 router.post('/roadmap/generate', authenticateToken, createRoadmap);
+router.post('/roadmap/adapt', authenticateToken, adaptRoadmap);
 router.get('/roadmap', authenticateToken, getUserRoadmaps);
 router.post('/roadmap/regenerate-week', authenticateToken, regenerateWeekRoadmap);
 router.get('/roadmap/streak', authenticateToken, getRoadmapStreak);
 router.post('/roadmap/streak-alert', authenticateToken, sendRoadmapStreakAlert);
 router.put('/roadmap/tasks/:taskId/toggle', authenticateToken, toggleTaskComplete);
+router.put('/roadmap/tasks/:taskId/status', authenticateToken, updateTaskStatus);
 router.put('/roadmap/tasks/:taskId/subtask', authenticateToken, toggleRoadmapSubtask);
 router.put('/roadmap/tasks/:taskId', authenticateToken, updateTask);
 

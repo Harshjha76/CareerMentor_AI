@@ -555,3 +555,125 @@ export async function sendRoadmapStreakAlert(req, res) {
     return res.status(500).json({ error: 'Failed to send streak alert email: ' + err.message });
   }
 }
+
+/**
+ * Update task status (planned -> started -> completed -> skipped -> revised)
+ */
+export async function updateTaskStatus(req, res) {
+  try {
+    const { taskId } = req.params;
+    const { status, is_completed } = req.body;
+    const allowed = ['planned', 'started', 'completed', 'skipped', 'revised'];
+    const newStatus = allowed.includes(status) ? status : (is_completed ? 'completed' : 'planned');
+    const isDone = newStatus === 'completed' || is_completed === true;
+    const completedAt = isDone ? new Date().toISOString() : null;
+
+    await query(
+      `UPDATE roadmap_tasks SET status = $1, is_completed = $2, completed_at = $3 WHERE id = $4`,
+      [newStatus, isDone, completedAt, taskId]
+    );
+
+    return res.json({ success: true, taskId, status: newStatus, is_completed: isDone });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to update task status: ' + err.message });
+  }
+}
+
+/**
+ * Adaptive Re-planning
+ * Re-sequences remaining roadmap tasks when user adapts goals or available time without repeating completed work.
+ */
+export async function adaptRoadmap(req, res) {
+  try {
+    const userId = req.user.id;
+    const { roadmapId, duration_weeks, daily_minutes, skill_level, target_role } = req.body;
+
+    const roadmapRes = await query(`SELECT * FROM roadmaps WHERE id = $1 AND user_id = $2`, [roadmapId, userId]);
+    if (roadmapRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Roadmap not found' });
+    }
+
+    const currentRoadmap = roadmapRes.rows[0];
+    const tasksRes = await query(
+      `SELECT * FROM roadmap_tasks WHERE roadmap_id = $1 ORDER BY week_number ASC, day_number ASC`,
+      [roadmapId]
+    );
+
+    const completedTasks = tasksRes.rows.filter(t => t.is_completed || t.status === 'completed');
+    const completedIds = new Set(completedTasks.map(t => t.id));
+
+    const weeks = parseInt(duration_weeks || currentRoadmap.duration_weeks, 10);
+    const minutes = parseInt(daily_minutes || (currentRoadmap.daily_hours * 60), 10);
+    const role = target_role || currentRoadmap.target_role || req.user.target_role || 'Software Engineer';
+    const level = skill_level || 'Intermediate';
+
+    const { adaptRoadmapCurriculum } = await import('../services/curriculumEngine.js');
+    const adaptedCurriculum = adaptRoadmapCurriculum({
+      existingWeeks: [],
+      completedTaskIds: completedIds,
+      skillName: currentRoadmap.skill_name,
+      newTotalWeeks: weeks,
+      newDailyMinutes: minutes,
+      newTargetRole: role,
+      newSkillLevel: level
+    });
+
+    // Update parent roadmap metadata
+    await query(
+      `UPDATE roadmaps SET duration_weeks = $1, daily_hours = $2, target_role = $3 WHERE id = $4`,
+      [weeks, Math.round(minutes / 60) || 1, role, roadmapId]
+    );
+
+    // Remove uncompleted tasks and insert new adapted tasks
+    await query(
+      `DELETE FROM roadmap_tasks WHERE roadmap_id = $1 AND is_completed = false AND (status IS NULL OR status != 'completed')`,
+      [roadmapId]
+    );
+
+    for (const week of adaptedCurriculum) {
+      for (const task of week.tasks) {
+        if (!task.is_completed) {
+          const taskId = uuidv4();
+          const payload = {
+            topic: task.topic || task.task_description,
+            type: task.type || 'learn',
+            time: task.time || `${minutes} min Session`,
+            duration_minutes: task.duration_minutes || minutes,
+            done_when: task.done_when || '',
+            subtasks: task.subtasks || [],
+            links: task.resource_links || [],
+            ...(task.day_number === 1 ? {
+              week_title: week.title,
+              milestone: week.milestone,
+              milestone_project: week.milestone_project || null,
+              time_distribution: week.time_distribution || {
+                theory_percent: 25,
+                practical_build_percent: 40,
+                project_percent: 25,
+                revision_percent: 10
+              }
+            } : {})
+          };
+
+          await query(
+            `INSERT INTO roadmap_tasks (id, roadmap_id, week_number, day_number, task_description, resource_links, is_completed, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [taskId, roadmapId, week.week_number, task.day_number, task.task_description, JSON.stringify(payload), false, 'planned']
+          );
+        }
+      }
+    }
+
+    return res.json({
+      message: 'Roadmap adapted successfully with progress preserved',
+      roadmapId,
+      duration_weeks: weeks,
+      daily_minutes: minutes,
+      preserved_completed_tasks_count: completedTasks.length
+    });
+  } catch (err) {
+    console.error('Adapt Roadmap Error:', err);
+    return res.status(500).json({ error: 'Failed to adapt roadmap: ' + err.message });
+  }
+}
+
