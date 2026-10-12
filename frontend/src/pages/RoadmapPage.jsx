@@ -351,10 +351,11 @@ export default function RoadmapPage() {
     const targetRole = user?.target_role || 'Software Engineer';
     const dailyMins = goal.daily_minutes || 60;
 
+    // Dark sleek cover header
     doc.setFillColor(11, 18, 32);
     doc.rect(0, 0, 210, 297, 'F');
     doc.setTextColor(59, 130, 246);
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     doc.text('CareerPilot AI', 20, 22);
 
@@ -382,32 +383,71 @@ export default function RoadmapPage() {
 
     let y = 80;
     (activeRoadmap.weeks || []).forEach(w => {
-      if (y > 260) {
+      if (y > 240) {
         doc.addPage();
         doc.setFillColor(11, 18, 32);
         doc.rect(0, 0, 210, 297, 'F');
         y = 25;
       }
+
+      // Week Section Banner
+      doc.setTextColor(168, 85, 247);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      if (w.phase) {
+        doc.text(`PHASE: ${w.phase.toUpperCase()}`, 20, y);
+        y += 5;
+      }
+
       doc.setTextColor(6, 182, 212);
-      doc.setFontSize(11);
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text(`Week ${w.week_number}: ${w.title}`, 20, y);
       y += 6;
 
+      if (w.milestone_project?.title) {
+        doc.setTextColor(245, 158, 11);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Capstone: ${w.milestone_project.title}`, 20, y);
+        y += 5;
+      }
+
       (w.tasks || []).forEach(t => {
-        if (y > 275) {
+        if (y > 265) {
           doc.addPage();
           doc.setFillColor(11, 18, 32);
           doc.rect(0, 0, 210, 297, 'F');
           y = 25;
         }
-        doc.setTextColor(203, 213, 225);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`• Day ${t.day_number}: ${t.topic || t.task_description}`, 24, y);
-        y += 5;
+
+        doc.setTextColor(248, 250, 252);
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`• Day ${t.day_number}: ${t.topic || t.task_description} (${t.duration_minutes || dailyMins}m)`, 24, y);
+        y += 4.5;
+
+        if (t.exercise) {
+          doc.setTextColor(203, 213, 225);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'italic');
+          const splitEx = doc.splitTextToSize(`Exercise: ${t.exercise}`, 165);
+          doc.text(splitEx.slice(0, 2), 28, y);
+          y += (Math.min(splitEx.length, 2) * 4);
+        }
+
+        if (t.done_when) {
+          doc.setTextColor(148, 163, 184);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`Done when: ${t.done_when}`, 28, y);
+          y += 4.5;
+        }
+
+        y += 1.5;
       });
-      y += 4;
+
+      y += 6;
     });
 
     doc.save(`CareerPilot_${activeRoadmap.skill_name.replace(/\s+/g, '_')}_Roadmap.pdf`);
@@ -673,7 +713,12 @@ export default function RoadmapPage() {
                         W{week.week_number}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {week.phase && (
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#8B5CF6]/15 text-[#A78BFA] border border-[#8B5CF6]/30">
+                              {week.phase}
+                            </span>
+                          )}
                           <span className="text-xs font-bold text-[#06B6D4] uppercase tracking-wider">
                             Week {week.week_number} Milestone
                           </span>
@@ -682,6 +727,11 @@ export default function RoadmapPage() {
                         <h3 className="text-sm sm:text-base font-black text-[#F8FAFC] truncate mt-0.5">
                           {week.title}
                         </h3>
+                        {week.theme && week.theme !== week.title && (
+                          <p className="text-xs text-[#94A3B8] truncate mt-0.5">
+                            🎯 Theme: <span className="text-[#CBD5E1]">{week.theme}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -704,7 +754,7 @@ export default function RoadmapPage() {
                   {/* Week Body (Days 1 to 7) */}
                   {isExpanded && (
                     <div className="p-5 sm:p-6 space-y-5 border-t border-[#1E293B]">
-                      {/* Milestone Project Card */}
+                      {/* Milestone Project Card with Google X-Y-Z Resume Bullet */}
                       {week.milestone_project && (
                         <div className="p-4 rounded-2xl bg-[#090D16] border border-[#1E293B] space-y-2">
                           <div className="flex items-center justify-between text-xs font-bold">
@@ -716,6 +766,12 @@ export default function RoadmapPage() {
                           <p className="text-xs text-[#CBD5E1] leading-relaxed">
                             {week.milestone_project.description}
                           </p>
+                          {week.milestone_project.resume_bullet && (
+                            <div className="pt-2 border-t border-[#1E293B]/60 text-[11px] text-[#94A3B8]">
+                              <span className="text-amber-400 font-bold">📝 Resume Bullet (Google X-Y-Z): </span>
+                              <span className="text-[#E2E8F0] italic">"{week.milestone_project.resume_bullet}"</span>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -778,6 +834,11 @@ export default function RoadmapPage() {
                                       Day {task.day_number} ({task.day || ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][task.day_number - 1]})
                                     </span>
                                     {getTypeBadge(task.type)}
+                                    {task.revision_of && (
+                                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-extrabold border border-emerald-500/30">
+                                        REVISION
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
 
@@ -787,20 +848,56 @@ export default function RoadmapPage() {
                                 </div>
                               </div>
 
-                              {/* Clean Semantic Topic (No double Day 1 prefix) */}
-                              <div className="pl-8">
+                              {/* Clean Semantic Topic */}
+                              <div className="pl-8 space-y-1">
                                 <h4 className={`text-sm font-bold ${isDone ? 'line-through text-[#64748B]' : 'text-[#F8FAFC]'}`}>
                                   {cleanTopic}
                                 </h4>
+
                                 {task.done_when && (
-                                  <p className="text-xs text-[#94A3B8] mt-1 flex items-center gap-1.5">
+                                  <p className="text-xs text-[#94A3B8] flex items-center gap-1.5">
                                     <span className="text-[#06B6D4] font-semibold">Done when:</span>
                                     <span>{task.done_when}</span>
                                   </p>
                                 )}
                               </div>
 
-                              {/* Subtasks Checklist */}
+                              {/* Concrete Exercise Callout Block */}
+                              {task.exercise && (
+                                <div className="ml-8 p-3 rounded-xl bg-[#111827] border border-[#1E293B] space-y-1 text-xs">
+                                  <div className="flex items-center gap-1.5 font-bold text-[#F59E0B]">
+                                    <Code className="w-3.5 h-3.5" />
+                                    <span>Hands-On Scenario & Exercise:</span>
+                                  </div>
+                                  <p className="text-[#CBD5E1] leading-relaxed">
+                                    {task.exercise}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Interview Question & AI Tool Tip */}
+                              {(task.interview_question || task.ai_tool_tip) && (
+                                <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 text-[11px]">
+                                  {task.interview_question && (
+                                    <div className="p-2.5 rounded-xl bg-[#0B132B] border border-blue-900/40 space-y-1">
+                                      <span className="text-[#60A5FA] font-bold block flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3 text-[#60A5FA]" /> Interview Question:
+                                      </span>
+                                      <p className="text-[#CBD5E1] leading-snug">{task.interview_question}</p>
+                                    </div>
+                                  )}
+                                  {task.ai_tool_tip && (
+                                    <div className="p-2.5 rounded-xl bg-[#161226] border border-purple-900/40 space-y-1">
+                                      <span className="text-[#C084FC] font-bold block flex items-center gap-1">
+                                        <Zap className="w-3 h-3 text-[#C084FC]" /> AI-Era Workflow Tip:
+                                      </span>
+                                      <p className="text-[#CBD5E1] leading-snug">{task.ai_tool_tip}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Variable Subtasks Checklist */}
                               {task.subtasks && task.subtasks.length > 0 && (
                                 <div className="pl-8 pt-1 space-y-1.5">
                                   {task.subtasks.map((st) => (
@@ -819,10 +916,10 @@ export default function RoadmapPage() {
                                         }`}>
                                           {st.is_completed && <Check className="w-3 h-3" />}
                                         </div>
-                                        <span className="truncate">{st.title}</span>
+                                        <span className="truncate">{st.title || st.name}</span>
                                       </div>
                                       <span className="text-[11px] font-bold text-[#06B6D4] shrink-0 ml-2">
-                                        {st.duration_minutes}m
+                                        {st.duration_minutes || st.minutes}m
                                       </span>
                                     </div>
                                   ))}

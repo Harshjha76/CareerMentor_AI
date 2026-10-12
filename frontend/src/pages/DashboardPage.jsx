@@ -152,12 +152,51 @@ export default function DashboardPage() {
   const compatibilityPct = uniqueVerifiedSkills.length === 0 ? 0 : Math.max(25, rawMatchPct);
   const gapPct = 100 - compatibilityPct;
 
-  const studyCategories = [
-    { name: 'Algorithms & DSA', pct: 0.45, color: '#8B5CF6', hoverColor: '#A78BFA', bg: 'bg-[#8B5CF6]/15', text: 'text-[#A78BFA]', offset: 0, dash: '45 55' },
-    { name: 'Projects & APIs', pct: 0.25, color: '#06B6D4', hoverColor: '#22D3EE', bg: 'bg-[#06B6D4]/15', text: 'text-[#06B6D4]', offset: -45, dash: '25 75' },
-    { name: 'System Design', pct: 0.15, color: '#F59E0B', hoverColor: '#FBBF24', bg: 'bg-amber-500/15', text: 'text-amber-400', offset: -70, dash: '15 85' },
-    { name: 'CS Core & Review', pct: 0.15, color: '#3B82F6', hoverColor: '#60A5FA', bg: 'bg-[#3B82F6]/15', text: 'text-[#60A5FA]', offset: -85, dash: '15 85' }
+  // Dynamically derive studyCategories from activeRoadmap task types if available, otherwise balanced distribution
+  let studyCategories = [
+    { name: 'Core Foundations & Theory', pct: 0.35, color: '#3B82F6', hoverColor: '#60A5FA', bg: 'bg-[#3B82F6]/15', text: 'text-[#60A5FA]', offset: 0, dash: '35 65' },
+    { name: 'Hands-On Drills & Labs', pct: 0.35, color: '#06B6D4', hoverColor: '#22D3EE', bg: 'bg-[#06B6D4]/15', text: 'text-[#06B6D4]', offset: -35, dash: '35 65' },
+    { name: 'Portfolio Projects & Builds', pct: 0.20, color: '#8B5CF6', hoverColor: '#A78BFA', bg: 'bg-[#8B5CF6]/15', text: 'text-[#A78BFA]', offset: -70, dash: '20 80' },
+    { name: 'Interview Prep & Revision', pct: 0.10, color: '#F59E0B', hoverColor: '#FBBF24', bg: 'bg-amber-500/15', text: 'text-amber-400', offset: -90, dash: '10 90' }
   ];
+
+  if (activeRoadmap?.weeks && activeRoadmap.weeks.length > 0) {
+    let learnCount = 0;
+    let practiceCount = 0;
+    let projectCount = 0;
+    let reviewCount = 0;
+    let totalCount = 0;
+
+    activeRoadmap.weeks.forEach(w => {
+      (w.tasks || []).forEach(t => {
+        totalCount++;
+        const ty = (t.type || 'learn').toLowerCase();
+        if (ty === 'learn') learnCount++;
+        else if (ty === 'practice') practiceCount++;
+        else if (ty === 'project') projectCount++;
+        else reviewCount++;
+      });
+    });
+
+    if (totalCount > 0) {
+      const pLearn = Number((learnCount / totalCount).toFixed(2));
+      const pPractice = Number((practiceCount / totalCount).toFixed(2));
+      const pProject = Number((projectCount / totalCount).toFixed(2));
+      const pReview = Number((1.0 - (pLearn + pPractice + pProject)).toFixed(2));
+
+      const dLearn = Math.round(pLearn * 100);
+      const dPractice = Math.round(pPractice * 100);
+      const dProject = Math.round(pProject * 100);
+      const dReview = 100 - (dLearn + dPractice + dProject);
+
+      studyCategories = [
+        { name: 'Core Foundations & Theory', pct: pLearn, color: '#3B82F6', hoverColor: '#60A5FA', bg: 'bg-[#3B82F6]/15', text: 'text-[#60A5FA]', offset: 0, dash: `${dLearn} ${100 - dLearn}` },
+        { name: 'Hands-On Drills & Labs', pct: pPractice, color: '#06B6D4', hoverColor: '#22D3EE', bg: 'bg-[#06B6D4]/15', text: 'text-[#06B6D4]', offset: -dLearn, dash: `${dPractice} ${100 - dPractice}` },
+        { name: 'Portfolio Projects & Builds', pct: pProject, color: '#8B5CF6', hoverColor: '#A78BFA', bg: 'bg-[#8B5CF6]/15', text: 'text-[#A78BFA]', offset: -(dLearn + dPractice), dash: `${dProject} ${100 - dProject}` },
+        { name: 'Interview Prep & Revision', pct: pReview, color: '#F59E0B', hoverColor: '#FBBF24', bg: 'bg-amber-500/15', text: 'text-amber-400', offset: -(dLearn + dPractice + dProject), dash: `${dReview} ${100 - dReview}` }
+      ];
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#090D16] text-[#F8FAFC] pb-16">

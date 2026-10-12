@@ -40,12 +40,19 @@ export async function createRoadmap(req, res) {
           time: task.time || `${numericMinutes} min Session`,
           duration_minutes: task.duration_minutes || numericMinutes,
           done_when: task.done_when || '',
-          subtasks: task.subtasks || [],
+          exercise: task.exercise || '',
+          interview_question: task.interview_question || '',
+          ai_tool_tip: task.ai_tool_tip || '',
+          revision_of: task.revision_of || null,
+          subtasks: task.subtasks || task.tasks || [],
           links: task.resource_links || [],
           ...(task.day_number === 1 ? {
             week_title: week.title,
+            phase: week.phase || null,
+            theme: week.theme || null,
             milestone: week.milestone,
             milestone_project: week.milestone_project || null,
+            weekly_checkpoint: week.weekly_checkpoint || null,
             time_distribution: week.time_distribution || {
               theory_percent: 25,
               practical_build_percent: 40,
@@ -150,13 +157,20 @@ export async function getUserRoadmaps(req, res) {
       tasksRes.rows.forEach(t => {
         let links = [];
         let weekTitle = null;
+        let phase = null;
+        let theme = null;
         let milestone = null;
         let milestoneProject = null;
+        let weeklyCheckpoint = null;
         let topic = null;
         let type = 'learn';
         let time = '60 min Session';
         let durationMinutes = 60;
         let doneWhen = '';
+        let exercise = '';
+        let interviewQuestion = '';
+        let aiToolTip = '';
+        let revisionOf = null;
         let subtasks = [];
 
         if (typeof t.resource_links === 'string') {
@@ -167,14 +181,21 @@ export async function getUserRoadmaps(req, res) {
             } else if (parsed && typeof parsed === 'object') {
               links = parsed.links || [];
               weekTitle = parsed.week_title || null;
+              phase = parsed.phase || null;
+              theme = parsed.theme || null;
               milestone = parsed.milestone || null;
               milestoneProject = parsed.milestone_project || null;
+              weeklyCheckpoint = parsed.weekly_checkpoint || null;
               topic = parsed.topic || null;
               type = parsed.type || 'learn';
               time = parsed.time || '60 min Session';
               durationMinutes = parsed.duration_minutes || 60;
               doneWhen = parsed.done_when || '';
-              subtasks = parsed.subtasks || [];
+              exercise = parsed.exercise || '';
+              interviewQuestion = parsed.interview_question || '';
+              aiToolTip = parsed.ai_tool_tip || '';
+              revisionOf = parsed.revision_of || null;
+              subtasks = parsed.subtasks || parsed.tasks || [];
               if (parsed.time_distribution) {
                 detectedTimeDistribution = parsed.time_distribution;
               }
@@ -188,14 +209,20 @@ export async function getUserRoadmaps(req, res) {
           weeksMap[t.week_number] = {
             week_number: t.week_number,
             title: weekTitle || `Week ${t.week_number}`,
+            phase: phase || null,
+            theme: theme || null,
             milestone: milestone || '',
             milestone_project: milestoneProject || null,
+            weekly_checkpoint: weeklyCheckpoint || null,
             tasks: []
           };
         } else {
           if (weekTitle) weeksMap[t.week_number].title = weekTitle;
+          if (phase) weeksMap[t.week_number].phase = phase;
+          if (theme) weeksMap[t.week_number].theme = theme;
           if (milestone) weeksMap[t.week_number].milestone = milestone;
           if (milestoneProject) weeksMap[t.week_number].milestone_project = milestoneProject;
+          if (weeklyCheckpoint) weeksMap[t.week_number].weekly_checkpoint = weeklyCheckpoint;
         }
 
         weeksMap[t.week_number].tasks.push({
@@ -205,6 +232,10 @@ export async function getUserRoadmaps(req, res) {
           time: time || '60 min Session',
           duration_minutes: durationMinutes,
           done_when: doneWhen,
+          exercise: exercise,
+          interview_question: interviewQuestion,
+          ai_tool_tip: aiToolTip,
+          revision_of: revisionOf,
           subtasks: subtasks,
           resource_links: links,
           is_completed: !!t.is_completed

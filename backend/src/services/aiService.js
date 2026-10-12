@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { generateProgressiveRoadmap, adaptRoadmapCurriculum } from './curriculumEngine.js';
+import { generateProgressiveRoadmap, adaptRoadmapCurriculum, getOrFetchDomainBlueprint } from './curriculumEngine.js';
 
 const apiKey = process.env.GEMINI_API_KEY;
 let genAI = null;
@@ -1762,73 +1762,24 @@ export function generate2HourCheckinReminder(userName, pendingCount = 2, languag
  * 6. AI Smart Roadmap Generator - Senior Mentor Curriculum
  */
 export async function generateRoadmapWithAI(skillName, durationWeeks = 12, dailyHoursOrMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate') {
-  const lowerSkill = (skillName || '').toLowerCase();
-  
   // Normalize daily minutes: if <= 12, it was passed as hours (e.g. 1 -> 60m, 2 -> 120m); if > 12, it is minutes (e.g. 57, 60, 90)
   const numericInput = Number(dailyHoursOrMinutes) || 60;
   const dailyMinutes = numericInput <= 12 ? numericInput * 60 : numericInput;
   const totalWeeks = Math.min(52, Math.max(1, Number(durationWeeks) || 12));
 
-  let domainFocusInstruction = '';
-  if (/full\s*stack|mern|mean|react|frontend|next|web\s*dev|node|express|vue|angular|backend|javascript|typescript|html|css/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants FULL STACK WEB DEVELOPMENT. The curriculum MUST be 100% focused on Web Development (HTML/CSS, modern JavaScript/TypeScript, React/Next.js frontend, Node.js/Express/PostgreSQL/MongoDB backend, REST/GraphQL APIs, Auth, Docker, and Cloud Deployment). DO NOT introduce unrelated LeetCode algorithmic puzzle topics or unrelated languages!`;
-  } else if (/data\s*analyst|analytics|power\s*bi|tableau|sql|excel|bi\s*developer|data\s*visualization/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants DATA ANALYTICS & BI ENGINEERING. The curriculum MUST be 100% focused on Advanced Excel, SQL data extraction, Python/Pandas data wrangling, Power BI/Tableau dashboards, Statistics/A-B Testing, and Business Analytics reporting!`;
-  } else if (/python|ai|machine\s*learning|data\s*science|deep\s*learning|pytorch|tensorflow|nlp|llm|langchain|rag|genai/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants PYTHON, AI & MACHINE LEARNING. The curriculum MUST be 100% focused on Python data stack, NumPy/Pandas, Scikit-Learn, PyTorch, Deep Learning, NLP, Transformers, and LLM RAG pipelines. DO NOT introduce unrelated LeetCode tree/graph puzzles or web UI topics!`;
-  } else if (/devops|cloud|kubernetes|docker|aws|terraform|ci\/?cd|linux|sysadmin|azure|gcp/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants CLOUD & DEVOPS. The curriculum MUST be 100% focused on Linux systems, Docker containerization, Kubernetes cluster orchestration, Terraform IaC, AWS cloud infrastructure, CI/CD GitHub Actions, and Prometheus observability.`;
-  } else if (/go|golang|grpc/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants GOLANG BACKEND & DISTRIBUTED SYSTEMS. The curriculum MUST be 100% focused on Go syntax, Goroutines/Channels concurrency, HTTP microservices, PostgreSQL persistence, gRPC, and high-throughput backend architecture.`;
-  } else if (/cyber|security|ethical|hack|penetration|infosec|network\s*security/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants CYBERSECURITY & NETWORK DEFENSE. The curriculum MUST be 100% focused on TCP/IP networking, Linux hardening, OWASP Top 10 web security, penetration testing, cryptography, and SIEM threat analysis.`;
-  } else if (/dsa|data\s*structures|algorithms|leetcode|competitive|java\s*dsa|cpp\s*dsa/i.test(lowerSkill)) {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The user wants DATA STRUCTURES & ALGORITHMS (DSA). The curriculum MUST be 100% focused on algorithmic problem solving (Arrays, Two Pointers, Binary Search, Trees, Graphs, Dynamic Programming, Heaps, and LeetCode patterns) in ${skillName}.`;
-  } else {
-    domainFocusInstruction = `CRITICAL DOMAIN SPECIFICITY: The curriculum MUST be 100% dedicated to mastering "${skillName}" exclusively. Every weekly milestone and daily task must directly teach and apply "${skillName}".`;
-  }
+  // Stage A: Fetch or resolve domain blueprint (Cached in DB `domain_blueprints`)
+  const blueprint = await getOrFetchDomainBlueprint(skillName, targetRole);
 
-  const systemPrompt = `You are a Principal Software Engineer and Senior Technical Curriculum Architect.
-Create a detailed, 7-days-per-week, non-repetitive learning roadmap for mastering "${skillName}" over ${totalWeeks} weeks with EXACTLY ${dailyMinutes} minutes/day study commitment, calibrated for the goal of becoming a "${targetRole}".
-
-${domainFocusInstruction}
-
-CRITICAL STRUCTURE RULES:
-1. Every week must have exactly 7 distinct days (Day 1: Learn, Day 2: Practice, Day 3: Practice, Day 4: Project, Day 5: Project, Day 6: Mock test, Day 7: Revision).
-2. Each day has a specific unique topic, a duration of ${dailyMinutes} minutes, 2-3 subtasks whose minutes sum exactly to ${dailyMinutes}, and a concrete "done when" criteria.
-3. On Day 1 ONLY of each week, provide 3 curated resource links (1x Video, 1x Article/Docs, 1x Practice).
-4. Each subtask must also include a high-yield free resource link or tutorial reference.
-
-Return ONLY a valid JSON array of week objects without markdown fences.`;
-
-  const aiText = await callGemini(systemPrompt, `Skill: ${skillName}, Duration: ${totalWeeks} weeks, Daily Minutes: ${dailyMinutes}, Target Role: ${targetRole}, Level: ${skillLevel}`, language);
-
-  if (aiText) {
-    try {
-      const cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      if (Array.isArray(parsed) && parsed.length >= totalWeeks) {
-        const titles = new Set();
-        const valid = parsed.every(w => {
-          if (!w.title || titles.has(w.title)) return false;
-          titles.add(w.title);
-          return Array.isArray(w.tasks) && w.tasks.length === 7;
-        });
-        if (valid) return parsed;
-      }
-    } catch {
-      // Fallback to deterministic progressive curriculum engine
-    }
-  }
-
-  return generateProgressiveRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, skillLevel);
+  // Stages B & C: Progressive, non-repeating curriculum generation with strict anti-repetition validation
+  return generateProgressiveRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, skillLevel, { blueprint });
 }
 
 /**
  * Regenerate only a single week for a given domain/skill
  */
 export async function regenerateSingleWeekWithAI({ skillName, weekNumber = 1, totalWeeks = 12, dailyMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate' }) {
-  const full = generateProgressiveRoadmap(skillName, Math.max(weekNumber, totalWeeks), dailyMinutes, targetRole, skillLevel);
+  const blueprint = await getOrFetchDomainBlueprint(skillName, targetRole);
+  const full = generateProgressiveRoadmap(skillName, Math.max(weekNumber, totalWeeks), dailyMinutes, targetRole, skillLevel, { blueprint });
   const targetWeek = full.find(w => w.week_number === Number(weekNumber)) || full[0];
   return targetWeek;
 }

@@ -253,6 +253,15 @@ export async function initDB() {
       reminder_enabled BOOLEAN DEFAULT TRUE,
       progress_enabled BOOLEAN DEFAULT TRUE,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 11. Domain Blueprints (Cached Domain Research, Skill Maps & AI-era Workflows)
+    `CREATE TABLE IF NOT EXISTS domain_blueprints (
+      domain_key VARCHAR(128) PRIMARY KEY,
+      domain_name VARCHAR(255) NOT NULL,
+      blueprint TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -294,7 +303,8 @@ export async function initDB() {
     'CREATE INDEX IF NOT EXISTS idx_resumes_user_id ON resumes(user_id);',
     'CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);',
     'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);',
-    'CREATE INDEX IF NOT EXISTS idx_email_logs_user_id ON email_logs(user_id);'
+    'CREATE INDEX IF NOT EXISTS idx_email_logs_user_id ON email_logs(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_domain_blueprints_key ON domain_blueprints(domain_key);'
   ];
   for (const indexSql of indexes) {
     try {
