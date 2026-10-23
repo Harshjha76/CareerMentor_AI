@@ -131,7 +131,10 @@ export async function initDB() {
       preferred_language VARCHAR(10) DEFAULT 'en',
       email_notifications_enabled BOOLEAN DEFAULT TRUE,
       email_consent_granted_at TIMESTAMP,
-      is_onboarded BOOLEAN DEFAULT FALSE
+      is_onboarded BOOLEAN DEFAULT FALSE,
+      learning_style VARCHAR(50) DEFAULT 'project_based',
+      target_deadline DATE,
+      current_skill_level VARCHAR(50) DEFAULT 'Intermediate'
     );`,
 
     // 2. Resumes
@@ -170,7 +173,9 @@ export async function initDB() {
       resource_links TEXT,
       is_completed BOOLEAN DEFAULT FALSE,
       status VARCHAR(20) DEFAULT 'planned',
-      completed_at TIMESTAMP
+      completed_at TIMESTAMP,
+      feedback VARCHAR(50),
+      quiz_score INTEGER
     );`,
 
     // 5. Plans
@@ -287,11 +292,16 @@ export async function initDB() {
     'ALTER TABLE users ADD COLUMN email_consent_granted_at TIMESTAMP;',
     'ALTER TABLE users ADD COLUMN skills_inventory TEXT;',
     'ALTER TABLE users ADD COLUMN skill_gaps TEXT;',
+    'ALTER TABLE users ADD COLUMN learning_style VARCHAR(50) DEFAULT \'project_based\';',
+    'ALTER TABLE users ADD COLUMN target_deadline DATE;',
+    'ALTER TABLE users ADD COLUMN current_skill_level VARCHAR(50) DEFAULT \'Intermediate\';',
     'ALTER TABLE resumes ADD COLUMN file_name VARCHAR(255);',
     'ALTER TABLE resumes ADD COLUMN file_type VARCHAR(50);',
     'ALTER TABLE resumes ADD COLUMN is_active BOOLEAN DEFAULT FALSE;',
     'ALTER TABLE resumes ADD COLUMN parsed_text TEXT;',
-    'ALTER TABLE roadmap_tasks ADD COLUMN status VARCHAR(20) DEFAULT \'planned\';'
+    'ALTER TABLE roadmap_tasks ADD COLUMN status VARCHAR(20) DEFAULT \'planned\';',
+    'ALTER TABLE roadmap_tasks ADD COLUMN feedback VARCHAR(50);',
+    'ALTER TABLE roadmap_tasks ADD COLUMN quiz_score INTEGER;'
   ];
   for (const alterSql of alterColumns) {
     try {

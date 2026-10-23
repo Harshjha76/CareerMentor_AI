@@ -180,16 +180,19 @@ export default function WhatIKnowPage() {
 
   const compatibilityScore = calculateCompatibility();
 
-  // Dynamic Skill Gaps based strictly on user's actual missing competencies from resume & role
+  // Dynamic Skill Gaps based strictly on user's actual verified competencies vs target role
   const getDynamicSkillGaps = () => {
     if (user?.skill_gaps) {
       try {
         const parsed = typeof user.skill_gaps === 'string' ? JSON.parse(user.skill_gaps) : user.skill_gaps;
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.slice(0, 4).map(p => ({
+          return parsed.slice(0, 6).map(p => ({
             name: p.name,
+            status: p.status || (p.evidenceType === 'missing' ? 'confirmed_weakness' : 'unassessed'),
+            priority: p.priority || 'high',
             why: p.reason || `Essential requirement for ${p.targetRole || user?.target_role || 'Software Engineering'} positions.`,
-            duration: p.suggestedDuration || '1-2 weeks'
+            duration: p.suggestedDuration || '1-2 weeks',
+            evidenceType: p.evidenceType || 'missing'
           }));
         }
       } catch {
@@ -199,20 +202,20 @@ export default function WhatIKnowPage() {
 
     const allNames = skills.map(s => s.name.toLowerCase());
     const catalog = [
-      { name: 'System Design & Distributed Systems', check: s => s.includes('system design') || s.includes('distributed'), why: 'Required for Tier-1 engineering interviews and scalable backend roles.', duration: '3 weeks' },
-      { name: 'Distributed Caching (Redis)', check: s => s.includes('redis') || s.includes('caching'), why: 'Key interview topic for high-throughput backend performance.', duration: '1 week' },
-      { name: 'Containerization & CI/CD (Docker & GitHub Actions)', check: s => s.includes('docker') || s.includes('kubernetes'), why: 'Essential DevOps proficiency expected by modern engineering teams.', duration: '2 weeks' },
-      { name: 'Relational DB Query Optimization (PostgreSQL / MySQL)', check: s => s.includes('postgres') || s.includes('sql') || s.includes('mysql'), why: 'Core requirement for indexing, query planning, and transactional reliability.', duration: '1.5 weeks' }
+      { name: 'System Design & Distributed Systems', check: s => s.includes('system design') || s.includes('distributed'), why: 'Required for Tier-1 engineering interviews and scalable backend roles.', duration: '3 weeks', status: 'confirmed_weakness', priority: 'high' },
+      { name: 'Distributed Caching (Redis)', check: s => s.includes('redis') || s.includes('caching'), why: 'Key interview topic for high-throughput backend performance.', duration: '1 week', status: 'confirmed_weakness', priority: 'high' },
+      { name: 'Containerization & CI/CD (Docker & GitHub Actions)', check: s => s.includes('docker') || s.includes('kubernetes'), why: 'Essential DevOps proficiency expected by modern engineering teams.', duration: '2 weeks', status: 'confirmed_weakness', priority: 'high' },
+      { name: 'Relational DB Query Optimization (PostgreSQL / MySQL)', check: s => s.includes('postgres') || s.includes('sql') || s.includes('mysql'), why: 'Core requirement for indexing, query planning, and transactional reliability.', duration: '1.5 weeks', status: 'confirmed_weakness', priority: 'high' }
     ];
 
     const missing = catalog.filter(c => !allNames.some(c.check));
-    return missing.slice(0, 4);
+    return missing.slice(0, 6);
   };
 
   const recommendedGaps = getDynamicSkillGaps();
 
   const getLevelBadge = (skill) => {
-    const level = skill.level;
+    const level = skill.level || 'intermediate';
     return (
       <select
         value={level}
@@ -390,29 +393,42 @@ export default function WhatIKnowPage() {
                       catSkills.map((skill) => (
                         <div
                           key={skill.id}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B1220]/70 border border-[#1E293B] hover:border-[#3B82F6]/40 transition-colors"
+                          className="p-3 rounded-xl bg-[#0B1220]/70 border border-[#1E293B] hover:border-[#3B82F6]/40 transition-colors space-y-1.5"
                         >
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                            <span className="text-xs font-semibold text-[#F8FAFC]">{skill.name}</span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                              skill.source === 'resume'
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            }`}>
-                              {skill.source === 'resume' ? 'Resume' : 'Manual'}
-                            </span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                              <span className="text-xs font-semibold text-[#F8FAFC]">{skill.name}</span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                skill.source === 'resume'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              }`}>
+                                {skill.source === 'resume' ? 'Resume' : 'Manual'}
+                              </span>
+                              {skill.confidence && (
+                                <span className="text-[10px] font-semibold text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">
+                                  {skill.confidence}% verified
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {getLevelBadge(skill)}
+                              <button
+                                onClick={() => removeSkill(skill.id)}
+                                className="text-[#94A3B8] hover:text-red-400 p-1 transition-colors"
+                                title="Delete skill"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            {getLevelBadge(skill)}
-                            <button
-                              onClick={() => removeSkill(skill.id)}
-                              className="text-[#94A3B8] hover:text-red-400 p-1 transition-colors"
-                              title="Delete skill"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
+                          {skill.evidence && (
+                            <div className="text-[10px] text-slate-400 flex items-center gap-1 pl-5">
+                              <span className="text-blue-400/80 font-bold">Evidence:</span>
+                              <span className="truncate">{skill.evidence}</span>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -424,7 +440,7 @@ export default function WhatIKnowPage() {
         </div>
       )}
 
-      {/* Dynamic Skill Gaps */}
+      {/* Dynamic Skill Gaps with Confirmed Weakness vs Unassessed Distinction */}
       {recommendedGaps.length > 0 && (
         <div className="bg-gradient-to-br from-[#111827] via-[#172033] to-[#0B1220] border border-[#1E293B] rounded-3xl p-6 sm:p-8 text-[#F8FAFC] shadow-xl space-y-6">
           <div className="flex items-center justify-between">
@@ -434,37 +450,58 @@ export default function WhatIKnowPage() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[#F8FAFC]">
-                  {t('what_i_know.skill_gaps_title') || 'Recommended High-Yield Skill Bridges'}
+                  {t('what_i_know.skill_gaps_title') || 'Target Role Skill Gap Analysis'}
                 </h3>
                 <p className="text-xs text-[#94A3B8]">
-                  Identified by CareerMentor AI based on missing skills for {user?.target_role || 'Software Engineering'} roles
+                  Identified against verified market standards for <strong>{user?.target_role || 'Software Engineering'}</strong> roles.
                 </p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {recommendedGaps.map((gap, i) => (
-              <div
-                key={i}
-                className="p-5 rounded-2xl bg-[#0B1220]/60 border border-[#1E293B] flex flex-col justify-between space-y-4 hover:border-[#3B82F6]/50 transition-colors"
-              >
-                <div>
-                  <div className="text-[11px] text-[#06B6D4] font-bold mb-1">Estimated: {gap.duration}</div>
-                  <h4 className="font-extrabold text-sm text-[#F8FAFC] mb-1.5">{gap.name}</h4>
-                  <p className="text-xs text-[#94A3B8] leading-relaxed">{gap.why}</p>
-                </div>
+            {recommendedGaps.map((gap, i) => {
+              const isConfirmedWeakness = gap.status === 'confirmed_weakness';
 
-                <button
-                  type="button"
-                  onClick={() => navigate('/roadmap', { state: { domain: gap.name } })}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs shadow-sm transition-all"
+              return (
+                <div
+                  key={i}
+                  className={`p-5 rounded-2xl bg-[#0B1220]/60 border flex flex-col justify-between space-y-4 transition-colors ${
+                    isConfirmedWeakness
+                      ? 'border-rose-500/30 hover:border-rose-500/60'
+                      : 'border-amber-500/30 hover:border-amber-500/60'
+                  }`}
                 >
-                  <span>{t('what_i_know.btn_add_to_roadmap') || 'Add to Study Roadmap'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className={`font-extrabold px-2 py-0.5 rounded border uppercase ${
+                        isConfirmedWeakness
+                          ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      }`}>
+                        {isConfirmedWeakness ? '⚠️ Confirmed Weakness' : '🔍 Unassessed Skill'}
+                      </span>
+                      <span className="text-[#06B6D4] font-bold">{gap.duration}</span>
+                    </div>
+                    <h4 className="font-extrabold text-sm text-[#F8FAFC]">{gap.name}</h4>
+                    <p className="text-xs text-[#94A3B8] leading-relaxed">{gap.why}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/roadmap', { state: { domain: gap.name } })}
+                    className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-white font-bold text-xs shadow-sm transition-all ${
+                      isConfirmedWeakness
+                        ? 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600'
+                        : 'bg-[#3B82F6] hover:bg-[#2563EB]'
+                    }`}
+                  >
+                    <span>{isConfirmedWeakness ? 'Bridge Priority Gap in Roadmap' : 'Verify in Practice Roadmap'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

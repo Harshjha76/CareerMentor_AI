@@ -32,7 +32,8 @@ import {
   updateTaskStatus,
   adaptRoadmap,
   getRoadmapStreak,
-  sendRoadmapStreakAlert
+  sendRoadmapStreakAlert,
+  submitTaskProgressFeedback
 } from '../controllers/roadmapController.js';
 
 import {
@@ -118,6 +119,7 @@ router.get('/roadmap/streak', authenticateToken, getRoadmapStreak);
 router.post('/roadmap/streak-alert', authenticateToken, sendRoadmapStreakAlert);
 router.put('/roadmap/tasks/:taskId/toggle', authenticateToken, toggleTaskComplete);
 router.put('/roadmap/tasks/:taskId/status', authenticateToken, updateTaskStatus);
+router.post('/roadmap/tasks/:taskId/feedback', authenticateToken, submitTaskProgressFeedback);
 router.put('/roadmap/tasks/:taskId/subtask', authenticateToken, toggleRoadmapSubtask);
 router.put('/roadmap/tasks/:taskId', authenticateToken, updateTask);
 

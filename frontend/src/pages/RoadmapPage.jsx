@@ -135,8 +135,10 @@ export default function RoadmapPage() {
   const [skillInput, setSkillInput] = useState(goal.domain || 'Full Stack Web Development');
   const [durationInput, setDurationInput] = useState(goal.duration_weeks || 12);
   const [dailyMinsInput, setDailyMinsInput] = useState(goal.daily_minutes || 60);
-  const [skillLevel, setSkillLevel] = useState(goal.level || 'Intermediate');
+  const [skillLevel, setSkillLevel] = useState(goal.level || user?.current_skill_level || 'Intermediate');
   const [targetRoleInput, setTargetRoleInput] = useState(user?.target_role || 'Software Engineer');
+  const [learningStyle, setLearningStyle] = useState(user?.learning_style || 'project_based');
+  const [targetDeadline, setTargetDeadline] = useState(user?.target_deadline ? String(user.target_deadline).split('T')[0] : '');
   const [loading, setLoading] = useState(true);
   const [activeRoadmap, setActiveRoadmap] = useState(null);
   const [expandedWeeks, setExpandedWeeks] = useState({ 1: true });
@@ -230,6 +232,15 @@ export default function RoadmapPage() {
         current_week: 1
       });
 
+      // Save user availability, target deadline, role and learning style
+      api.auth.updateProfile({
+        target_role: targetRoleInput.trim(),
+        learning_style: learningStyle,
+        target_deadline: targetDeadline || null,
+        available_study_minutes: dailyMinsInput,
+        current_skill_level: skillLevel
+      }).catch(err => console.warn('Notice saving user study preferences:', err.message));
+
       await api.roadmap.generate({
         skill_name: skillInput.trim(),
         duration_weeks: durationInput,
@@ -244,6 +255,38 @@ export default function RoadmapPage() {
       alert('Error generating roadmap: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTaskFeedback = async (taskId, feedbackType) => {
+    try {
+      const res = await api.roadmap.submitFeedback(taskId, { feedback: feedbackType });
+      await loadStreakData();
+      if (activeRoadmap) {
+        const updatedWeeks = activeRoadmap.weeks.map(w => {
+          let tasks = w.tasks.map(t => {
+            if (t.id === taskId) {
+              return {
+                ...t,
+                status: res.status,
+                is_completed: res.is_completed,
+                feedback: res.feedback
+              };
+            }
+            return t;
+          });
+          if (res.remediationTask && w.week_number === res.remediationTask.week_number) {
+            tasks.push(res.remediationTask);
+          }
+          return { ...w, tasks };
+        });
+        setActiveRoadmap({
+          ...activeRoadmap,
+          weeks: updatedWeeks
+        });
+      }
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
     }
   };
 
@@ -573,8 +616,8 @@ export default function RoadmapPage() {
               ))}
             </div>
 
-            {/* 4-Pillar Collection Parameters: Target Role, Skill Level, Timeline & Daily Commitment */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-[#1E293B]">
+            {/* 6-Pillar Parameter Controls: Role, Level, Learning Style, Deadline, Duration, Daily Time */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 pt-3 border-t border-[#1E293B]">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#94A3B8]">
                   Target Role
@@ -605,28 +648,55 @@ export default function RoadmapPage() {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-[#94A3B8]">
-                  Duration: <strong className="text-[#F8FAFC]">{durationInput} Weeks</strong>
+                  Learning Style
+                </label>
+                <select
+                  value={learningStyle}
+                  onChange={(e) => setLearningStyle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090D16] border border-[#1E293B] text-xs font-semibold text-[#F8FAFC] outline-none focus:border-[#3B82F6]"
+                >
+                  <option value="project_based">Project-Based (Portfolio)</option>
+                  <option value="interview_defense">Interview Defense (Timed)</option>
+                  <option value="rapid_drills">Applied Diagnostics</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8]">
+                  Target Deadline
+                </label>
+                <input
+                  type="date"
+                  value={targetDeadline}
+                  onChange={(e) => setTargetDeadline(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-[#090D16] border border-[#1E293B] text-xs font-semibold text-[#F8FAFC] outline-none focus:border-[#3B82F6]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8]">
+                  Duration: <strong className="text-[#F8FAFC]">{durationInput} Wks</strong>
                 </label>
                 <select
                   value={durationInput}
                   onChange={(e) => setDurationInput(parseInt(e.target.value, 10))}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#090D16] border border-[#1E293B] text-xs font-semibold text-[#F8FAFC] outline-none focus:border-[#3B82F6]"
                 >
-                  <option value={2}>2 Weeks (Fast-track Sprint)</option>
-                  <option value={4}>4 Weeks (1 Month Intensive)</option>
-                  <option value={8}>8 Weeks (2 Months Core)</option>
-                  <option value={12}>12 Weeks (3 Months Mastery)</option>
-                  <option value={16}>16 Weeks (4 Months Comprehensive)</option>
-                  <option value={24}>24 Weeks (6 Months Deep Track)</option>
-                  <option value={48}>48 Weeks (12 Months Masterclass)</option>
-                  <option value={52}>52 Weeks (Full Year Engineering Arc)</option>
+                  <option value={2}>2 Weeks (Sprint)</option>
+                  <option value={4}>4 Weeks (1 Month)</option>
+                  <option value={8}>8 Weeks (2 Months)</option>
+                  <option value={12}>12 Weeks (3 Months)</option>
+                  <option value={16}>16 Weeks (4 Months)</option>
+                  <option value={24}>24 Weeks (6 Months)</option>
+                  <option value={48}>48 Weeks (12 Months)</option>
+                  <option value={52}>52 Weeks (Full Year)</option>
                 </select>
               </div>
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-semibold text-[#94A3B8]">
                   <span>Daily Study Time</span>
-                  <span className="text-[#06B6D4] font-bold">{dailyMinsInput} mins/day</span>
+                  <span className="text-[#06B6D4] font-bold">{dailyMinsInput}m/d</span>
                 </div>
                 <input
                   type="range"
@@ -935,6 +1005,63 @@ export default function RoadmapPage() {
                                   ))}
                                 </div>
                               )}
+
+                              {/* Adaptive Progress Feedback & Mastery Adaptation */}
+                              <div className="pl-8 pt-2 border-t border-[#1E293B]/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-bold text-[#94A3B8]">
+                                    Adaptive Feedback:
+                                  </span>
+                                  {task.status === 'needs_revision' && (
+                                    <span className="px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-300 text-[10px] font-bold border border-rose-500/30">
+                                      ⚠️ Needs Revision • Remediation Active
+                                    </span>
+                                  )}
+                                  {task.status === 'mastered' && (
+                                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                                      🏆 Mastered • Fast-Tracked
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskFeedback(task.id, 'struggling')}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+                                      task.feedback === 'struggling' || task.status === 'needs_revision'
+                                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                                        : 'bg-[#111827] text-slate-400 border-[#1E293B] hover:text-rose-400 hover:border-rose-500/30'
+                                    }`}
+                                    title="Request targeted remediation and guided practice"
+                                  >
+                                    😰 Struggling? Get Remediation
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskFeedback(task.id, 'just_right')}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+                                      task.feedback === 'just_right' || (task.is_completed && task.status === 'completed')
+                                        ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                                        : 'bg-[#111827] text-slate-400 border-[#1E293B] hover:text-blue-400 hover:border-blue-500/30'
+                                    }`}
+                                  >
+                                    👍 Just Right
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskFeedback(task.id, 'too_easy')}
+                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+                                      task.feedback === 'too_easy' || task.status === 'mastered'
+                                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                                        : 'bg-[#111827] text-slate-400 border-[#1E293B] hover:text-emerald-400 hover:border-emerald-500/30'
+                                    }`}
+                                    title="Boost skill confidence and fast-track to advanced challenges"
+                                  >
+                                    🚀 Mastered! Advance
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           );
                         })}

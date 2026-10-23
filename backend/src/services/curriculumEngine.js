@@ -667,12 +667,44 @@ export function resolveBlueprintSync(domainName = '', targetRole = 'Software Eng
 // STAGE B: CURRICULUM ARCHITECTURE (PHASE PARTITIONING & CONCEPT LEDGER)
 // ============================================================================
 
-export function buildCurriculumArchitecture(blueprint, totalWeeks = 12, targetRole = 'Software Engineer', skillLevel = 'Intermediate') {
+export function buildCurriculumArchitecture(blueprint, totalWeeks = 12, targetRole = 'Software Engineer', skillLevel = 'Intermediate', options = {}) {
   const weeksCount = Math.min(52, Math.max(1, Number(totalWeeks) || 12));
   const conceptLedger = new Set();
   const architecture = [];
 
-  const availableConcepts = [...(blueprint.conceptsInOrder || [])];
+  const verifiedSkills = Array.isArray(options.verifiedSkills) ? options.verifiedSkills : [];
+  const skillGaps = Array.isArray(options.skillGaps) ? options.skillGaps : [];
+  const learningStyle = options.learningStyle || 'project_based';
+
+  // Check if candidate already has strong verified experience in this domain or its foundational skills
+  const domainLower = (blueprint.domain || '').toLowerCase();
+  const candidateHasProvenFoundations = verifiedSkills.some(s => {
+    const sName = (s.name || '').toLowerCase();
+    const hasMatch = domainLower.includes(sName) || sName.includes(domainLower);
+    return hasMatch && (s.level === 'intermediate' || s.level === 'expert' || (s.projectCount && s.projectCount > 0));
+  });
+
+  let availableConcepts = [...(blueprint.conceptsInOrder || [])];
+
+  // If candidate has proven foundations, fast-track beyond basic syntax & introductory concepts
+  if (candidateHasProvenFoundations && availableConcepts.length > 2) {
+    const filtered = availableConcepts.filter(c => !/basic|foundational syntax|environment setup|hello world|core mechanics/i.test(c));
+    if (filtered.length >= Math.min(weeksCount, 4)) {
+      availableConcepts = filtered;
+    }
+  }
+
+  // If candidate has confirmed high-priority gaps, integrate them into the curriculum
+  const highPriorityGaps = skillGaps.filter(g => g.priority === 'high' || g.status === 'confirmed_weakness').map(g => g.name);
+  if (highPriorityGaps.length > 0) {
+    highPriorityGaps.forEach(gap => {
+      const exists = availableConcepts.some(c => c.toLowerCase().includes(gap.toLowerCase()));
+      if (!exists && availableConcepts.length > 2) {
+        const insertIdx = Math.min(2, availableConcepts.length - 1);
+        availableConcepts.splice(insertIdx, 0, `Targeted Mastery: ${gap} Architecture & Hands-on Implementation`);
+      }
+    });
+  }
 
   for (let w = 1; w <= weeksCount; w++) {
     const progressPct = w / weeksCount;
@@ -1250,7 +1282,7 @@ export function generateProgressiveRoadmap(
   const blueprint = options.blueprint || resolveBlueprintSync(skillName, targetRole);
 
   // Step 2: Build Curriculum Architecture (Phases + Themes)
-  const { architecture } = buildCurriculumArchitecture(blueprint, totalWeeks, targetRole, skillLevel);
+  const { architecture } = buildCurriculumArchitecture(blueprint, totalWeeks, targetRole, skillLevel, options);
 
   // Step 3: Day Generation & Validation Loop
   const ledger = new Set();
@@ -1323,9 +1355,10 @@ export function adaptRoadmapCurriculum({
   newTotalWeeks = 12,
   newDailyMinutes = 60,
   newTargetRole = 'Software Engineer',
-  newSkillLevel = 'Intermediate'
+  newSkillLevel = 'Intermediate',
+  options = {}
 }) {
-  const freshCurriculum = generateProgressiveRoadmap(skillName, newTotalWeeks, newDailyMinutes, newTargetRole, newSkillLevel);
+  const freshCurriculum = generateProgressiveRoadmap(skillName, newTotalWeeks, newDailyMinutes, newTargetRole, newSkillLevel, options);
 
   const updatedWeeks = freshCurriculum.map((week, wIdx) => {
     const existingWeek = existingWeeks[wIdx];

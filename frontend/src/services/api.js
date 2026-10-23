@@ -165,6 +165,13 @@ export const api = {
       fetch(`${API_BASE}/roadmap/streak-alert`, {
         method: 'POST',
         headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    submitFeedback: (taskId, feedbackData) =>
+      fetch(`${API_BASE}/roadmap/tasks/${taskId}/feedback`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(feedbackData)
       }).then(handleResponse)
   },
 

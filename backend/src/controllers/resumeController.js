@@ -8,6 +8,69 @@ import { analyzeResumeWithAI, extractStructuredResumeDetails, getRoleExpectation
 /**
  * Helper to sync extracted skills and role gaps into users.skills_inventory, current_skills, and skill_gaps
  */
+/**
+ * Helper to assess candidate's verified skills against target role requirements.
+ * Classifies into:
+ * 1. Confirmed Weaknesses (missing critical role skills or low proficiency)
+ * 2. Unassessed Skills (self-reported on resume without verified project/role proof)
+ * 3. Verified Strengths (skills with demonstrated projects/experience)
+ */
+export function assessCandidateSkillsAndGaps(skillsInventory = [], targetRole = 'Software Engineer') {
+  const expectations = getRoleExpectations(targetRole);
+  const candidateSkillsMap = new Map();
+  skillsInventory.forEach(s => {
+    if (s && s.name) {
+      candidateSkillsMap.set(s.name.toLowerCase().trim(), s);
+    }
+  });
+
+  const skillGaps = [];
+  const expectedSkills = expectations.skills || [];
+
+  for (const expSkill of expectedSkills) {
+    const lower = expSkill.toLowerCase().trim();
+    let matchedSkill = null;
+
+    for (const [candName, candSkill] of candidateSkillsMap.entries()) {
+      if (candName === lower || candName.includes(lower) || lower.includes(candName)) {
+        matchedSkill = candSkill;
+        break;
+      }
+    }
+
+    if (!matchedSkill) {
+      // Confirmed missing / weakness
+      skillGaps.push({
+        name: expSkill,
+        targetRole,
+        priority: 'high',
+        status: 'confirmed_weakness',
+        evidenceType: 'missing',
+        suggestedDuration: '1-2 weeks',
+        reason: `Essential requirement for ${targetRole} positions. Not found on candidate resume.`
+      });
+    } else if (matchedSkill.level === 'beginner' || matchedSkill.evidenceType === 'self_reported' || (matchedSkill.confidence && matchedSkill.confidence <= 50)) {
+      // Unassessed / needs project proof
+      skillGaps.push({
+        name: expSkill,
+        targetRole,
+        priority: 'medium',
+        status: 'unassessed',
+        evidenceType: 'self_reported',
+        suggestedDuration: '1 week',
+        reason: `Self-reported in resume skills list without verified project evidence. Practical assessment recommended.`
+      });
+    }
+  }
+
+  return skillGaps;
+}
+
+/**
+ * Helper to sync extracted skills and role gaps into users.skills_inventory, current_skills, and skill_gaps
+ * Categorizes skills by evidence (project count, experience bullets, quantified metrics, certifications)
+ * Never assumes expert without sufficient verifiable proof.
+ */
 export async function syncKnowledgeVaultFromResume(userId, combinedPayload = null, targetRole = 'Software Engineer', resumeId = null) {
   try {
     // 1. Fetch current user skills inventory to preserve any manually added skills
@@ -30,9 +93,102 @@ export async function syncKnowledgeVaultFromResume(userId, combinedPayload = nul
     const extractedSkillItems = [];
 
     if (combinedPayload) {
-      const analysis = combinedPayload.analysis || {};
       const extractedProfile = combinedPayload.extractedProfile || {};
       const skillsObj = extractedProfile.skills || extractedProfile.categorized_skills || {};
+      const projects = Array.isArray(extractedProfile.projects) ? extractedProfile.projects : [];
+      const experiences = Array.isArray(extractedProfile.experience) ? extractedProfile.experience : [];
+      const certifications = Array.isArray(extractedProfile.certifications) ? extractedProfile.certifications : [];
+
+      const metricRegex = /\b(?:\d+[%kKmM]?|\$\d+|\d+\+?|reduced|increased|optimized|latency|ms|throughput|scale|users)\b/i;
+
+      const analyzeSkillEvidence = (skillName) => {
+        const norm = skillName.toLowerCase();
+        let projCount = 0;
+        let projHasMetrics = false;
+        const matchedProjects = [];
+
+        for (const p of projects) {
+          const techArr = Array.isArray(p.techStack) ? p.techStack.map(t => String(t).toLowerCase()) : [];
+          const textToSearch = `${p.title || ''} ${p.description || ''} ${(p.bullets || []).join(' ')}`.toLowerCase();
+          const isTechMatch = techArr.some(t => t.includes(norm) || norm.includes(t));
+          const isTextMatch = textToSearch.includes(norm);
+
+          if (isTechMatch || isTextMatch) {
+            projCount++;
+            matchedProjects.push(p.title || 'Portfolio Project');
+            if (metricRegex.test(textToSearch)) {
+              projHasMetrics = true;
+            }
+          }
+        }
+
+        let expCount = 0;
+        let expHasMetrics = false;
+        const matchedExperiences = [];
+
+        for (const exp of experiences) {
+          const textToSearch = `${exp.role || ''} ${exp.company || ''} ${(exp.bullets || []).join(' ')}`.toLowerCase();
+          if (textToSearch.includes(norm)) {
+            expCount++;
+            matchedExperiences.push(exp.role ? `${exp.role} at ${exp.company || 'Company'}` : 'Experience');
+            if (metricRegex.test(textToSearch)) {
+              expHasMetrics = true;
+            }
+          }
+        }
+
+        let hasCert = false;
+        for (const c of certifications) {
+          if ((c.name || '').toLowerCase().includes(norm)) {
+            hasCert = true;
+          }
+        }
+
+        let level = 'beginner';
+        let evidenceType = 'self_reported';
+        let evidence = 'Self-reported in skills section (no project evidence found)';
+        let confidence = 40;
+
+        if (projCount >= 2 || (projCount >= 1 && expCount >= 1)) {
+          if (projHasMetrics || expHasMetrics) {
+            level = 'expert';
+            evidenceType = 'project_and_experience_proven';
+            evidence = `Proven in ${projCount} project(s) & experience with quantified impact`;
+            confidence = 85;
+          } else {
+            level = 'intermediate';
+            evidenceType = 'project_proven';
+            evidence = `Applied across ${projCount} project(s) / employment`;
+            confidence = 75;
+          }
+        } else if (projCount === 1) {
+          level = 'intermediate';
+          evidenceType = 'project_proven';
+          evidence = `Applied in 1 project (${matchedProjects[0] || 'Portfolio Project'})`;
+          confidence = 65;
+        } else if (expCount === 1) {
+          level = 'intermediate';
+          evidenceType = 'experience_proven';
+          evidence = `Demonstrated in work experience (${matchedExperiences[0] || 'Employment Role'})`;
+          confidence = 65;
+        } else if (hasCert) {
+          level = 'intermediate';
+          evidenceType = 'certified';
+          evidence = 'Validated by industry certification';
+          confidence = 70;
+        }
+
+        return {
+          level,
+          evidenceType,
+          evidence,
+          confidence,
+          projectCount: projCount,
+          experienceCount: expCount,
+          hasMetrics: projHasMetrics || expHasMetrics,
+          hasCertification: hasCert
+        };
+      };
 
       const addSkill = (name, category = 'languages') => {
         if (!name || typeof name !== 'string') return;
@@ -40,11 +196,19 @@ export async function syncKnowledgeVaultFromResume(userId, combinedPayload = nul
         const lower = clean.toLowerCase();
         if (clean.length > 1 && !seenSkillNames.has(lower)) {
           seenSkillNames.add(lower);
+          const evidenceInfo = analyzeSkillEvidence(clean);
           extractedSkillItems.push({
             id: `sk-${uuidv4().slice(0, 8)}`,
             name: clean,
             category,
-            level: 'intermediate',
+            level: evidenceInfo.level,
+            confidence: evidenceInfo.confidence,
+            evidence: evidenceInfo.evidence,
+            evidenceType: evidenceInfo.evidenceType,
+            projectCount: evidenceInfo.projectCount,
+            experienceCount: evidenceInfo.experienceCount,
+            hasMetrics: evidenceInfo.hasMetrics,
+            hasCertification: evidenceInfo.hasCertification,
             verified: true,
             source: 'resume',
             resumeId: resumeId || null
@@ -52,7 +216,7 @@ export async function syncKnowledgeVaultFromResume(userId, combinedPayload = nul
         }
       };
 
-      // Category mapping directly from structured extraction (no hardcoded skill buckets)
+      // Category mapping directly from structured extraction
       if (Array.isArray(skillsObj.languages)) skillsObj.languages.forEach(s => addSkill(s, 'languages'));
       if (Array.isArray(skillsObj.frameworks)) skillsObj.frameworks.forEach(s => addSkill(s, 'frameworks'));
       if (Array.isArray(skillsObj.libraries)) skillsObj.libraries.forEach(s => addSkill(s, 'frameworks'));
@@ -67,18 +231,8 @@ export async function syncKnowledgeVaultFromResume(userId, combinedPayload = nul
     // Combine manual skills + new resume verified skills
     const finalInventory = [...preservedManualSkills, ...extractedSkillItems];
 
-    // Compute dynamic skill gaps versus target role
-    const expectations = getRoleExpectations(targetRole);
-    const activeSkillNamesLower = new Set(finalInventory.map(s => (s.name || '').toLowerCase().trim()));
-    const missingSkills = (expectations.skills || []).filter(s => !activeSkillNamesLower.has(s.toLowerCase()));
-
-    const skillGapsPayload = missingSkills.map(gapName => ({
-      name: gapName,
-      targetRole,
-      priority: 'high',
-      suggestedDuration: '1-2 weeks',
-      reason: `Essential requirement for ${targetRole} positions.`
-    }));
+    // Compute dynamic skill gaps versus target role with distinction between confirmed weaknesses and unassessed skills
+    const skillGapsPayload = assessCandidateSkillsAndGaps(finalInventory, targetRole);
 
     const commaList = finalInventory.map(s => s.name).join(', ');
     await query(
@@ -95,7 +249,7 @@ export async function syncKnowledgeVaultFromResume(userId, combinedPayload = nul
       ]
     );
 
-    console.log(`✅ Synced Knowledge Vault for user ${userId}: ${extractedSkillItems.length} resume skills, ${preservedManualSkills.length} manual skills, ${skillGapsPayload.length} gaps`);
+    console.log(`✅ Synced Knowledge Vault for user ${userId}: ${extractedSkillItems.length} resume skills with evidence, ${preservedManualSkills.length} manual skills, ${skillGapsPayload.length} gaps`);
 
     return { finalInventory, extractedSkillItems, preservedManualSkills, skillGapsPayload };
   } catch (err) {

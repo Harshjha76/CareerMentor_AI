@@ -2112,17 +2112,17 @@ export function generate2HourCheckinReminder(userName, pendingCount = 2, languag
 /**
  * 6. AI Smart Roadmap Generator - Senior Mentor Curriculum
  */
-export async function generateRoadmapWithAI(skillName, durationWeeks = 12, dailyHoursOrMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate') {
+export async function generateRoadmapWithAI(skillName, durationWeeks = 12, dailyHoursOrMinutes = 60, targetRole = 'Software Engineer', language = 'en', skillLevel = 'Intermediate', options = {}) {
   // Normalize daily minutes: if <= 12, it was passed as hours (e.g. 1 -> 60m, 2 -> 120m); if > 12, it is minutes (e.g. 57, 60, 90)
   const numericInput = Number(dailyHoursOrMinutes) || 60;
   const dailyMinutes = numericInput <= 12 ? numericInput * 60 : numericInput;
   const totalWeeks = Math.min(52, Math.max(1, Number(durationWeeks) || 12));
 
   // Stage A: Fetch or resolve domain blueprint (Cached in DB `domain_blueprints`)
-  const blueprint = await getOrFetchDomainBlueprint(skillName, targetRole);
+  const blueprint = options.blueprint || await getOrFetchDomainBlueprint(skillName, targetRole);
 
-  // Stages B & C: Progressive, non-repeating curriculum generation with strict anti-repetition validation
-  return generateProgressiveRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, skillLevel, { blueprint });
+  // Stages B & C: Progressive, non-repeating curriculum generation with strict anti-repetition validation and personalized gap prioritization
+  return generateProgressiveRoadmap(skillName, totalWeeks, dailyMinutes, targetRole, skillLevel, { blueprint, ...options });
 }
 
 /**

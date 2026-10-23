@@ -18,9 +18,43 @@ export async function createRoadmap(req, res) {
     const language = req.user.preferred_language || 'en';
     const skillLevel = skill_level || 'Intermediate';
 
-    console.log(`🗺️ Generating roadmap for [${skill_name}], ${weeks} weeks, ${numericMinutes}m/day in [${language}]`);
+    // Retrieve user verified skills and skill gaps for personalized roadmap generation
+    const userRes = await query(
+      `SELECT skills_inventory, skill_gaps, target_role, available_study_minutes, learning_style, target_deadline, current_skill_level
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+    const userProfile = userRes.rows[0] || {};
 
-    const curriculum = await generateRoadmapWithAI(skill_name, weeks, numericMinutes, targetRole, language, skillLevel);
+    let verifiedSkills = [];
+    if (userProfile.skills_inventory) {
+      try {
+        verifiedSkills = typeof userProfile.skills_inventory === 'string' ? JSON.parse(userProfile.skills_inventory) : userProfile.skills_inventory;
+      } catch {}
+    }
+
+    let skillGaps = [];
+    if (userProfile.skill_gaps) {
+      try {
+        skillGaps = typeof userProfile.skill_gaps === 'string' ? JSON.parse(userProfile.skill_gaps) : userProfile.skill_gaps;
+      } catch {}
+    }
+
+    console.log(`🗺️ Generating personalized roadmap for [${skill_name}], ${weeks} weeks, ${numericMinutes}m/day in [${language}] with ${verifiedSkills.length} verified skills and ${skillGaps.length} gaps`);
+
+    const curriculum = await generateRoadmapWithAI(
+      skill_name,
+      weeks,
+      numericMinutes,
+      targetRole,
+      language,
+      skillLevel,
+      {
+        verifiedSkills,
+        skillGaps,
+        learningStyle: userProfile.learning_style || 'project_based'
+      }
+    );
 
     const roadmapId = uuidv4();
     const hoursEquivalent = Math.max(1, Math.round(numericMinutes / 60));
@@ -638,6 +672,28 @@ export async function adaptRoadmap(req, res) {
     const role = target_role || currentRoadmap.target_role || req.user.target_role || 'Software Engineer';
     const level = skill_level || 'Intermediate';
 
+    // Retrieve user verified skills and skill gaps for personalized adaptation
+    const userRes = await query(
+      `SELECT skills_inventory, skill_gaps, target_role, available_study_minutes, learning_style
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+    const userProfile = userRes.rows[0] || {};
+
+    let verifiedSkills = [];
+    if (userProfile.skills_inventory) {
+      try {
+        verifiedSkills = typeof userProfile.skills_inventory === 'string' ? JSON.parse(userProfile.skills_inventory) : userProfile.skills_inventory;
+      } catch {}
+    }
+
+    let skillGaps = [];
+    if (userProfile.skill_gaps) {
+      try {
+        skillGaps = typeof userProfile.skill_gaps === 'string' ? JSON.parse(userProfile.skill_gaps) : userProfile.skill_gaps;
+      } catch {}
+    }
+
     const { adaptRoadmapCurriculum } = await import('../services/curriculumEngine.js');
     const adaptedCurriculum = adaptRoadmapCurriculum({
       existingWeeks: [],
@@ -646,7 +702,12 @@ export async function adaptRoadmap(req, res) {
       newTotalWeeks: weeks,
       newDailyMinutes: minutes,
       newTargetRole: role,
-      newSkillLevel: level
+      newSkillLevel: level,
+      options: {
+        verifiedSkills,
+        skillGaps,
+        learningStyle: userProfile.learning_style || 'project_based'
+      }
     });
 
     // Update parent roadmap metadata
@@ -705,6 +766,171 @@ export async function adaptRoadmap(req, res) {
   } catch (err) {
     console.error('Adapt Roadmap Error:', err);
     return res.status(500).json({ error: 'Failed to adapt roadmap: ' + err.message });
+  }
+}
+
+/**
+ * Submit progress feedback (comprehension, quiz score, practice notes)
+ * Dynamically adapts the roadmap:
+ * - If struggling: inserts targeted remediation practice and marks task needs_revision
+ * - If too easy / score >= 90%: fast-tracks to advanced topics and elevates skill confidence in Knowledge Vault
+ * - If just right: marks completed
+ */
+export async function submitTaskProgressFeedback(req, res) {
+  try {
+    const userId = req.user.id;
+    const { taskId } = req.params;
+    const { feedback, quiz_score, notes } = req.body;
+
+    const taskRes = await query(
+      `SELECT rt.*, r.user_id, r.skill_name, r.target_role
+       FROM roadmap_tasks rt
+       JOIN roadmaps r ON rt.roadmap_id = r.id
+       WHERE rt.id = $1 AND r.user_id = $2`,
+      [taskId, userId]
+    );
+
+    if (taskRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found or unauthorized' });
+    }
+
+    const taskRow = taskRes.rows[0];
+    let payload = {};
+    if (typeof taskRow.resource_links === 'string') {
+      try {
+        payload = JSON.parse(taskRow.resource_links);
+      } catch {}
+    } else if (taskRow.resource_links && typeof taskRow.resource_links === 'object') {
+      payload = taskRow.resource_links;
+    }
+
+    const numericScore = typeof quiz_score === 'number' ? quiz_score : (quiz_score ? parseInt(quiz_score, 10) : null);
+    const isStruggling = feedback === 'struggling' || (numericScore !== null && numericScore < 60);
+    const isHighPerformer = feedback === 'too_easy' || (numericScore !== null && numericScore >= 90);
+
+    let newStatus = 'completed';
+    let isDone = true;
+    let adaptationAction = null;
+    let remediationTask = null;
+
+    if (isStruggling) {
+      newStatus = 'needs_revision';
+      isDone = false;
+      adaptationAction = 'remediation_injected';
+
+      // Dynamically create a targeted remediation task
+      const remTaskId = uuidv4();
+      const cleanTopic = (payload.topic || taskRow.task_description || '').replace(/^Day\s*\d+\s*:\s*/i, '');
+      const remDuration = payload.duration_minutes || 45;
+      const remPayload = {
+        topic: `Targeted Remediation & Step-by-Step Drills: ${cleanTopic}`,
+        type: 'revision',
+        time: `${remDuration} min Focused Session`,
+        duration_minutes: remDuration,
+        done_when: `All foundational edge-cases for ${cleanTopic} re-tested and understood.`,
+        exercise: `Deconstruct ${cleanTopic} from first principles with annotated code and unit tests.`,
+        interview_question: `Explain the fundamental concept of ${cleanTopic} without using jargon.`,
+        ai_tool_tip: `Ask AI: "Explain ${cleanTopic} using an intuitive real-world analogy and show a minimal code reproduction."`,
+        revision_of: cleanTopic,
+        subtasks: [
+          {
+            id: `subtask-${uuidv4().slice(0, 8)}`,
+            title: `Step-by-step breakdown of ${cleanTopic}`,
+            name: `Step-by-step breakdown of ${cleanTopic}`,
+            duration_minutes: Math.round(remDuration * 0.5),
+            is_completed: false
+          },
+          {
+            id: `subtask-${uuidv4().slice(0, 8)}`,
+            title: `Solve 2 guided drills with instant test feedback`,
+            name: `Solve 2 guided drills with instant test feedback`,
+            duration_minutes: Math.round(remDuration * 0.5),
+            is_completed: false
+          }
+        ],
+        is_remediation: true
+      };
+
+      await query(
+        `INSERT INTO roadmap_tasks (id, roadmap_id, week_number, day_number, task_description, resource_links, is_completed, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          remTaskId,
+          taskRow.roadmap_id,
+          taskRow.week_number,
+          taskRow.day_number + 1,
+          `Targeted Remediation: ${cleanTopic}`,
+          JSON.stringify(remPayload),
+          false,
+          'planned'
+        ]
+      );
+
+      remediationTask = {
+        id: remTaskId,
+        ...remPayload,
+        week_number: taskRow.week_number,
+        day_number: taskRow.day_number + 1
+      };
+    } else if (isHighPerformer) {
+      newStatus = 'mastered';
+      isDone = true;
+      adaptationAction = 'fast_track_mastery';
+
+      // Update Knowledge Vault skill confidence if applicable
+      const userRes = await query('SELECT skills_inventory FROM users WHERE id = $1', [userId]);
+      let inventory = [];
+      if (userRes.rows[0]?.skills_inventory) {
+        try {
+          inventory = typeof userRes.rows[0].skills_inventory === 'string' ? JSON.parse(userRes.rows[0].skills_inventory) : userRes.rows[0].skills_inventory;
+        } catch {}
+      }
+
+      const domainLower = (taskRow.skill_name || '').toLowerCase();
+      let updatedInv = false;
+      inventory = inventory.map(s => {
+        const sLower = (s.name || '').toLowerCase();
+        if (domainLower.includes(sLower) || sLower.includes(domainLower)) {
+          updatedInv = true;
+          return {
+            ...s,
+            confidence: Math.min(95, (s.confidence || 70) + 10),
+            level: (s.confidence || 70) >= 80 ? 'expert' : s.level
+          };
+        }
+        return s;
+      });
+
+      if (updatedInv) {
+        await query('UPDATE users SET skills_inventory = $1 WHERE id = $2', [JSON.stringify(inventory), userId]);
+      }
+    } else {
+      newStatus = 'completed';
+      isDone = true;
+      adaptationAction = 'standard_completed';
+    }
+
+    const completedAt = isDone ? new Date().toISOString() : null;
+    await query(
+      `UPDATE roadmap_tasks
+       SET status = $1, is_completed = $2, completed_at = $3, feedback = $4, quiz_score = $5
+       WHERE id = $6`,
+      [newStatus, isDone, completedAt, feedback || null, numericScore, taskId]
+    );
+
+    return res.json({
+      success: true,
+      taskId,
+      status: newStatus,
+      is_completed: isDone,
+      feedback,
+      quiz_score: numericScore,
+      adaptationAction,
+      remediationTask
+    });
+  } catch (err) {
+    console.error('Task Progress Feedback Error:', err);
+    return res.status(500).json({ error: 'Failed to submit task feedback: ' + err.message });
   }
 }
 

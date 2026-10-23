@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
 import { getRoleExpectations } from '../services/aiService.js';
+import { assessCandidateSkillsAndGaps } from './resumeController.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'careerpilot-ai-super-secret-key-2026';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -45,6 +46,9 @@ function formatUserResponse(user) {
     university_name: user.university_name || '',
     branch: user.branch || '',
     phone_number: user.phone_number || '',
+    learning_style: user.learning_style || 'project_based',
+    target_deadline: user.target_deadline || null,
+    current_skill_level: user.current_skill_level || 'Intermediate',
     email_notifications_enabled: user.email_notifications_enabled !== false,
     email_consent_granted_at: user.email_consent_granted_at || null,
     is_onboarded: user.is_onboarded === true || user.is_onboarded === 1 || user.is_onboarded === '1' || user.is_onboarded === 'true'
@@ -471,7 +475,10 @@ export async function updateProfile(req, res) {
       university_name,
       branch,
       phone_number,
-      preferred_language
+      preferred_language,
+      learning_style,
+      target_deadline,
+      current_skill_level
     } = req.body;
 
     const validLanguages = ['en', 'hi', 'mr', 'sa'];
@@ -499,8 +506,11 @@ export async function updateProfile(req, res) {
         university_name = COALESCE($8, university_name),
         branch = COALESCE($9, branch),
         phone_number = COALESCE($10, phone_number),
-        preferred_language = $11
-      WHERE id = $12`,
+        preferred_language = $11,
+        learning_style = COALESCE($12, learning_style),
+        target_deadline = COALESCE($13, target_deadline),
+        current_skill_level = COALESCE($14, current_skill_level)
+      WHERE id = $15`,
       [
         name || req.user.name,
         updatedEmail,
@@ -513,6 +523,9 @@ export async function updateProfile(req, res) {
         branch !== undefined ? branch : req.user.branch,
         phone_number !== undefined ? phone_number : req.user.phone_number,
         selectedLang,
+        learning_style || null,
+        target_deadline || null,
+        current_skill_level || null,
         userId
       ]
     );
@@ -598,23 +611,22 @@ export async function updateUserSkills(req, res) {
           name,
           category: s.category || 'languages',
           level: s.level || 'intermediate',
+          confidence: typeof s.confidence === 'number' ? s.confidence : (s.level === 'expert' ? 85 : s.level === 'intermediate' ? 70 : 40),
+          evidence: s.evidence || (s.source === 'manual' ? 'Manually verified by candidate' : 'Self-reported in profile'),
+          evidenceType: s.evidenceType || (s.source === 'manual' ? 'manual' : 'self_reported'),
+          projectCount: s.projectCount || 0,
+          experienceCount: s.experienceCount || 0,
+          hasMetrics: Boolean(s.hasMetrics),
+          hasCertification: Boolean(s.hasCertification),
           verified: s.verified !== false,
-          source: s.source || 'manual'
+          source: s.source || 'manual',
+          resumeId: s.resumeId || null
         });
       }
     });
 
-    // Recompute dynamic skill gaps versus target role
-    const expectations = getRoleExpectations(targetRole);
-    const missingSkills = (expectations.skills || []).filter(s => !seen.has(s.toLowerCase()));
-
-    const skillGapsPayload = missingSkills.map(gapName => ({
-      name: gapName,
-      targetRole,
-      priority: 'high',
-      suggestedDuration: '1-2 weeks',
-      reason: `Essential requirement for ${targetRole} positions.`
-    }));
+    // Recompute dynamic skill gaps versus target role with distinction between confirmed weaknesses and unassessed skills
+    const skillGapsPayload = assessCandidateSkillsAndGaps(cleanSkills, targetRole);
 
     const commaSkills = cleanSkills.map(s => s.name).join(', ');
     const jsonInventory = JSON.stringify(cleanSkills);
