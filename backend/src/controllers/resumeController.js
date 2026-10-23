@@ -8,47 +8,69 @@ import { analyzeResumeWithAI, extractStructuredResumeDetails, getRoleExpectation
 /**
  * Helper to sync extracted skills and role gaps into users.skills_inventory, current_skills, and skill_gaps
  */
-export async function syncKnowledgeVaultFromResume(userId, combinedPayload, targetRole = 'Software Engineer') {
+export async function syncKnowledgeVaultFromResume(userId, combinedPayload = null, targetRole = 'Software Engineer', resumeId = null) {
   try {
-    const analysis = combinedPayload.analysis || {};
-    const extractedProfile = combinedPayload.extractedProfile || {};
-    const skillsObj = extractedProfile.skills || extractedProfile.categorized_skills || {};
+    // 1. Fetch current user skills inventory to preserve any manually added skills
+    const userRes = await query('SELECT skills_inventory, current_skills FROM users WHERE id = $1', [userId]);
+    let existingInventory = [];
+    if (userRes.rows.length > 0 && userRes.rows[0].skills_inventory) {
+      try {
+        const raw = userRes.rows[0].skills_inventory;
+        existingInventory = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!Array.isArray(existingInventory)) existingInventory = [];
+      } catch {
+        existingInventory = [];
+      }
+    }
+
+    // Keep manual skills (skills that were not auto-extracted from a previous resume)
+    const preservedManualSkills = existingInventory.filter(s => s.source === 'manual');
+    const seenSkillNames = new Set(preservedManualSkills.map(s => (s.name || '').toLowerCase().trim()));
 
     const extractedSkillItems = [];
-    const seenSkillNames = new Set();
 
-    const addSkill = (name, category = 'languages') => {
-      if (!name || typeof name !== 'string') return;
-      const clean = name.trim();
-      const lower = clean.toLowerCase();
-      if (clean.length > 1 && !seenSkillNames.has(lower)) {
-        seenSkillNames.add(lower);
-        extractedSkillItems.push({
-          id: `sk-${uuidv4().slice(0, 8)}`,
-          name: clean,
-          category,
-          level: 'intermediate',
-          verified: true,
-          source: 'resume'
-        });
-      }
-    };
+    if (combinedPayload) {
+      const analysis = combinedPayload.analysis || {};
+      const extractedProfile = combinedPayload.extractedProfile || {};
+      const skillsObj = extractedProfile.skills || extractedProfile.categorized_skills || {};
 
-    // Category mapping directly from structured extraction (no hardcoded skill buckets)
-    if (Array.isArray(skillsObj.languages)) skillsObj.languages.forEach(s => addSkill(s, 'languages'));
-    if (Array.isArray(skillsObj.frameworks)) skillsObj.frameworks.forEach(s => addSkill(s, 'frameworks'));
-    if (Array.isArray(skillsObj.libraries)) skillsObj.libraries.forEach(s => addSkill(s, 'frameworks'));
-    if (Array.isArray(skillsObj.databases)) skillsObj.databases.forEach(s => addSkill(s, 'databases'));
-    if (Array.isArray(skillsObj.developerTools)) skillsObj.developerTools.forEach(s => addSkill(s, 'tools'));
-    if (Array.isArray(skillsObj.cloud)) skillsObj.cloud.forEach(s => addSkill(s, 'tools'));
-    if (Array.isArray(skillsObj.tools_and_cloud)) skillsObj.tools_and_cloud.forEach(s => addSkill(s, 'tools'));
-    if (Array.isArray(skillsObj.coreConcepts)) skillsObj.coreConcepts.forEach(s => addSkill(s, 'core'));
-    if (Array.isArray(skillsObj.core_competencies)) skillsObj.core_competencies.forEach(s => addSkill(s, 'core'));
+      const addSkill = (name, category = 'languages') => {
+        if (!name || typeof name !== 'string') return;
+        const clean = name.trim();
+        const lower = clean.toLowerCase();
+        if (clean.length > 1 && !seenSkillNames.has(lower)) {
+          seenSkillNames.add(lower);
+          extractedSkillItems.push({
+            id: `sk-${uuidv4().slice(0, 8)}`,
+            name: clean,
+            category,
+            level: 'intermediate',
+            verified: true,
+            source: 'resume',
+            resumeId: resumeId || null
+          });
+        }
+      };
+
+      // Category mapping directly from structured extraction (no hardcoded skill buckets)
+      if (Array.isArray(skillsObj.languages)) skillsObj.languages.forEach(s => addSkill(s, 'languages'));
+      if (Array.isArray(skillsObj.frameworks)) skillsObj.frameworks.forEach(s => addSkill(s, 'frameworks'));
+      if (Array.isArray(skillsObj.libraries)) skillsObj.libraries.forEach(s => addSkill(s, 'frameworks'));
+      if (Array.isArray(skillsObj.databases)) skillsObj.databases.forEach(s => addSkill(s, 'databases'));
+      if (Array.isArray(skillsObj.developerTools)) skillsObj.developerTools.forEach(s => addSkill(s, 'tools'));
+      if (Array.isArray(skillsObj.cloud)) skillsObj.cloud.forEach(s => addSkill(s, 'tools'));
+      if (Array.isArray(skillsObj.tools_and_cloud)) skillsObj.tools_and_cloud.forEach(s => addSkill(s, 'tools'));
+      if (Array.isArray(skillsObj.coreConcepts)) skillsObj.coreConcepts.forEach(s => addSkill(s, 'core'));
+      if (Array.isArray(skillsObj.core_competencies)) skillsObj.core_competencies.forEach(s => addSkill(s, 'core'));
+    }
+
+    // Combine manual skills + new resume verified skills
+    const finalInventory = [...preservedManualSkills, ...extractedSkillItems];
 
     // Compute dynamic skill gaps versus target role
     const expectations = getRoleExpectations(targetRole);
-    const missingSkills = (analysis.what_to_add?.missing_skills || expectations.skills)
-      .filter(s => !seenSkillNames.has(s.toLowerCase()));
+    const activeSkillNamesLower = new Set(finalInventory.map(s => (s.name || '').toLowerCase().trim()));
+    const missingSkills = (expectations.skills || []).filter(s => !activeSkillNamesLower.has(s.toLowerCase()));
 
     const skillGapsPayload = missingSkills.map(gapName => ({
       name: gapName,
@@ -58,28 +80,27 @@ export async function syncKnowledgeVaultFromResume(userId, combinedPayload, targ
       reason: `Essential requirement for ${targetRole} positions.`
     }));
 
-    if (extractedSkillItems.length > 0 || skillGapsPayload.length > 0) {
-      const commaList = extractedSkillItems.map(s => s.name).join(', ');
-      await query(
-        `UPDATE users
-         SET skills_inventory = $1,
-             current_skills = $2,
-             skill_gaps = $3
-         WHERE id = $4`,
-        [
-          JSON.stringify(extractedSkillItems),
-          commaList,
-          JSON.stringify(skillGapsPayload),
-          userId
-        ]
-      );
-      console.log(`✅ Synced ${extractedSkillItems.length} verified skills & ${skillGapsPayload.length} gaps to Knowledge Vault`);
-    }
+    const commaList = finalInventory.map(s => s.name).join(', ');
+    await query(
+      `UPDATE users
+       SET skills_inventory = $1,
+           current_skills = $2,
+           skill_gaps = $3
+       WHERE id = $4`,
+      [
+        JSON.stringify(finalInventory),
+        commaList,
+        JSON.stringify(skillGapsPayload),
+        userId
+      ]
+    );
 
-    return { extractedSkillItems, skillGapsPayload };
+    console.log(`✅ Synced Knowledge Vault for user ${userId}: ${extractedSkillItems.length} resume skills, ${preservedManualSkills.length} manual skills, ${skillGapsPayload.length} gaps`);
+
+    return { finalInventory, extractedSkillItems, preservedManualSkills, skillGapsPayload };
   } catch (err) {
     console.warn('Notice syncing knowledge vault from resume:', err.message);
-    return { extractedSkillItems: [], skillGapsPayload: [] };
+    return { finalInventory: [], extractedSkillItems: [], preservedManualSkills: [], skillGapsPayload: [] };
   }
 }
 
@@ -169,7 +190,7 @@ export async function uploadAndAnalyzeResume(req, res) {
     );
 
     // Sync Knowledge Vault: "What I Know" & "What I Don't Know"
-    await syncKnowledgeVaultFromResume(userId, combinedPayload, userRole);
+    await syncKnowledgeVaultFromResume(userId, combinedPayload, userRole, resumeId);
 
     // Automatically run internship matcher for immediate recommendations
     let matchedInternships = [];
@@ -325,7 +346,7 @@ export async function setActiveResume(req, res) {
     }
 
     // Re-sync Knowledge Vault from this activated resume
-    await syncKnowledgeVaultFromResume(userId, payload, targetRole);
+    await syncKnowledgeVaultFromResume(userId, payload, targetRole, resumeId);
 
     const normalized = normalizeResumeRecord({ ...activeRecord, is_active: true });
     return res.json({
@@ -380,8 +401,11 @@ export async function deleteResume(req, res) {
           if (typeof payload === 'string') {
             try { payload = JSON.parse(payload); } catch { payload = {}; }
           }
-          await syncKnowledgeVaultFromResume(userId, payload, req.user.target_role || 'Software Engineer');
+          await syncKnowledgeVaultFromResume(userId, payload, req.user.target_role || 'Software Engineer', nextId);
         }
+      } else {
+        // No resumes remain for this user: clean all resume-extracted skills while keeping any manual skills
+        await syncKnowledgeVaultFromResume(userId, null, req.user.target_role || 'Software Engineer', null);
       }
     }
 

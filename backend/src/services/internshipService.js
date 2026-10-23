@@ -658,13 +658,15 @@ export async function matchInternshipsForCandidate(userProfile = {}, resumeData 
   // Collect candidate skills from all sources
   const candidateSkills = [];
   if (resumeData) {
-    if (resumeData.categorized_skills && typeof resumeData.categorized_skills === 'object') {
-      Object.values(resumeData.categorized_skills).forEach(arr => {
-        if (Array.isArray(arr)) candidateSkills.push(...arr);
+    const profile = resumeData.extractedProfile || resumeData;
+    const skillsObj = profile.skills || profile.categorized_skills;
+    if (skillsObj && typeof skillsObj === 'object') {
+      Object.values(skillsObj).forEach(val => {
+        if (Array.isArray(val)) candidateSkills.push(...val);
       });
     }
-    if (Array.isArray(resumeData.detected_skills)) candidateSkills.push(...resumeData.detected_skills);
-    if (Array.isArray(resumeData.skills)) candidateSkills.push(...resumeData.skills);
+    if (Array.isArray(profile.detected_skills)) candidateSkills.push(...profile.detected_skills);
+    if (Array.isArray(profile.skills)) candidateSkills.push(...profile.skills);
   }
 
   if (userProfile.skills_inventory) {

@@ -2,6 +2,7 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/db.js';
+import { getRoleExpectations } from '../services/aiService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'careerpilot-ai-super-secret-key-2026';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -576,23 +577,58 @@ export async function getUserSkills(req, res) {
 export async function updateUserSkills(req, res) {
   try {
     const userId = req.user.id;
+    const targetRole = req.user.target_role || 'Software Engineer';
     const { skills } = req.body;
 
     if (!Array.isArray(skills)) {
       return res.status(400).json({ error: 'Skills must be an array of skill objects' });
     }
 
-    const commaSkills = skills.map(s => s.name || s).join(', ');
-    const jsonInventory = JSON.stringify(skills);
+    // Deduplicate and ensure proper structure with source
+    const seen = new Set();
+    const cleanSkills = [];
+
+    skills.forEach(s => {
+      const name = typeof s === 'string' ? s.trim() : (s.name || '').trim();
+      const lower = name.toLowerCase();
+      if (name && !seen.has(lower)) {
+        seen.add(lower);
+        cleanSkills.push({
+          id: s.id || `sk-${uuidv4().slice(0, 8)}`,
+          name,
+          category: s.category || 'languages',
+          level: s.level || 'intermediate',
+          verified: s.verified !== false,
+          source: s.source || 'manual'
+        });
+      }
+    });
+
+    // Recompute dynamic skill gaps versus target role
+    const expectations = getRoleExpectations(targetRole);
+    const missingSkills = (expectations.skills || []).filter(s => !seen.has(s.toLowerCase()));
+
+    const skillGapsPayload = missingSkills.map(gapName => ({
+      name: gapName,
+      targetRole,
+      priority: 'high',
+      suggestedDuration: '1-2 weeks',
+      reason: `Essential requirement for ${targetRole} positions.`
+    }));
+
+    const commaSkills = cleanSkills.map(s => s.name).join(', ');
+    const jsonInventory = JSON.stringify(cleanSkills);
+    const jsonGaps = JSON.stringify(skillGapsPayload);
 
     await query(
-      `UPDATE users SET current_skills = $1, skills_inventory = $2 WHERE id = $3`,
-      [commaSkills, jsonInventory, userId]
+      `UPDATE users SET current_skills = $1, skills_inventory = $2, skill_gaps = $3 WHERE id = $4`,
+      [commaSkills, jsonInventory, jsonGaps, userId]
     );
 
     return res.json({
       message: 'Skills updated successfully',
-      skills
+      skills: cleanSkills,
+      skill_gaps: skillGapsPayload
     });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update skills: ' + err.message });

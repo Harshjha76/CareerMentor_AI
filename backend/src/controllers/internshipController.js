@@ -23,13 +23,19 @@ export async function getRecommendedInternships(req, res) {
       console.warn('Notice loading user details:', uErr.message);
     }
 
-    // Look for user's latest parsed resume
+    // Look for user's currently active resume (fallback to newest)
     let resumeData = null;
     try {
-      const resumeRes = await query(
-        'SELECT ai_feedback FROM resumes WHERE user_id = $1 ORDER BY uploaded_at DESC LIMIT 1',
+      let resumeRes = await query(
+        'SELECT ai_feedback FROM resumes WHERE user_id = $1 AND is_active = TRUE LIMIT 1',
         [user.id]
       );
+      if (resumeRes.rows.length === 0) {
+        resumeRes = await query(
+          'SELECT ai_feedback FROM resumes WHERE user_id = $1 ORDER BY uploaded_at DESC LIMIT 1',
+          [user.id]
+        );
+      }
       if (resumeRes.rows.length > 0 && resumeRes.rows[0].ai_feedback) {
         let raw = resumeRes.rows[0].ai_feedback;
         if (typeof raw === 'string') {
@@ -39,7 +45,7 @@ export async function getRecommendedInternships(req, res) {
         }
       }
     } catch (parseErr) {
-      console.warn('Notice reading latest resume for matching:', parseErr.message);
+      console.warn('Notice reading active resume for matching:', parseErr.message);
     }
 
     const matches = await matchInternshipsForCandidate(userDetails, resumeData);

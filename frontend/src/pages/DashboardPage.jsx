@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const { goal } = useGoal();
   const navigate = useNavigate();
 
-  const [resumeScore, setResumeScore] = useState(88);
+  const [resumeScore, setResumeScore] = useState(null);
   const [roadmaps, setRoadmaps] = useState([]);
   const [plannerTasks, setPlannerTasks] = useState([]);
   const [goals, setGoals] = useState([]);
@@ -69,6 +69,8 @@ export default function DashboardPage() {
 
         if (resumeRes.status === 'fulfilled' && resumeRes.value?.resume) {
           setResumeScore(resumeRes.value.resume.score);
+        } else {
+          setResumeScore(null);
         }
         if (roadmapsRes.status === 'fulfilled' && roadmapsRes.value?.roadmaps) {
           setRoadmaps(roadmapsRes.value.roadmaps);
@@ -149,7 +151,7 @@ export default function DashboardPage() {
   });
 
   const rawMatchPct = Math.round((matchedSkills.length / Math.max(1, targetRequiredSkills.length)) * 100);
-  const compatibilityPct = uniqueVerifiedSkills.length === 0 ? 0 : Math.max(25, rawMatchPct);
+  const compatibilityPct = rawMatchPct;
   const gapPct = 100 - compatibilityPct;
 
   // Dynamically derive studyCategories from activeRoadmap task types if available, otherwise balanced distribution
@@ -344,11 +346,22 @@ export default function DashboardPage() {
               </div>
             </div>
             <div>
-              <div className="text-3xl font-black text-[#F8FAFC]">{resumeScore}/100</div>
-              <p className="text-[11px] text-[#10B981] font-semibold mt-0.5">High Industry Readiness 🚀</p>
+              {resumeScore !== null ? (
+                <>
+                  <div className="text-3xl font-black text-[#F8FAFC]">{resumeScore}/100</div>
+                  <p className="text-[11px] font-semibold mt-0.5 text-[#10B981]">
+                    {resumeScore >= 80 ? 'High Industry Readiness 🚀' : resumeScore >= 60 ? 'Moderate Alignment 📈' : 'Needs Optimization ⚠️'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-xl font-bold text-[#94A3B8]">Not Uploaded</div>
+                  <p className="text-[11px] text-[#38BDF8] font-semibold mt-0.5">Upload for ATS Analysis</p>
+                </>
+              )}
             </div>
             <div className="text-xs font-bold text-[#60A5FA] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-              <span>Analyze Resume</span>
+              <span>{resumeScore !== null ? 'Analyze Resume' : 'Upload Resume'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </Link>

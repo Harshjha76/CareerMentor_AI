@@ -28,6 +28,7 @@ export default function WhatIKnowPage() {
   const navigate = useNavigate();
 
   const [skills, setSkills] = useState([]);
+  const [activeResume, setActiveResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,14 +44,18 @@ export default function WhatIKnowPage() {
     { id: 'core', label: t('what_i_know.cat_core') || 'Computer Science Foundations', icon: Cpu, color: 'from-rose-600 to-red-600' },
   ];
 
-  // Fetch real verified user skills on mount
+  // Fetch real verified user skills and active resume profile on mount
   useEffect(() => {
-    async function loadSkills() {
+    async function loadData() {
       setLoading(true);
       try {
-        const res = await api.skills.get();
-        if (res.skills && res.skills.length > 0) {
-          setSkills(res.skills);
+        const [skillsRes, resumeRes] = await Promise.allSettled([
+          api.skills.get(),
+          api.resume.getLatest()
+        ]);
+
+        if (skillsRes.status === 'fulfilled' && skillsRes.value?.skills && skillsRes.value.skills.length > 0) {
+          setSkills(skillsRes.value.skills);
         } else if (user?.current_skills) {
           // Parse from comma separated
           const raw = user.current_skills.split(',').map(s => s.trim()).filter(Boolean);
@@ -66,7 +71,9 @@ export default function WhatIKnowPage() {
               id: `skill-${idx}-${Date.now()}`,
               name,
               category: cat,
-              level: 'intermediate'
+              level: 'intermediate',
+              source: 'manual',
+              verified: true
             };
           });
           setSkills(formatted);
@@ -76,6 +83,12 @@ export default function WhatIKnowPage() {
         } else {
           setSkills([]);
         }
+
+        if (resumeRes.status === 'fulfilled' && resumeRes.value?.resume) {
+          setActiveResume(resumeRes.value.resume);
+        } else {
+          setActiveResume(null);
+        }
       } catch (err) {
         console.warn('Could not load user skills:', err.message);
         setSkills([]);
@@ -83,7 +96,7 @@ export default function WhatIKnowPage() {
         setLoading(false);
       }
     }
-    loadSkills();
+    loadData();
   }, [user]);
 
   // Persist skills to backend
@@ -112,7 +125,9 @@ export default function WhatIKnowPage() {
       id: `skill-${Date.now()}`,
       name: newSkillName.trim(),
       category: newSkillCat,
-      level: newSkillLevel
+      level: newSkillLevel,
+      source: 'manual',
+      verified: true
     };
 
     const updated = [...skills, newSkill];
@@ -134,13 +149,33 @@ export default function WhatIKnowPage() {
     await persistSkills(updated);
   };
 
+  // Authentic readiness score (0-100) calculated from candidate verified skills vs real target role requirements
   const calculateCompatibility = () => {
     if (skills.length === 0) return 0;
-    const total = skills.length;
-    const expertCount = skills.filter(s => s.level === 'expert').length;
-    const interCount = skills.filter(s => s.level === 'intermediate').length;
-    const score = Math.min(Math.round((expertCount * 14 + interCount * 8 + total * 2)), 98);
-    return Math.max(score, 50);
+    const roleReqs = {
+      'software engineer': ['data structures & algorithms', 'system design', 'git', 'sql', 'restful apis', 'clean architecture', 'testing & ci/cd'],
+      'frontend developer': ['react', 'javascript', 'typescript', 'html', 'css', 'tailwind css', 'restful apis'],
+      'backend developer': ['node.js', 'express', 'postgresql', 'sql', 'redis', 'docker', 'system design'],
+      'full stack developer': ['react', 'node.js', 'postgresql', 'mongodb', 'docker', 'git', 'system design'],
+      'data scientist': ['python', 'pandas', 'numpy', 'machine learning', 'sql', 'statistics'],
+      'data analyst': ['sql', 'excel', 'tableau', 'python', 'statistics'],
+      'devops engineer': ['docker', 'kubernetes', 'ci/cd', 'aws', 'linux', 'terraform'],
+      'python developer': ['python', 'django', 'fastapi', 'postgresql', 'docker', 'git', 'restful apis'],
+      'java developer': ['java', 'spring boot', 'sql', 'microservices', 'git', 'restful apis', 'hibernate']
+    };
+    const targetKey = (user?.target_role || 'software engineer').toLowerCase();
+    const matchedRoleKey = Object.keys(roleReqs).find(k => targetKey.includes(k) || k.includes(targetKey)) || 'software engineer';
+    const reqs = roleReqs[matchedRoleKey];
+
+    const skillNames = skills.map(s => (s.name || '').toLowerCase());
+    let matchCount = 0;
+    reqs.forEach(req => {
+      if (skillNames.some(sn => sn.includes(req) || req.includes(sn))) {
+        matchCount++;
+      }
+    });
+
+    return Math.min(100, Math.round((matchCount / reqs.length) * 100));
   };
 
   const compatibilityScore = calculateCompatibility();
@@ -211,13 +246,41 @@ export default function WhatIKnowPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {activeResume ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#172033] border border-emerald-500/30 text-xs">
+              <FileText className="w-4 h-4 text-emerald-400" />
+              <span className="text-slate-400">Active Resume:</span>
+              <span className="font-bold text-white max-w-[160px] truncate">{activeResume.fileName}</span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-extrabold text-[10px]">
+                ATS {activeResume.score}/100
+              </span>
+              <button
+                onClick={() => navigate('/resume')}
+                className="ml-1 text-blue-400 hover:text-blue-300 underline font-semibold text-[11px]"
+              >
+                Switch
+              </button>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#172033] border border-amber-500/30 text-xs text-amber-300">
+              <AlertCircle className="w-4 h-4 text-amber-400" />
+              <span>No Active Resume</span>
+              <button
+                onClick={() => navigate('/resume')}
+                className="ml-1 text-blue-400 hover:text-blue-300 underline font-semibold"
+              >
+                Upload
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => navigate('/resume')}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#172033] hover:bg-[#1e293b] text-[#94A3B8] hover:text-[#F8FAFC] border border-[#1E293B] font-bold text-xs sm:text-sm transition-all"
           >
             <FileText className="w-4 h-4 text-[#06B6D4]" />
-            Extract from Resume
+            Manage Resumes
           </button>
 
           <button
@@ -330,8 +393,15 @@ export default function WhatIKnowPage() {
                           className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B1220]/70 border border-[#1E293B] hover:border-[#3B82F6]/40 transition-colors"
                         >
                           <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
                             <span className="text-xs font-semibold text-[#F8FAFC]">{skill.name}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                              skill.source === 'resume'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            }`}>
+                              {skill.source === 'resume' ? 'Resume' : 'Manual'}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             {getLevelBadge(skill)}
