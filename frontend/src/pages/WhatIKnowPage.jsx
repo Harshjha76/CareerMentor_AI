@@ -145,8 +145,23 @@ export default function WhatIKnowPage() {
 
   const compatibilityScore = calculateCompatibility();
 
-  // Dynamic Skill Gaps based strictly on user's actual missing competencies
+  // Dynamic Skill Gaps based strictly on user's actual missing competencies from resume & role
   const getDynamicSkillGaps = () => {
+    if (user?.skill_gaps) {
+      try {
+        const parsed = typeof user.skill_gaps === 'string' ? JSON.parse(user.skill_gaps) : user.skill_gaps;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.slice(0, 4).map(p => ({
+            name: p.name,
+            why: p.reason || `Essential requirement for ${p.targetRole || user?.target_role || 'Software Engineering'} positions.`,
+            duration: p.suggestedDuration || '1-2 weeks'
+          }));
+        }
+      } catch {
+        // fallback to catalog check
+      }
+    }
+
     const allNames = skills.map(s => s.name.toLowerCase());
     const catalog = [
       { name: 'System Design & Distributed Systems', check: s => s.includes('system design') || s.includes('distributed'), why: 'Required for Tier-1 engineering interviews and scalable backend roles.', duration: '3 weeks' },
@@ -156,7 +171,7 @@ export default function WhatIKnowPage() {
     ];
 
     const missing = catalog.filter(c => !allNames.some(c.check));
-    return missing.slice(0, 3);
+    return missing.slice(0, 4);
   };
 
   const recommendedGaps = getDynamicSkillGaps();
@@ -372,7 +387,7 @@ export default function WhatIKnowPage() {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/roadmap')}
+                  onClick={() => navigate('/roadmap', { state: { domain: gap.name } })}
                   className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs shadow-sm transition-all"
                 >
                   <span>{t('what_i_know.btn_add_to_roadmap') || 'Add to Study Roadmap'}</span>

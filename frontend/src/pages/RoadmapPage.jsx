@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useGoal } from '../context/GoalContext';
@@ -130,6 +130,7 @@ export default function RoadmapPage() {
   const { t, language } = useLanguage();
   const { goal, updateGoal, setDomain, setDurationWeeks, setDailyMinutes } = useGoal();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [skillInput, setSkillInput] = useState(goal.domain || 'Full Stack Web Development');
   const [durationInput, setDurationInput] = useState(goal.duration_weeks || 12);
@@ -143,6 +144,15 @@ export default function RoadmapPage() {
   const [matchedInternships, setMatchedInternships] = useState([]);
   const [syncingPlanner, setSyncingPlanner] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+
+  // Handle incoming domain from Knowledge Vault or Resume Analyzer skill gaps
+  useEffect(() => {
+    if (location.state?.domain) {
+      const incomingDomain = location.state.domain;
+      setSkillInput(incomingDomain);
+      updateGoal({ domain: incomingDomain, current_week: 1 });
+    }
+  }, [location.state]);
 
   // Synchronize local input with shared GoalContext
   useEffect(() => {

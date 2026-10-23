@@ -89,6 +89,28 @@ export const api = {
     getLatest: () =>
       fetch(`${API_BASE}/resume/latest`, {
         headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    list: () =>
+      fetch(`${API_BASE}/resume/list`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    getById: (id) =>
+      fetch(`${API_BASE}/resume/${id}`, {
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    activate: (id) =>
+      fetch(`${API_BASE}/resume/${id}/activate`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      }).then(handleResponse),
+
+    delete: (id) =>
+      fetch(`${API_BASE}/resume/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
       }).then(handleResponse)
   },
 

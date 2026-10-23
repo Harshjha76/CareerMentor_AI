@@ -139,9 +139,13 @@ export async function initDB() {
       id VARCHAR(64) PRIMARY KEY,
       user_id VARCHAR(64) NOT NULL,
       file_url TEXT,
+      file_name VARCHAR(255),
+      file_type VARCHAR(50),
       uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ai_feedback TEXT,
-      score INTEGER DEFAULT 0
+      score INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT FALSE,
+      parsed_text TEXT
     );`,
 
     // 3. Roadmaps
@@ -282,6 +286,11 @@ export async function initDB() {
     'ALTER TABLE users ADD COLUMN email_notifications_enabled BOOLEAN DEFAULT TRUE;',
     'ALTER TABLE users ADD COLUMN email_consent_granted_at TIMESTAMP;',
     'ALTER TABLE users ADD COLUMN skills_inventory TEXT;',
+    'ALTER TABLE users ADD COLUMN skill_gaps TEXT;',
+    'ALTER TABLE resumes ADD COLUMN file_name VARCHAR(255);',
+    'ALTER TABLE resumes ADD COLUMN file_type VARCHAR(50);',
+    'ALTER TABLE resumes ADD COLUMN is_active BOOLEAN DEFAULT FALSE;',
+    'ALTER TABLE resumes ADD COLUMN parsed_text TEXT;',
     'ALTER TABLE roadmap_tasks ADD COLUMN status VARCHAR(20) DEFAULT \'planned\';'
   ];
   for (const alterSql of alterColumns) {
@@ -301,6 +310,7 @@ export async function initDB() {
     'CREATE INDEX IF NOT EXISTS idx_plans_user_id ON plans(user_id);',
     'CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);',
     'CREATE INDEX IF NOT EXISTS idx_resumes_user_id ON resumes(user_id);',
+    'CREATE INDEX IF NOT EXISTS idx_resumes_user_active ON resumes(user_id, is_active);',
     'CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);',
     'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);',
     'CREATE INDEX IF NOT EXISTS idx_email_logs_user_id ON email_logs(user_id);',

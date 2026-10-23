@@ -15,7 +15,11 @@ import {
 
 import {
   uploadAndAnalyzeResume,
-  getLatestResume
+  getLatestResume,
+  listUserResumes,
+  getResumeById,
+  setActiveResume,
+  deleteResume
 } from '../controllers/resumeController.js';
 
 import {
@@ -100,6 +104,10 @@ router.put('/user/skills', authenticateToken, updateUserSkills);
 // 2. Resume Analyzer & Deep Information Extraction
 router.post('/resume/analyze', authenticateToken, uploadResume.single('resume'), uploadAndAnalyzeResume);
 router.get('/resume/latest', authenticateToken, getLatestResume);
+router.get('/resume/list', authenticateToken, listUserResumes);
+router.get('/resume/:id', authenticateToken, getResumeById);
+router.post('/resume/:id/activate', authenticateToken, setActiveResume);
+router.delete('/resume/:id', authenticateToken, deleteResume);
 
 // 3. Smart Roadmap
 router.post('/roadmap/generate', authenticateToken, createRoadmap);
